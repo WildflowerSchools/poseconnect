@@ -1,0 +1,1 @@
+# from BASE_MODULE_NAME.CHILD_MODULE_NAME import *
