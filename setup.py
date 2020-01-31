@@ -24,22 +24,22 @@ BASE_DEPENDENCIES = [
 os.chdir(os.path.normpath(BASEDIR))
 
 setup(
-    name='PYPI_PACKAGE_NAME',
+    name='wf-process-pose-data',
     packages=find_packages(),
     version=VERSION,
     include_package_data=True,
-    description='SHORT_DESCRIPTION',
+    description='Tools for fetching, processing, visualizing, and analyzing Wildflower human pose data',
     long_description=open('README.md').read(),
-    url='https://github.com/WildflowerSchools/PYPI_PACKAGE_NAME',
-    author='AUTHOR_NAME',
-    author_email='AUTHOR_EMAIL',
-    # install_requires=BASE_DEPENDENCIES,
+    url='https://github.com/WildflowerSchools/wf-process-pose-data',
+    author='Theodore Quinn',
+    author_email='ted.quinn@wildflowerschools.org',
+    install_requires=BASE_DEPENDENCIES,
     # tests_require=TEST_DEPENDENCIES,
     # extras_require = {
     #     'test': TEST_DEPENDENCIES,
     #     'local': LOCAL_DEPENDENCIES
     # },
-    # keywords=['KEYWORD'],
+    keywords=['pose estimation'],
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
