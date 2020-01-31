@@ -5,8 +5,14 @@ BASEDIR = os.path.dirname(os.path.abspath(__file__))
 VERSION = open(os.path.join(BASEDIR, 'VERSION')).read().strip()
 
 # Dependencies (format is 'PYPI_PACKAGE_NAME[>=]=VERSION_NUMBER')
-# BASE_DEPENDENCIES = [
-# ]
+BASE_DEPENDENCIES = [
+    'wf-pose-tracking-3d>=0.1.0',
+    'wf-minimal-honeycomb-python>=0.4.0',
+    'wf-geom-render>=0.3.0',
+    'python-dateutil>=2.8.1',
+    'pandas>=0.25.3',
+    'numpy>=1.18.1'
+]
 
 # TEST_DEPENDENCIES = [
 # ]
