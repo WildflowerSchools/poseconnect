@@ -9,7 +9,6 @@ BASE_DEPENDENCIES = [
     'wf-pose-tracking-3d>=0.1.0',
     'wf-minimal-honeycomb-python>=0.4.0',
     'wf-geom-render>=0.3.0',
-    'python-dateutil>=2.8.1',
     'pandas>=0.25.3',
     'numpy>=1.18.1'
 ]
