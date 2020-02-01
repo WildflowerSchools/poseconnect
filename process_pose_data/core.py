@@ -153,7 +153,9 @@ def fetch_2d_pose_data_by_time_span(
             environment_name
         ))
     camera_device_ids = [assignment.get('assigned').get('device_id') for assignment in filtered_camera_assignments]
-    logger.info('Found {} camera assignments that match specified start and end times')
+    logger.info('Found {} camera assignments that match specified start and end times'.format(
+        len(camera_device_ids)
+    ))
     query_list.append({
         'field': 'camera',
         'operator': 'IN',

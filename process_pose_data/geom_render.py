@@ -10,6 +10,118 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def fetch_geoms_2d_by_inference_execution(
+    inference_id=None,
+    inference_name=None,
+    inference_model=None,
+    inference_version=None,
+    chunk_size=100,
+    frames_per_second=10.0,
+    track_label_color='ff0000',
+    track_label_alpha=1.0,
+    keypoint_color='00ff00',
+    keypoint_alpha=0.3,
+    pose_line_color='00ff00',
+    pose_line_alpha=0.3,
+    progress_bar=False,
+    notebook=False,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    logger.info('Fetching pose data')
+    df = process_pose_data.core.fetch_2d_pose_data_by_inference_execution(
+        inference_id=inference_id,
+        inference_name=inference_name,
+        inference_model=inference_model,
+        inference_version=inference_version,
+        chunk_size=chunk_size,
+        progress_bar=progress_bar,
+        notebook=notebook,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Creating geom collections')
+    geom_collection_2d_dict = create_geom_collection_2d_dict(
+        df,
+        frames_per_second=frames_per_second,
+        track_label_color=track_label_color,
+        track_label_alpha=track_label_alpha,
+        keypoint_color=keypoint_color,
+        keypoint_alpha=keypoint_alpha,
+        pose_line_color=pose_line_color,
+        pose_line_alpha=pose_line_alpha,
+        progress_bar=progress_bar,
+        notebook=notebook,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    return geom_collection_2d_dict
+
+def fetch_geoms_2d_by_time_span(
+    environment_name,
+    start_time,
+    end_time=None,
+    camera_device_types=['PI3WITHCAMERA'],
+    chunk_size=100,
+    frames_per_second=10.0,
+    track_label_color='ff0000',
+    track_label_alpha=1.0,
+    keypoint_color='00ff00',
+    keypoint_alpha=0.3,
+    pose_line_color='00ff00',
+    pose_line_alpha=0.3,
+    progress_bar=False,
+    notebook=False,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    logger.info('Fetching pose data')
+    df = process_pose_data.core.fetch_2d_pose_data_by_time_span(
+        environment_name=environment_name,
+        start_time=start_time,
+        end_time=end_time,
+        camera_device_types=camera_device_types,
+        chunk_size=chunk_size,
+        progress_bar=progress_bar,
+        notebook=notebook,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Creating geom collections')
+    geom_collection_2d_dict = create_geom_collection_2d_dict(
+        df,
+        frames_per_second=frames_per_second,
+        track_label_color=track_label_color,
+        track_label_alpha=track_label_alpha,
+        keypoint_color=keypoint_color,
+        keypoint_alpha=keypoint_alpha,
+        pose_line_color=pose_line_color,
+        pose_line_alpha=pose_line_alpha,
+        progress_bar=progress_bar,
+        notebook=notebook,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    return geom_collection_2d_dict
+
 def create_geom_collection_2d_dict(
     df,
     frames_per_second=10.0,
