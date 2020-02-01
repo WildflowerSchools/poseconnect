@@ -272,12 +272,14 @@ def poses_2d_to_dataframe(
     df = pd.DataFrame(pose_data)
     df.set_index('pose_id', inplace=True)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['centroid'] = df['keypoint_array'].apply(lambda x: np.nanmean(x, axis=0))
     df = df.reindex(columns=[
         'camera_device_id',
         'camera_name',
         'track_label',
         'timestamp',
         'keypoint_array',
+        'centroid',
         'keypoint_quality_array',
         'pose_quality',
         'person_id',
@@ -286,3 +288,104 @@ def poses_2d_to_dataframe(
     ])
     df.sort_values(['camera_name', 'camera_device_id', 'track_label', 'timestamp'], inplace=True)
     return df
+
+def extract_pose_model_id(
+    df
+):
+    pose_model_ids = df['pose_model_id'].unique().tolist()
+    if len(pose_model_ids) > 1:
+        raise ValueError('Data frame contains multiple pose model ids: {}'.format(
+            pose_model_ids
+        ))
+    pose_model_id = pose_model_ids[0]
+    logger.info('Data conforms to pose model {}'.format(
+        pose_model_id
+    ))
+    return pose_model_id
+
+def fetch_pose_model_info(
+    pose_model_id,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = minimal_honeycomb.MinimalHoneycombClient(
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Fetching info for pose model {}'.format(
+        pose_model_id
+    ))
+    result = client.request(
+        request_type='query',
+        request_name='getPoseModel',
+        arguments={
+            'pose_model_id': {
+                'type': 'ID!',
+                'value': pose_model_id
+            }
+        },
+        return_object=[
+            'model_name',
+            'model_variant_name',
+            'keypoint_names',
+            'keypoint_descriptions',
+            'keypoint_connectors'
+        ]
+    )
+    return result
+
+def fetch_camera_assignment_ids(
+    camera_device_ids,
+    start_time,
+    end_time,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = minimal_honeycomb.MinimalHoneycombClient(
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Fetching assignment IDs for {} cameras'.format(len(camera_device_ids)))
+    result = client.bulk_query(
+        request_name='searchDevices',
+        arguments={
+            'query': {
+                'type': 'QueryExpression!',
+                'value': {
+                    'field': 'device_id',
+                    'operator': 'IN',
+                    'values': camera_device_ids
+                }
+            }
+        },
+        return_data=[
+            'device_id',
+            {'assignments': [
+                'assignment_id',
+                'start',
+                'end'
+            ]}
+        ],
+        id_field_name='device_id'
+    )
+    assignment_id_lookup = dict()
+    for device in result:
+        assignment = minimal_honeycomb.extract_assignment(
+            device['assignments'],
+            start_time=start_time,
+            end_time=end_time
+        )
+        assignment_id_lookup[device['device_id']] = assignment['assignment_id']
+    return assignment_id_lookup
