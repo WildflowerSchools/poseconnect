@@ -1,6 +1,7 @@
 import minimal_honeycomb
 import pandas as pd
 import numpy as np
+import tqdm
 import datetime
 import logging
 
@@ -12,6 +13,8 @@ def fetch_2d_pose_data_by_inference_execution(
     inference_model=None,
     inference_version=None,
     chunk_size=100,
+    progress_bar=False,
+    notebook=False,
     uri=None,
     token_uri=None,
     audience=None,
@@ -70,7 +73,11 @@ def fetch_2d_pose_data_by_inference_execution(
         query_list=query_list,
         chunk_size=chunk_size
     )
-    df = poses_2d_to_dataframe(result)
+    df = poses_2d_to_dataframe(
+        poses_2d=result,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
     return df
 
 def fetch_2d_pose_data_by_time_span(
@@ -78,6 +85,8 @@ def fetch_2d_pose_data_by_time_span(
     start_time,
     end_time=None,
     chunk_size=100,
+    progress_bar=False,
+    notebook=False,
     camera_device_types=['PI3WITHCAMERA'],
     uri=None,
     token_uri=None,
@@ -166,7 +175,11 @@ def fetch_2d_pose_data_by_time_span(
         query_list=query_list,
         chunk_size=chunk_size
     )
-    df = poses_2d_to_dataframe(result)
+    df = poses_2d_to_dataframe(
+        poses_2d=result,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
     return df
 
 def search_2d_poses(
@@ -229,10 +242,17 @@ def search_2d_poses(
     return result
 
 def poses_2d_to_dataframe(
-    poses_2d
+    poses_2d,
+    progress_bar=False,
+    notebook=False
 ):
     pose_data = list()
     logger.info('Parsing {} poses'.format(len(poses_2d)))
+    if progress_bar:
+        if notebook:
+            poses_2d=tqdm.tqdm_notebook(poses_2d)
+        else:
+            poses_2d=tqdm.tqdm(poses_2d)
     for pose in poses_2d:
         if pose.get('person') is None:
             pose['person'] = {}
