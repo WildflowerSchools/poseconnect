@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from pandas.plotting import register_matplotlib_converters
-# import slugify
+import slugify
 import os
 
 register_matplotlib_converters()
@@ -78,11 +78,12 @@ def track_timeline(
         path = os.path.join(
             save_directory,
             '{}{}.{}'.format(
-                camera_info['camera_name'],
+                slugify.slugify(camera_info['camera_name']),
                 filename_suffix,
                 filename_extension
             )
         )
+        fig.savefig(path)
 
 def extract_camera_info(df):
     # Extract camera device ID
