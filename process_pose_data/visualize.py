@@ -85,6 +85,71 @@ def track_timeline(
         )
         fig.savefig(path)
 
+def pose_quality_histograms(
+    df,
+    bins=30,
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_suffix='_pose_quality',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    for camera_device_id, group_df in df.groupby('camera_device_id'):
+        pose_quality_histogram(
+            df=group_df,
+            bins=bins,
+            show=show,
+            save=save,
+            save_directory=save_directory,
+            filename_suffix=filename_suffix,
+            filename_extension=filename_extension,
+            fig_width_inches=fig_width_inches,
+            fig_height_inches=fig_height_inches
+        )
+
+
+def pose_quality_histogram(
+    df,
+    bins=30,
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_suffix='_pose_quality',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    # Extract camera info
+    camera_info = extract_camera_info(df)
+    # Build plot
+    fig, axes = plt.subplots()
+    plot_object=axes.hist(
+        df['pose_quality'],
+        bins=bins
+    )
+    axes.set_xlabel('Pose quality')
+    axes.set_ylabel('Number of poses')
+    fig.suptitle('{} ({})'.format(
+        camera_info['camera_name'],
+        df['timestamp'].min().isoformat()))
+    fig.set_size_inches(fig_width_inches, fig_height_inches)
+    # Show plot
+    if show:
+        plt.show()
+    # Save plot
+    if save:
+        path = os.path.join(
+            save_directory,
+            '{}{}.{}'.format(
+                slugify.slugify(camera_info['camera_name']),
+                filename_suffix,
+                filename_extension
+            )
+        )
+        fig.savefig(path)
+
 def extract_camera_info(df):
     # Extract camera device ID
     camera_device_ids = df['camera_device_id'].unique().tolist()
