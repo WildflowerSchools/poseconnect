@@ -109,7 +109,6 @@ def pose_quality_histograms(
             fig_height_inches=fig_height_inches
         )
 
-
 def pose_quality_histogram(
     df,
     bins=30,
@@ -131,6 +130,71 @@ def pose_quality_histogram(
     )
     axes.set_xlabel('Pose quality')
     axes.set_ylabel('Number of poses')
+    fig.suptitle('{} ({})'.format(
+        camera_info['camera_name'],
+        df['timestamp'].min().isoformat()))
+    fig.set_size_inches(fig_width_inches, fig_height_inches)
+    # Show plot
+    if show:
+        plt.show()
+    # Save plot
+    if save:
+        path = os.path.join(
+            save_directory,
+            '{}{}.{}'.format(
+                slugify.slugify(camera_info['camera_name']),
+                filename_suffix,
+                filename_extension
+            )
+        )
+        fig.savefig(path)
+
+def keypoint_quality_histograms(
+    df,
+    bins=30,
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_suffix='_keypoint_quality',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    for camera_device_id, group_df in df.groupby('camera_device_id'):
+        keypoint_quality_histogram(
+            df=group_df,
+            bins=bins,
+            show=show,
+            save=save,
+            save_directory=save_directory,
+            filename_suffix=filename_suffix,
+            filename_extension=filename_extension,
+            fig_width_inches=fig_width_inches,
+            fig_height_inches=fig_height_inches
+        )
+
+def keypoint_quality_histogram(
+    df,
+    bins=30,
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_suffix='_keypoint_quality',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    # Extract camera info
+    camera_info = extract_camera_info(df)
+    keypoint_quality = np.concatenate(df['keypoint_quality_array'].values)
+    # Build plot
+    fig, axes = plt.subplots()
+    plot_object=axes.hist(
+        keypoint_quality,
+        bins=bins
+    )
+    axes.set_xlabel('Keypoint quality')
+    axes.set_ylabel('Number of keypoints')
     fig.suptitle('{} ({})'.format(
         camera_info['camera_name'],
         df['timestamp'].min().isoformat()))
