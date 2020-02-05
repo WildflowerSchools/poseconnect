@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from pandas.plotting import register_matplotlib_converters
+import seaborn as sns
 import slugify
 import os
 
@@ -271,6 +272,70 @@ def pose_keypoint_quality_scatter(
             '{}{}.{}'.format(
                 slugify.slugify(camera_info['camera_name']),
                 filename_suffix,
+                filename_extension
+            )
+        )
+        fig.savefig(path)
+
+def match_scores_heatmap(
+    scores_df,
+    score_metric,
+    min_num_common_frames=None,
+    min_score_metric=None,
+    max_score_metric=None,
+    color_map_name = 'summer_r',
+    score_axis_label = 'Score',
+    title_label = 'Scores',
+    show=True,
+    save=False,
+    save_directory='.',
+    filename='match_scores_heatmap',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    camera_names_a = scores_df['camera_name_a'].unique().tolist()
+    camera_names_b = scores_df['camera_name_b'].unique().tolist()
+    if len(camera_names_a) > 1:
+        raise ValueError('More than one camera name found for camera A')
+    if len(camera_names_b) > 1:
+        raise ValueError('More than one camera name found for camera B')
+    camera_name_a = camera_names_a[0]
+    camera_name_b = camera_names_b[0]
+    df = scores_df.copy()
+    if min_num_common_frames is not None:
+        df.loc[df['num_common_frames'] < min_num_common_frames, score_metric] = np.nan
+    if min_score_metric is not None:
+        df.loc[df[score_metric] < min_score_metric, score_metric] = np.nan
+    if max_score_metric is not None:
+        df.loc[df[score_metric] > max_score_metric, score_metric] = np.nan
+    pivot_df=df.pivot(index='track_label_a', columns='track_label_b', values=score_metric)
+    fig, axes = plt.subplots()
+    sns.heatmap(
+        pivot_df,
+        cmap=color_map_name,
+        linewidths=0.1,
+        linecolor='gray',
+        annot=True,
+        ax=axes,
+        square=True,
+        cbar_kws = {
+            'label': score_axis_label
+        }
+    )
+    axes.set_ylabel('{} track labels'.format(camera_name_a))
+    axes.set_xlabel('{} track labels'.format(camera_name_b))
+    axes.set_title(title_label)
+    fig.set_size_inches(fig_width_inches, fig_height_inches)
+    # Show plot
+    if show:
+        plt.show()
+    # Save plot
+    if save:
+        path = os.path.join(
+            save_directory,
+            '{}.{}'.format(
+                filename,
                 filename_extension
             )
         )
