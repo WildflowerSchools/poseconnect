@@ -168,3 +168,169 @@ def score_pose_track_matches(
                 10**3*elapsed_time/num_potential_matches
             ))
     return(pd.DataFrame(results))
+
+def calculate_3d_poses(
+    df,
+    camera_info
+):
+    df_list=list()
+    camera_device_ids = df['camera_device_id'].unique().tolist()
+    for camera_index_a, camera_device_id_a in enumerate(camera_device_ids):
+        for camera_device_id_b in camera_device_ids[(camera_index_a + 1):]:
+            camera_name_a = df.loc[df['camera_device_id'] == camera_device_id_a, 'camera_name'][0]
+            camera_name_b = df.loc[df['camera_device_id'] == camera_device_id_b, 'camera_name'][0]
+            track_labels_a = df.loc[df['camera_device_id'] == camera_device_id_a, 'track_label'].unique().tolist()
+            track_labels_b = df.loc[df['camera_device_id'] == camera_device_id_b, 'track_label'].unique().tolist()
+            num_tracks_a = len(track_labels_a)
+            num_tracks_b = len(track_labels_b)
+            num_potential_matches = num_tracks_a*num_tracks_b
+            logger.info('Calculating 3D poses between {} tracks from {} and {} tracks from {} ({} potential poses)'.format(
+                num_tracks_a,
+                camera_name_a,
+                num_tracks_b,
+                camera_name_b,
+                num_potential_matches
+            ))
+            start_time = time.time()
+            for track_label_a in track_labels_a:
+                for track_label_b in track_labels_b:
+                    df_a = df.loc[
+                        (df['camera_device_id'] == camera_device_id_a) &
+                        (df['track_label'] == track_label_a),
+                        ['timestamp', 'camera_device_id', 'camera_name', 'track_label', 'keypoint_array', 'keypoint_quality_array', 'pose_quality']
+                    ].set_index('timestamp')
+                    df_b = df.loc[
+                        (df['camera_device_id'] == camera_device_id_b) &
+                        (df['track_label'] == track_label_b),
+                        ['timestamp', 'camera_device_id', 'camera_name', 'track_label', 'keypoint_array', 'keypoint_quality_array', 'pose_quality']
+                    ].set_index('timestamp')
+                    df_join = df_a.join(df_b, how='inner', lsuffix='_a', rsuffix='_b')
+                    num_common_frames = len(df_join)
+                    if num_common_frames == 0:
+                        continue
+                    logger.debug('Track {}: {} timestamps. Track {}: {} timestamps. {} common timestamps'.format(
+                        track_label_a,
+                        len(df_a),
+                        track_label_b,
+                        len(df_b),
+                        num_common_frames
+                    ))
+                    keypoints_a = np.concatenate(df_join['keypoint_array_a'].values)
+                    keypoints_b = np.concatenate(df_join['keypoint_array_b'].values)
+                    keypoints_a_undistorted = cv_utils.undistort_points(
+                        keypoints_a,
+                        camera_info[camera_device_id_a]['camera_matrix'],
+                        camera_info[camera_device_id_a]['distortion_coefficients']
+                    )
+                    keypoints_b_undistorted = cv_utils.undistort_points(
+                        keypoints_b,
+                        camera_info[camera_device_id_b]['camera_matrix'],
+                        camera_info[camera_device_id_b]['distortion_coefficients']
+                    )
+                    object_points = cv_utils.reconstruct_object_points_from_camera_poses(
+                        keypoints_a_undistorted,
+                        keypoints_b_undistorted,
+                        camera_info[camera_device_id_a]['camera_matrix'],
+                        camera_info[camera_device_id_a]['rotation_vector'],
+                        camera_info[camera_device_id_a]['translation_vector'],
+                        camera_info[camera_device_id_b]['rotation_vector'],
+                        camera_info[camera_device_id_b]['translation_vector']
+                    )
+                    keypoints_a_reprojected = cv_utils.project_points(
+                        object_points,
+                        camera_info[camera_device_id_a]['rotation_vector'],
+                        camera_info[camera_device_id_a]['translation_vector'],
+                        camera_info[camera_device_id_a]['camera_matrix'],
+                        camera_info[camera_device_id_a]['distortion_coefficients']
+                    )
+                    keypoints_b_reprojected = cv_utils.project_points(
+                        object_points,
+                        camera_info[camera_device_id_b]['rotation_vector'],
+                        camera_info[camera_device_id_b]['translation_vector'],
+                        camera_info[camera_device_id_b]['camera_matrix'],
+                        camera_info[camera_device_id_b]['distortion_coefficients']
+                    )
+                    df_join['keypoint_array_3d'] = np.split(object_points, num_common_frames)
+                    df_join['keypoint_array_reprojected_a'] = np.split(keypoints_a_reprojected, num_common_frames)
+                    df_join['keypoint_array_reprojected_b'] = np.split(keypoints_b_reprojected, num_common_frames)
+                    df_list.append(df_join)
+            elapsed_time = time.time() - start_time
+            logger.info('Calculated 3D poses from {} track pairs in {:.3f} seconds ({:.1f} milliseconds per pair)'.format(
+                num_potential_matches,
+                elapsed_time,
+                10**3*elapsed_time/num_potential_matches
+            ))
+    return(pd.concat(df_list))
+
+def score_3d_poses(
+    poses_3d,
+    inplace=False
+):
+    if inplace:
+        poses_3d_scored = poses_3d
+    else:
+        poses_3d_scored = poses_3d.copy()
+    poses_3d_scored['reprojection_diff_a'] = (
+        poses_3d_scored['keypoint_array_reprojected_a'] -
+        poses_3d_scored['keypoint_array_a']
+    )
+    poses_3d_scored['reprojection_diff_b'] = (
+        poses_3d_scored['keypoint_array_reprojected_b'] -
+        poses_3d_scored['keypoint_array_b']
+    )
+    poses_3d_scored['mean_distance_a'] = poses_3d_scored['reprojection_diff_a'].apply(
+        lambda x: np.nanmean(np.linalg.norm(x, axis=1), axis=0)
+    )
+    poses_3d_scored['mean_distance_b'] = poses_3d_scored['reprojection_diff_b'].apply(
+        lambda x: np.nanmean(np.linalg.norm(x, axis=1), axis=0)
+    )
+    poses_3d_scored['rms_distance_a'] = poses_3d_scored['reprojection_diff_a'].apply(
+        lambda x: np.sqrt(np.nanmean(np.sum(np.square(x), axis=1), axis=0))
+    )
+    poses_3d_scored['rms_distance_b'] = poses_3d_scored['reprojection_diff_b'].apply(
+        lambda x: np.sqrt(np.nanmean(np.sum(np.square(x), axis=1), axis=0))
+    )
+    if not inplace:
+        return poses_3d_scored
+
+def score_3d_pose_tracks(
+    poses_3d
+):
+    df = poses_3d.copy()
+    df['reprojection_diff_a'] = (
+        df['keypoint_array_reprojected_a'] -
+        df['keypoint_array_a']
+    )
+    df['reprojection_diff_b'] = (
+        df['keypoint_array_reprojected_b'] -
+        df['keypoint_array_b']
+    )
+    poses_3d_grouped = df.groupby([
+        'camera_device_id_a',
+        'camera_name_a',
+        'camera_device_id_b',
+        'camera_name_b',
+        'track_label_a',
+        'track_label_b'
+    ])
+    num_common_frames = poses_3d_grouped.apply(len)
+    mean_distance_a = poses_3d_grouped.apply(lambda df:
+        np.nanmean(np.linalg.norm(np.concatenate(df['reprojection_diff_a'].values), axis=1), axis=0)
+    )
+    mean_distance_b = poses_3d_grouped.apply(lambda df:
+        np.nanmean(np.linalg.norm(np.concatenate(df['reprojection_diff_b'].values), axis=1), axis=0)
+    )
+    rms_distance_a = poses_3d_grouped.apply(lambda df:
+        np.sqrt(np.nanmean(np.sum(np.square(np.concatenate(df['reprojection_diff_a'].values)), axis=1), axis=0))
+    )
+    rms_distance_b = poses_3d_grouped.apply(lambda df:
+        np.sqrt(np.nanmean(np.sum(np.square(np.concatenate(df['reprojection_diff_b'].values)), axis=1), axis=0))
+    )
+    pose_tracks_3d_scored = pd.DataFrame({
+        'num_common_frames': num_common_frames,
+        'mean_distance_a': mean_distance_a,
+        'mean_distance_b': mean_distance_b,
+        'rms_distance_a': rms_distance_a,
+        'rms_distance_b': rms_distance_b
+    }).reset_index()
+    return pose_tracks_3d_scored
