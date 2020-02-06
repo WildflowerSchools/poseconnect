@@ -147,10 +147,10 @@ def score_pose_track_matches(
                         'num_common_frames': num_common_frames,
                         'mean_reproj_error_a': mean_reproj_error_a,
                         'mean_reproj_error_b': mean_reproj_error_b,
-                        'median_reproj_error_a': median_reproj_error_a,
-                        'median_reproj_error_b': median_reproj_error_b,
                         'root_mean_square_reproj_error_a': root_mean_square_reproj_error_a,
                         'root_mean_square_reproj_error_b': root_mean_square_reproj_error_b,
+                        'median_reproj_error_a': median_reproj_error_a,
+                        'median_reproj_error_b': median_reproj_error_b,
                         'root_median_square_reproj_error_a': root_median_square_reproj_error_a,
                         'root_median_square_reproj_error_b': root_median_square_reproj_error_b
                     })
@@ -275,6 +275,18 @@ def score_3d_poses(
     )
     poses_3d_scored['root_mean_square_reproj_error_b'] = poses_3d_scored['diff_b'].apply(
         lambda x: np.sqrt(np.nanmean(np.sum(np.square(x), axis=1), axis=0))
+    )
+    poses_3d_scored['median_reproj_error_a'] = poses_3d_scored['diff_a'].apply(
+        lambda x: np.nanmedian(np.linalg.norm(x, axis=1), axis=0)
+    )
+    poses_3d_scored['median_reproj_error_b'] = poses_3d_scored['diff_b'].apply(
+        lambda x: np.nanmedian(np.linalg.norm(x, axis=1), axis=0)
+    )
+    poses_3d_scored['root_median_square_reproj_error_a'] = poses_3d_scored['diff_a'].apply(
+        lambda x: np.sqrt(np.nanmedian(np.sum(np.square(x), axis=1), axis=0))
+    )
+    poses_3d_scored['root_median_square_reproj_error_b'] = poses_3d_scored['diff_b'].apply(
+        lambda x: np.sqrt(np.nanmedian(np.sum(np.square(x), axis=1), axis=0))
     )
     if not inplace:
         return poses_3d_scored
