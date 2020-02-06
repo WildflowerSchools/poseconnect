@@ -160,7 +160,17 @@ def score_pose_track_matches(
                 elapsed_time,
                 10**3*elapsed_time/num_potential_matches
             ))
-    return(pd.DataFrame(results))
+    pose_tracks_3d_scored = pd.DataFrame(results)
+    pose_tracks_3d_scored.sort_values(
+        [
+            'camera_device_id_a',
+            'camera_device_id_b',
+            'track_label_a',
+            'track_label_b'
+        ],
+        inplace=True
+    )
+    return pose_tracks_3d_scored
 
 def calculate_3d_poses(
     df,
@@ -246,7 +256,37 @@ def calculate_3d_poses(
                 elapsed_time,
                 10**3*elapsed_time/num_potential_matches
             ))
-    return(pd.concat(df_list))
+    poses_3d = pd.concat(df_list)
+    poses_3d.reset_index(inplace=True)
+    poses_3d = poses_3d.reindex(columns=[
+        'camera_device_id_a',
+        'camera_name_a',
+        'camera_device_id_b',
+        'camera_name_b',
+        'track_label_a',
+        'track_label_b',
+        'timestamp',
+        'keypoint_array_a',
+        'keypoint_quality_array_a',
+        'pose_quality_a',
+        'keypoint_array_b',
+        'keypoint_quality_array_b',
+        'pose_quality_b',
+        'keypoint_array_3d',
+        'keypoint_array_reprojected_a',
+        'keypoint_array_reprojected_b'
+    ])
+    poses_3d.sort_values(
+        [
+            'camera_device_id_a',
+            'camera_device_id_b',
+            'track_label_a',
+            'track_label_b',
+            'timestamp'
+        ],
+        inplace=True
+    )
+    return poses_3d
 
 def score_3d_poses(
     poses_3d,
@@ -287,6 +327,16 @@ def score_3d_poses(
     )
     poses_3d_scored['root_median_square_reproj_error_b'] = poses_3d_scored['diff_b'].apply(
         lambda x: np.sqrt(np.nanmedian(np.sum(np.square(x), axis=1), axis=0))
+    )
+    poses_3d_scored.sort_values(
+        [
+            'camera_device_id_a',
+            'camera_device_id_b',
+            'track_label_a',
+            'track_label_b',
+            'timestamp'
+        ],
+        inplace=True
     )
     if not inplace:
         return poses_3d_scored
@@ -347,4 +397,13 @@ def score_3d_pose_tracks(
         'root_median_square_reproj_error_a': root_median_square_reproj_error_a,
         'root_median_square_reproj_error_b': root_median_square_reproj_error_b
     }).reset_index()
+    pose_tracks_3d_scored.sort_values(
+        [
+            'camera_device_id_a',
+            'camera_device_id_b',
+            'track_label_a',
+            'track_label_b'
+        ],
+        inplace=True
+    )
     return pose_tracks_3d_scored
