@@ -88,13 +88,6 @@ def score_pose_track_matches(
                     num_common_frames = len(common_timestamps)
                     if num_common_frames == 0:
                         continue
-                    logger.debug('Track {}: {} timestamps. Track {}: {} timestamps. {} common timestamps'.format(
-                        track_label_a,
-                        len(df_a),
-                        track_label_b,
-                        len(df_b),
-                        len(common_timestamps)
-                    ))
                     keypoints_a = np.concatenate(df_a.reindex(common_timestamps)['keypoint_array'].values)
                     keypoints_b = np.concatenate(df_b.reindex(common_timestamps)['keypoint_array'].values)
                     keypoints_a_undistorted = cv_utils.undistort_points(
@@ -130,20 +123,20 @@ def score_pose_track_matches(
                         camera_info[camera_device_id_b]['camera_matrix'],
                         camera_info[camera_device_id_b]['distortion_coefficients']
                     )
-                    difference_a = keypoints_a_reprojected - keypoints_a
-                    difference_b = keypoints_b_reprojected - keypoints_b
-                    difference_a_norms = np.linalg.norm(difference_a, axis=1)
-                    difference_b_norms = np.linalg.norm(difference_b, axis=1)
-                    difference_a_sum_squares = np.sum(np.square(difference_a), axis=1)
-                    difference_b_sum_squares = np.sum(np.square(difference_b), axis=1)
-                    mean_reprojection_error_a = np.nanmean(difference_a_norms)
-                    mean_reprojection_error_b = np.nanmean(difference_b_norms)
-                    rms_reprojection_error_a = np.sqrt(np.nanmean(difference_a_sum_squares))
-                    rms_reprojection_error_b = np.sqrt(np.nanmean(difference_b_sum_squares))
-                    median_reprojection_error_a = np.nanmedian(difference_a_norms)
-                    median_reprojection_error_b = np.nanmedian(difference_b_norms)
-                    r_median_s_reprojection_error_a = np.sqrt(np.nanmedian(difference_a_sum_squares))
-                    r_median_s_reprojection_error_b = np.sqrt(np.nanmedian(difference_b_sum_squares))
+                    diff_a = keypoints_a_reprojected - keypoints_a
+                    diff_b = keypoints_b_reprojected - keypoints_b
+                    diff_a_norms = np.linalg.norm(diff_a, axis=1)
+                    diff_b_norms = np.linalg.norm(diff_b, axis=1)
+                    diff_a_sum_squares = np.sum(np.square(diff_a), axis=1)
+                    diff_b_sum_squares = np.sum(np.square(diff_b), axis=1)
+                    mean_reproj_error_a = np.nanmean(diff_a_norms)
+                    mean_reproj_error_b = np.nanmean(diff_b_norms)
+                    root_mean_square_reproj_error_a = np.sqrt(np.nanmean(diff_a_sum_squares))
+                    root_mean_square_reproj_error_b = np.sqrt(np.nanmean(diff_b_sum_squares))
+                    median_reproj_error_a = np.nanmedian(diff_a_norms)
+                    median_reproj_error_b = np.nanmedian(diff_b_norms)
+                    root_median_square_reproj_error_a = np.sqrt(np.nanmedian(diff_a_sum_squares))
+                    root_median_square_reproj_error_b = np.sqrt(np.nanmedian(diff_b_sum_squares))
                     results.append({
                         'camera_device_id_a': camera_device_id_a,
                         'camera_name_a': camera_name_a,
@@ -152,14 +145,14 @@ def score_pose_track_matches(
                         'track_label_a': track_label_a,
                         'track_label_b': track_label_b,
                         'num_common_frames': num_common_frames,
-                        'mean_reprojection_error_a': mean_reprojection_error_a,
-                        'mean_reprojection_error_b': mean_reprojection_error_b,
-                        'median_reprojection_error_a': median_reprojection_error_a,
-                        'median_reprojection_error_b': median_reprojection_error_b,
-                        'rms_reprojection_error_a': rms_reprojection_error_a,
-                        'rms_reprojection_error_b': rms_reprojection_error_b,
-                        'r_median_s_reprojection_error_a': r_median_s_reprojection_error_a,
-                        'r_median_s_reprojection_error_b': r_median_s_reprojection_error_b
+                        'mean_reproj_error_a': mean_reproj_error_a,
+                        'mean_reproj_error_b': mean_reproj_error_b,
+                        'median_reproj_error_a': median_reproj_error_a,
+                        'median_reproj_error_b': median_reproj_error_b,
+                        'root_mean_square_reproj_error_a': root_mean_square_reproj_error_a,
+                        'root_mean_square_reproj_error_b': root_mean_square_reproj_error_b,
+                        'root_median_square_reproj_error_a': root_median_square_reproj_error_a,
+                        'root_median_square_reproj_error_b': root_median_square_reproj_error_b
                     })
             elapsed_time = time.time() - start_time
             logger.info('Scored {} potential matches in {:.3f} seconds ({:.1f} milliseconds per match)'.format(
@@ -208,13 +201,6 @@ def calculate_3d_poses(
                     num_common_frames = len(df_join)
                     if num_common_frames == 0:
                         continue
-                    logger.debug('Track {}: {} timestamps. Track {}: {} timestamps. {} common timestamps'.format(
-                        track_label_a,
-                        len(df_a),
-                        track_label_b,
-                        len(df_b),
-                        num_common_frames
-                    ))
                     keypoints_a = np.concatenate(df_join['keypoint_array_a'].values)
                     keypoints_b = np.concatenate(df_join['keypoint_array_b'].values)
                     keypoints_a_undistorted = cv_utils.undistort_points(
@@ -270,24 +256,24 @@ def score_3d_poses(
         poses_3d_scored = poses_3d
     else:
         poses_3d_scored = poses_3d.copy()
-    poses_3d_scored['reprojection_diff_a'] = (
+    poses_3d_scored['diff_a'] = (
         poses_3d_scored['keypoint_array_reprojected_a'] -
         poses_3d_scored['keypoint_array_a']
     )
-    poses_3d_scored['reprojection_diff_b'] = (
+    poses_3d_scored['diff_b'] = (
         poses_3d_scored['keypoint_array_reprojected_b'] -
         poses_3d_scored['keypoint_array_b']
     )
-    poses_3d_scored['mean_distance_a'] = poses_3d_scored['reprojection_diff_a'].apply(
+    poses_3d_scored['mean_reproj_error_a'] = poses_3d_scored['diff_a'].apply(
         lambda x: np.nanmean(np.linalg.norm(x, axis=1), axis=0)
     )
-    poses_3d_scored['mean_distance_b'] = poses_3d_scored['reprojection_diff_b'].apply(
+    poses_3d_scored['mean_reproj_error_b'] = poses_3d_scored['diff_b'].apply(
         lambda x: np.nanmean(np.linalg.norm(x, axis=1), axis=0)
     )
-    poses_3d_scored['rms_distance_a'] = poses_3d_scored['reprojection_diff_a'].apply(
+    poses_3d_scored['root_mean_square_reproj_error_a'] = poses_3d_scored['diff_a'].apply(
         lambda x: np.sqrt(np.nanmean(np.sum(np.square(x), axis=1), axis=0))
     )
-    poses_3d_scored['rms_distance_b'] = poses_3d_scored['reprojection_diff_b'].apply(
+    poses_3d_scored['root_mean_square_reproj_error_b'] = poses_3d_scored['diff_b'].apply(
         lambda x: np.sqrt(np.nanmean(np.sum(np.square(x), axis=1), axis=0))
     )
     if not inplace:
@@ -297,11 +283,11 @@ def score_3d_pose_tracks(
     poses_3d
 ):
     df = poses_3d.copy()
-    df['reprojection_diff_a'] = (
+    df['diff_a'] = (
         df['keypoint_array_reprojected_a'] -
         df['keypoint_array_a']
     )
-    df['reprojection_diff_b'] = (
+    df['diff_b'] = (
         df['keypoint_array_reprojected_b'] -
         df['keypoint_array_b']
     )
@@ -314,23 +300,39 @@ def score_3d_pose_tracks(
         'track_label_b'
     ])
     num_common_frames = poses_3d_grouped.apply(len)
-    mean_distance_a = poses_3d_grouped.apply(lambda df:
-        np.nanmean(np.linalg.norm(np.concatenate(df['reprojection_diff_a'].values), axis=1), axis=0)
+    mean_reproj_error_a = poses_3d_grouped.apply(lambda df:
+        np.nanmean(np.linalg.norm(np.concatenate(df['diff_a'].values), axis=1), axis=0)
     )
-    mean_distance_b = poses_3d_grouped.apply(lambda df:
-        np.nanmean(np.linalg.norm(np.concatenate(df['reprojection_diff_b'].values), axis=1), axis=0)
+    mean_reproj_error_b = poses_3d_grouped.apply(lambda df:
+        np.nanmean(np.linalg.norm(np.concatenate(df['diff_b'].values), axis=1), axis=0)
     )
-    rms_distance_a = poses_3d_grouped.apply(lambda df:
-        np.sqrt(np.nanmean(np.sum(np.square(np.concatenate(df['reprojection_diff_a'].values)), axis=1), axis=0))
+    root_mean_square_reproj_error_a = poses_3d_grouped.apply(lambda df:
+        np.sqrt(np.nanmean(np.sum(np.square(np.concatenate(df['diff_a'].values)), axis=1), axis=0))
     )
-    rms_distance_b = poses_3d_grouped.apply(lambda df:
-        np.sqrt(np.nanmean(np.sum(np.square(np.concatenate(df['reprojection_diff_b'].values)), axis=1), axis=0))
+    root_mean_square_reproj_error_b = poses_3d_grouped.apply(lambda df:
+        np.sqrt(np.nanmean(np.sum(np.square(np.concatenate(df['diff_b'].values)), axis=1), axis=0))
+    )
+    median_reproj_error_a = poses_3d_grouped.apply(lambda df:
+        np.nanmedian(np.linalg.norm(np.concatenate(df['diff_a'].values), axis=1), axis=0)
+    )
+    median_reproj_error_b = poses_3d_grouped.apply(lambda df:
+        np.nanmedian(np.linalg.norm(np.concatenate(df['diff_b'].values), axis=1), axis=0)
+    )
+    root_median_square_reproj_error_a = poses_3d_grouped.apply(lambda df:
+        np.sqrt(np.nanmedian(np.sum(np.square(np.concatenate(df['diff_a'].values)), axis=1), axis=0))
+    )
+    root_median_square_reproj_error_b = poses_3d_grouped.apply(lambda df:
+        np.sqrt(np.nanmedian(np.sum(np.square(np.concatenate(df['diff_b'].values)), axis=1), axis=0))
     )
     pose_tracks_3d_scored = pd.DataFrame({
         'num_common_frames': num_common_frames,
-        'mean_distance_a': mean_distance_a,
-        'mean_distance_b': mean_distance_b,
-        'rms_distance_a': rms_distance_a,
-        'rms_distance_b': rms_distance_b
+        'mean_reproj_error_a': mean_reproj_error_a,
+        'mean_reproj_error_b': mean_reproj_error_b,
+        'root_mean_square_reproj_error_a': root_mean_square_reproj_error_a,
+        'root_mean_square_reproj_error_b': root_mean_square_reproj_error_b,
+        'median_reproj_error_a': median_reproj_error_a,
+        'median_reproj_error_b': median_reproj_error_b,
+        'root_median_square_reproj_error_a': root_median_square_reproj_error_a,
+        'root_median_square_reproj_error_b': root_median_square_reproj_error_b
     }).reset_index()
     return pose_tracks_3d_scored
