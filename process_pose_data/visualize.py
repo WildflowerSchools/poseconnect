@@ -191,7 +191,7 @@ def keypoint_quality_histogram(
     # Build plot
     fig, axes = plt.subplots()
     plot_object=axes.hist(
-        keypoint_quality,
+        keypoint_quality[~np.isnan(keypoint_quality)],
         bins=bins
     )
     axes.set_xlabel('Keypoint quality')
@@ -249,7 +249,7 @@ def pose_keypoint_quality_scatter(
 ):
     # Extract camera info
     camera_info = extract_camera_info(df)
-    mean_keypoint_quality = df['keypoint_quality_array'].apply(np.mean)
+    mean_keypoint_quality = df['keypoint_quality_array'].apply(np.nanmean)
     # Build plot
     fig, axes = plt.subplots()
     plot_object=axes.scatter(
