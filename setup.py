@@ -13,7 +13,9 @@ BASE_DEPENDENCIES = [
     'pandas>=0.25.3',
     'numpy>=1.18.1',
     'tqdm>=4.42.0',
-    'python-slugify>=4.0.0'
+    'python-slugify>=4.0.0',
+    'matplotlib>=3.1.2',
+    'seaborn>=0.10.0'
 ]
 
 # TEST_DEPENDENCIES = [
