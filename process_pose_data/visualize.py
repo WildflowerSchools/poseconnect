@@ -278,7 +278,8 @@ def pose_keypoint_quality_scatter(
         fig.savefig(path)
 
 def match_scores_heatmap(
-    scores_df,
+    df,
+    camera_device_ids,
     score_metric,
     min_num_common_frames=None,
     min_score_metric=None,
@@ -294,6 +295,22 @@ def match_scores_heatmap(
     fig_width_inches=10.5,
     fig_height_inches=8
 ):
+    if len(camera_device_ids) != 2:
+        raise ValueError('Must specify exactly two camera device IDs')
+    camera_device_ids_a = df['camera_device_id_a'].unique().tolist()
+    camera_device_ids_b = df['camera_device_id_b'].unique().tolist()
+    if camera_device_ids[0] in camera_device_ids_a and camera_device_ids[1] in camera_device_ids_b:
+        camera_device_id_a = camera_device_ids[0]
+        camera_device_id_b = camera_device_ids[1]
+    elif camera_device_ids[1] in camera_device_ids_a and camera_device_ids[0] in camera_device_ids_b:
+        camera_device_id_a = camera_device_ids[1]
+        camera_device_id_b = camera_device_ids[0]
+    else:
+        raise ValueError('Camera pair not found in data')
+    scores_df = df.loc[
+        (df['camera_device_id_a'] == camera_device_id_a) &
+        (df['camera_device_id_b'] == camera_device_id_b)
+    ].copy()
     camera_names_a = scores_df['camera_name_a'].unique().tolist()
     camera_names_b = scores_df['camera_name_b'].unique().tolist()
     if len(camera_names_a) > 1:
