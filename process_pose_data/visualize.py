@@ -277,7 +277,7 @@ def pose_keypoint_quality_scatter(
         )
         fig.savefig(path)
 
-def match_scores_heatmap(
+def pose_track_scores_heatmap(
     df,
     camera_device_ids,
     score_metric,
