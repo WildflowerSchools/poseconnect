@@ -302,3 +302,215 @@ def create_geom_collection_2d(
         geom_list = geom_list
     )
     return geom_collection_2d
+
+def render_pose_track_match(
+    df,
+    camera_device_ids,
+    match,
+    frames_per_second,
+    num_keypoints_per_pose,
+    num_spatial_dimensions_per_keypoint,
+    keypoint_connectors,
+    source_track_label_color='ff0000',
+    source_track_label_alpha=1.0,
+    source_keypoint_color='00ff00',
+    source_keypoint_alpha=0.3,
+    source_pose_line_color='00ff00',
+    source_pose_line_alpha=0.3,
+    reprojection_track_label_color='ff0000',
+    reprojection_track_label_alpha=1.0,
+    reprojection_keypoint_color='ffff00',
+    reprojection_keypoint_alpha=0.3,
+    reprojection_pose_line_color='ffff00',
+    reprojection_pose_line_alpha=0.3,
+    progress_bar=False,
+    notebook=False
+):
+    if len(camera_device_ids) != 2:
+        raise ValueError('Must specify exactly two camera device IDs')
+    camera_device_ids_a = df['camera_device_id_a'].unique().tolist()
+    camera_device_ids_b = df['camera_device_id_b'].unique().tolist()
+    if camera_device_ids[0] in camera_device_ids_a and camera_device_ids[1] in camera_device_ids_b:
+        camera_device_id_a = camera_device_ids[0]
+        camera_device_id_b = camera_device_ids[1]
+        track_label_a = match[0]
+        track_label_b = match[1]
+    elif camera_device_ids[1] in camera_device_ids_a and camera_device_ids[0] in camera_device_ids_b:
+        camera_device_id_a = camera_device_ids[1]
+        camera_device_id_b = camera_device_ids[0]
+        track_label_a = match[1]
+        track_label_b = match[0]
+    else:
+        raise ValueError('Camera pair not found in data')
+    df_match = df.loc[
+        (df['camera_device_id_a'] == camera_device_id_a) &
+        (df['camera_device_id_b'] == camera_device_id_b) &
+        (df['track_label_a'] == track_label_a) &
+        (df['track_label_b'] == track_label_b)
+    ].copy().set_index('timestamp').sort_index()
+    geom_list_camera_a = list()
+    geom_list_camera_b = list()
+    logger.info('Calculating geom collection for source track in camera A')
+    geom_list_camera_a.append(geom_collection_pose_track(
+        poses_2d_series = df_match['keypoint_array_a'],
+        label=track_label_a,
+        frames_per_second=frames_per_second,
+        num_keypoints_per_pose=num_keypoints_per_pose,
+        num_spatial_dimensions_per_keypoint=num_spatial_dimensions_per_keypoint,
+        keypoint_connectors=keypoint_connectors,
+        track_label_color=source_track_label_color,
+        track_label_alpha=source_track_label_alpha,
+        keypoint_color=source_keypoint_color,
+        keypoint_alpha=source_keypoint_alpha,
+        pose_line_color=source_pose_line_color,
+        pose_line_alpha=source_pose_line_alpha,
+        progress_bar=progress_bar,
+        notebook=notebook
+    ))
+    logger.info('Calculating geom collection for source track in camera B')
+    geom_list_camera_b.append(geom_collection_pose_track(
+        poses_2d_series = df_match['keypoint_array_b'],
+        label=track_label_b,
+        frames_per_second=frames_per_second,
+        num_keypoints_per_pose=num_keypoints_per_pose,
+        num_spatial_dimensions_per_keypoint=num_spatial_dimensions_per_keypoint,
+        keypoint_connectors=keypoint_connectors,
+        track_label_color=source_track_label_color,
+        track_label_alpha=source_track_label_alpha,
+        keypoint_color=source_keypoint_color,
+        keypoint_alpha=source_keypoint_alpha,
+        pose_line_color=source_pose_line_color,
+        pose_line_alpha=source_pose_line_alpha,
+        progress_bar=progress_bar,
+        notebook=notebook
+    ))
+    logger.info('Calculating geom collection for reprojected match ({}-{}) in camera A'.format(
+        track_label_a,
+        track_label_b
+    ))
+    geom_list_camera_a.append(geom_collection_pose_track(
+        poses_2d_series = df_match['keypoint_array_reprojected_a'],
+        label='{}-{}'.format(track_label_a, track_label_b),
+        frames_per_second=frames_per_second,
+        num_keypoints_per_pose=num_keypoints_per_pose,
+        num_spatial_dimensions_per_keypoint=num_spatial_dimensions_per_keypoint,
+        keypoint_connectors=keypoint_connectors,
+        track_label_color=reprojection_track_label_color,
+        track_label_alpha=reprojection_track_label_alpha,
+        keypoint_color=reprojection_keypoint_color,
+        keypoint_alpha=reprojection_keypoint_alpha,
+        pose_line_color=reprojection_pose_line_color,
+        pose_line_alpha=reprojection_pose_line_alpha,
+        progress_bar=progress_bar,
+        notebook=notebook
+    ))
+    logger.info('Calculating geom collection for reprojected match ({}-{}) in camera B'.format(
+        track_label_a,
+        track_label_b
+    ))
+    geom_list_camera_b.append(geom_collection_pose_track(
+        poses_2d_series = df_match['keypoint_array_reprojected_b'],
+        label='{}-{}'.format(track_label_a, track_label_b),
+        frames_per_second=frames_per_second,
+        num_keypoints_per_pose=num_keypoints_per_pose,
+        num_spatial_dimensions_per_keypoint=num_spatial_dimensions_per_keypoint,
+        keypoint_connectors=keypoint_connectors,
+        track_label_color=reprojection_track_label_color,
+        track_label_alpha=reprojection_track_label_alpha,
+        keypoint_color=reprojection_keypoint_color,
+        keypoint_alpha=reprojection_keypoint_alpha,
+        pose_line_color=reprojection_pose_line_color,
+        pose_line_alpha=reprojection_pose_line_alpha,
+        progress_bar=progress_bar,
+        notebook=notebook
+    ))
+    logger.info('Combining geom collections for camera A')
+    geom_camera_a = geom_render.GeomCollection2D.from_geom_list(
+        geom_list=geom_list_camera_a,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
+    logger.info('Combining geom collections for camera B')
+    geom_camera_b = geom_render.GeomCollection2D.from_geom_list(
+        geom_list=geom_list_camera_b,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
+    return geom_camera_a, geom_camera_b
+
+def geom_collection_pose_track(
+    poses_2d_series,
+    label,
+    frames_per_second,
+    num_keypoints_per_pose,
+    num_spatial_dimensions_per_keypoint,
+    keypoint_connectors,
+    track_label_color,
+    track_label_alpha,
+    keypoint_color,
+    keypoint_alpha,
+    pose_line_color,
+    pose_line_alpha,
+    progress_bar=False,
+    notebook=False
+):
+    # Calculate time index information
+    time_between_frames = datetime.timedelta(microseconds=10**6/frames_per_second)
+    min_timestamp = poses_2d_series.index.min()
+    max_timestamp = poses_2d_series.index.max()
+    start_time = min_timestamp.to_pydatetime()
+    end_time = max_timestamp.to_pydatetime()
+    num_frames = int(round((end_time - start_time)/time_between_frames)) + 1
+    coordinates = np.full((num_frames, num_keypoints_per_pose + 1, num_spatial_dimensions_per_keypoint), np.nan)
+    if progress_bar:
+        if notebook:
+            series_iterable = tqdm.tqdm_notebook(poses_2d_series.iteritems(), total=len(poses_2d_series))
+        else:
+            series_iterable = tqdm.tqdm(poses_2d_series.iteritems(), total=len(poses_2d_series))
+    else:
+        series_iterable = df.iteritems()
+    for timestamp, keypoint_array in series_iterable:
+        frame_index = int(round((timestamp.to_pydatetime() - min_timestamp)/time_between_frames))
+        centroid = np.nanmean(keypoint_array, axis=0)
+        coordinates[frame_index, 0:num_keypoints_per_pose] = keypoint_array
+        coordinates[frame_index, num_keypoints_per_pose] = centroid
+    # Define geom list
+    geom_list = []
+    # Label
+    geom_list.append(
+        geom_render.Text2D(
+            coordinate_indices=[num_keypoints_per_pose],
+            text=str(label),
+            color=track_label_color,
+            alpha=track_label_alpha
+        )
+    )
+    # Points to represent keypoints
+    for keypoint_index in range(num_keypoints_per_pose):
+        geom_list.append(
+            geom_render.Point2D(
+                coordinate_indices=[keypoint_index],
+                color=keypoint_color,
+                alpha=keypoint_alpha
+            )
+        )
+    # Lines to represent keypoint connectors
+    for keypoint_connector in keypoint_connectors:
+        geom_list.append(
+            geom_render.Line2D(
+                coordinate_indices = [
+                    keypoint_connector[0],
+                    keypoint_connector[1]
+                ],
+                color=pose_line_color,
+                alpha=pose_line_alpha
+            )
+        )
+    geom_collection_2d = geom_render.GeomCollection2D(
+        start_time=start_time,
+        frames_per_second=frames_per_second,
+        num_frames=num_frames,
+        coordinates = coordinates,
+        geom_list = geom_list
+    )
+    return geom_collection_2d
