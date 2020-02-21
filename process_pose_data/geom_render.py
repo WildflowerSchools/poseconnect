@@ -17,6 +17,7 @@ def fetch_geoms_2d_by_inference_execution(
     inference_version=None,
     chunk_size=100,
     frames_per_second=10.0,
+    include_track_labels=True,
     track_label_color='ff0000',
     track_label_alpha=1.0,
     keypoint_color='00ff00',
@@ -50,6 +51,7 @@ def fetch_geoms_2d_by_inference_execution(
     geom_collection_2d_dict = create_geom_collection_2d_dict(
         df,
         frames_per_second=frames_per_second,
+        include_track_labels=include_track_labels,
         track_label_color=track_label_color,
         track_label_alpha=track_label_alpha,
         keypoint_color=keypoint_color,
@@ -73,6 +75,7 @@ def fetch_geoms_2d_by_time_span(
     camera_device_types=['PI3WITHCAMERA'],
     chunk_size=100,
     frames_per_second=10.0,
+    include_track_labels=True,
     track_label_color='ff0000',
     track_label_alpha=1.0,
     keypoint_color='00ff00',
@@ -106,6 +109,7 @@ def fetch_geoms_2d_by_time_span(
     geom_collection_2d_dict = create_geom_collection_2d_dict(
         df,
         frames_per_second=frames_per_second,
+        include_track_labels=include_track_labels,
         track_label_color=track_label_color,
         track_label_alpha=track_label_alpha,
         keypoint_color=keypoint_color,
@@ -125,6 +129,7 @@ def fetch_geoms_2d_by_time_span(
 def create_geom_collection_2d_dict(
     df,
     frames_per_second=10.0,
+    include_track_labels=True,
     track_label_color='ff0000',
     track_label_alpha=1.0,
     keypoint_color='00ff00',
@@ -182,6 +187,7 @@ def create_geom_collection_2d_dict(
             num_keypoints=num_keypoints,
             keypoint_connectors=keypoint_conectors,
             frames_per_second=frames_per_second,
+            include_track_labels=include_track_labels,
             track_label_color=track_label_color,
             track_label_alpha=track_label_alpha,
             keypoint_color=keypoint_color,
@@ -198,6 +204,7 @@ def create_geom_collection_2d(
     num_keypoints,
     keypoint_connectors,
     frames_per_second=10.0,
+    include_track_labels=True,
     track_label_color='ff0000',
     track_label_alpha=1.0,
     keypoint_color='00ff00',
@@ -265,14 +272,15 @@ def create_geom_collection_2d(
         base_coordinate_index = track_index*(num_keypoints + 1)
         track_label = track_labels[track_index]
         # Track label
-        geom_list.append(
-            geom_render.Text2D(
-                coordinate_indices=[base_coordinate_index + num_keypoints],
-                text=str(track_label),
-                color=track_label_color,
-                alpha=track_label_alpha
+        if include_track_labels:
+            geom_list.append(
+                geom_render.Text2D(
+                    coordinate_indices=[base_coordinate_index + num_keypoints],
+                    text=str(track_label),
+                    color=track_label_color,
+                    alpha=track_label_alpha
+                )
             )
-        )
         # Points to represent keypoints
         for keypoint_index in range(num_keypoints):
             geom_list.append(
@@ -311,12 +319,14 @@ def render_pose_track_match(
     num_keypoints_per_pose,
     num_spatial_dimensions_per_keypoint,
     keypoint_connectors,
+    include_source_track_label=True,
     source_track_label_color='ff0000',
     source_track_label_alpha=1.0,
     source_keypoint_color='00ff00',
     source_keypoint_alpha=0.3,
     source_pose_line_color='00ff00',
     source_pose_line_alpha=0.3,
+    include_reprojection_track_label=True,
     reprojection_track_label_color='ff0000',
     reprojection_track_label_alpha=1.0,
     reprojection_keypoint_color='ffff00',
@@ -358,6 +368,7 @@ def render_pose_track_match(
         num_keypoints_per_pose=num_keypoints_per_pose,
         num_spatial_dimensions_per_keypoint=num_spatial_dimensions_per_keypoint,
         keypoint_connectors=keypoint_connectors,
+        include_track_label = include_source_track_label,
         track_label_color=source_track_label_color,
         track_label_alpha=source_track_label_alpha,
         keypoint_color=source_keypoint_color,
@@ -375,6 +386,7 @@ def render_pose_track_match(
         num_keypoints_per_pose=num_keypoints_per_pose,
         num_spatial_dimensions_per_keypoint=num_spatial_dimensions_per_keypoint,
         keypoint_connectors=keypoint_connectors,
+        include_track_label=include_source_track_label,
         track_label_color=source_track_label_color,
         track_label_alpha=source_track_label_alpha,
         keypoint_color=source_keypoint_color,
@@ -395,6 +407,7 @@ def render_pose_track_match(
         num_keypoints_per_pose=num_keypoints_per_pose,
         num_spatial_dimensions_per_keypoint=num_spatial_dimensions_per_keypoint,
         keypoint_connectors=keypoint_connectors,
+        include_track_label = include_reprojection_track_label,
         track_label_color=reprojection_track_label_color,
         track_label_alpha=reprojection_track_label_alpha,
         keypoint_color=reprojection_keypoint_color,
@@ -415,6 +428,7 @@ def render_pose_track_match(
         num_keypoints_per_pose=num_keypoints_per_pose,
         num_spatial_dimensions_per_keypoint=num_spatial_dimensions_per_keypoint,
         keypoint_connectors=keypoint_connectors,
+        include_track_label=include_reprojection_track_label,
         track_label_color=reprojection_track_label_color,
         track_label_alpha=reprojection_track_label_alpha,
         keypoint_color=reprojection_keypoint_color,
@@ -445,6 +459,7 @@ def geom_collection_pose_track(
     num_keypoints_per_pose,
     num_spatial_dimensions_per_keypoint,
     keypoint_connectors,
+    include_track_label,
     track_label_color,
     track_label_alpha,
     keypoint_color,
@@ -477,14 +492,15 @@ def geom_collection_pose_track(
     # Define geom list
     geom_list = []
     # Label
-    geom_list.append(
-        geom_render.Text2D(
-            coordinate_indices=[num_keypoints_per_pose],
-            text=str(label),
-            color=track_label_color,
-            alpha=track_label_alpha
+    if include_track_label:
+        geom_list.append(
+            geom_render.Text2D(
+                coordinate_indices=[num_keypoints_per_pose],
+                text=str(label),
+                color=track_label_color,
+                alpha=track_label_alpha
+            )
         )
-    )
     # Points to represent keypoints
     for keypoint_index in range(num_keypoints_per_pose):
         geom_list.append(
