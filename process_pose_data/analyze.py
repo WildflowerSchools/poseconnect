@@ -1,4 +1,5 @@
 import cv_utils
+import cv2 as cv
 import pandas as pd
 import numpy as np
 import logging
@@ -90,24 +91,17 @@ def score_pose_track_matches(
                         continue
                     keypoints_a = np.concatenate(df_a.reindex(common_timestamps)['keypoint_array'].values)
                     keypoints_b = np.concatenate(df_b.reindex(common_timestamps)['keypoint_array'].values)
-                    keypoints_a_undistorted = cv_utils.undistort_points(
-                        keypoints_a,
-                        camera_info[camera_device_id_a]['camera_matrix'],
-                        camera_info[camera_device_id_a]['distortion_coefficients']
-                    )
-                    keypoints_b_undistorted = cv_utils.undistort_points(
-                        keypoints_b,
-                        camera_info[camera_device_id_b]['camera_matrix'],
-                        camera_info[camera_device_id_b]['distortion_coefficients']
-                    )
-                    object_points = cv_utils.reconstruct_object_points_from_camera_poses(
-                        keypoints_a_undistorted,
-                        keypoints_b_undistorted,
-                        camera_info[camera_device_id_a]['camera_matrix'],
-                        camera_info[camera_device_id_a]['rotation_vector'],
-                        camera_info[camera_device_id_a]['translation_vector'],
-                        camera_info[camera_device_id_b]['rotation_vector'],
-                        camera_info[camera_device_id_b]['translation_vector']
+                    object_points = triangulate_image_points(
+                        image_points_1=keypoints_a,
+                        image_points_2=keypoints_b,
+                        camera_matrix_1=camera_info[camera_device_id_a]['camera_matrix'],
+                        distortion_coefficients_1=camera_info[camera_device_id_a]['distortion_coefficients'],
+                        rotation_vector_1=camera_info[camera_device_id_a]['rotation_vector'],
+                        translation_vector_1=camera_info[camera_device_id_a]['translation_vector'],
+                        camera_matrix_2=camera_info[camera_device_id_b]['camera_matrix'],
+                        distortion_coefficients_2=camera_info[camera_device_id_b]['distortion_coefficients'],
+                        rotation_vector_2=camera_info[camera_device_id_b]['rotation_vector'],
+                        translation_vector_2=camera_info[camera_device_id_b]['translation_vector']
                     )
                     keypoints_a_reprojected = cv_utils.project_points(
                         object_points,
@@ -213,24 +207,17 @@ def calculate_3d_poses(
                         continue
                     keypoints_a = np.concatenate(df_join['keypoint_array_a'].values)
                     keypoints_b = np.concatenate(df_join['keypoint_array_b'].values)
-                    keypoints_a_undistorted = cv_utils.undistort_points(
-                        keypoints_a,
-                        camera_info[camera_device_id_a]['camera_matrix'],
-                        camera_info[camera_device_id_a]['distortion_coefficients']
-                    )
-                    keypoints_b_undistorted = cv_utils.undistort_points(
-                        keypoints_b,
-                        camera_info[camera_device_id_b]['camera_matrix'],
-                        camera_info[camera_device_id_b]['distortion_coefficients']
-                    )
-                    object_points = cv_utils.reconstruct_object_points_from_camera_poses(
-                        keypoints_a_undistorted,
-                        keypoints_b_undistorted,
-                        camera_info[camera_device_id_a]['camera_matrix'],
-                        camera_info[camera_device_id_a]['rotation_vector'],
-                        camera_info[camera_device_id_a]['translation_vector'],
-                        camera_info[camera_device_id_b]['rotation_vector'],
-                        camera_info[camera_device_id_b]['translation_vector']
+                    object_points = triangulate_image_points(
+                        image_points_1=keypoints_a,
+                        image_points_2=keypoints_b,
+                        camera_matrix_1=camera_info[camera_device_id_a]['camera_matrix'],
+                        distortion_coefficients_1=camera_info[camera_device_id_a]['distortion_coefficients'],
+                        rotation_vector_1=camera_info[camera_device_id_a]['rotation_vector'],
+                        translation_vector_1=camera_info[camera_device_id_a]['translation_vector'],
+                        camera_matrix_2=camera_info[camera_device_id_b]['camera_matrix'],
+                        distortion_coefficients_2=camera_info[camera_device_id_b]['distortion_coefficients'],
+                        rotation_vector_2=camera_info[camera_device_id_b]['rotation_vector'],
+                        translation_vector_2=camera_info[camera_device_id_b]['translation_vector']
                     )
                     keypoints_a_reprojected = cv_utils.project_points(
                         object_points,
@@ -407,3 +394,70 @@ def score_3d_pose_tracks(
         inplace=True
     )
     return pose_tracks_3d_scored
+
+def triangulate_image_points(
+    image_points_1,
+    image_points_2,
+    camera_matrix_1,
+    distortion_coefficients_1,
+    rotation_vector_1,
+    translation_vector_1,
+    camera_matrix_2,
+    distortion_coefficients_2,
+    rotation_vector_2,
+    translation_vector_2
+):
+    image_points_1 = np.asarray(image_points_1)
+    image_points_2 = np.asarray(image_points_2)
+    camera_matrix_1 = np.asarray(camera_matrix_1)
+    distortion_coefficients_1 = np.asarray(distortion_coefficients_1)
+    rotation_vector_1 = np.asarray(rotation_vector_1)
+    translation_vector_1 = np.asarray(translation_vector_1)
+    camera_matrix_2 = np.asarray(camera_matrix_2)
+    distortion_coefficients_2 = np.asarray(distortion_coefficients_2)
+    rotation_vector_2 = np.asarray(rotation_vector_2)
+    translation_vector_2 = np.asarray(translation_vector_2)
+    if image_points_1.size == 0 or image_points_2.size == 0:
+        return np.zeros((0, 3))
+    if image_points_1.shape != image_points_2.shape:
+        raise ValueError('Sets of image points do not appear to be the same shape')
+    image_points_shape = image_points_1.shape
+    image_points_1 = image_points_1.reshape((-1, 2))
+    image_points_2 = image_points_2.reshape((-1, 2))
+    camera_matrix_1 = camera_matrix.reshape((3, 3))
+    distortion_coefficients_1 = np.squeeze(distortion_coefficients_1)
+    rotation_vector_1 = rotation_vector_1.reshape(3)
+    translation_vector_1 = translation_vector_1.reshape(3)
+    camera_matrix_2 = camera_matrix.reshape((3, 3))
+    distortion_coefficients_2 = np.squeeze(distortion_coefficients_2)
+    rotation_vector_2 = rotation_vector_2.reshape(3)
+    translation_vector_2 = translation_vector_2.reshape(3)
+    image_points_1_undistorted = cv_utils.undistort_points(
+        image_points_1,
+        camera_matrix_1,
+        distortion_coefficients_1
+    )
+    image_points_2_undistorted = cv_utils.undistort_points(
+        image_points_2,
+        camera_matrix_2,
+        distortion_coefficients_2
+    )
+    projection_matrix_1 = cv_utils.generate_projection_matrix(
+        camera_matrix_1,
+        rotation_vector_1,
+        translation_vector_1)
+    projection_matrix_2 = cv_utils.generate_projection_matrix(
+        camera_matrix_2,
+        rotation_vector_2,
+        translation_vector_2)
+    object_points_homogeneous = cv.triangulatePoints(
+        projection_matrix_1,
+        projection_matrix_2,
+        image_points_1.T,
+        image_points_2.T)
+    object_points = cv.convertPointsFromHomogeneous(
+        object_points_homogeneous.T
+    )
+    object_points = np.squeeze(object_points)
+    object_points.reshape(image_points_shape[:-1] + (, 3))
+    return object_points
