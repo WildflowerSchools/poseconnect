@@ -424,11 +424,11 @@ def triangulate_image_points(
     image_points_shape = image_points_1.shape
     image_points_1 = image_points_1.reshape((-1, 2))
     image_points_2 = image_points_2.reshape((-1, 2))
-    camera_matrix_1 = camera_matrix.reshape((3, 3))
+    camera_matrix_1 = camera_matrix_1.reshape((3, 3))
     distortion_coefficients_1 = np.squeeze(distortion_coefficients_1)
     rotation_vector_1 = rotation_vector_1.reshape(3)
     translation_vector_1 = translation_vector_1.reshape(3)
-    camera_matrix_2 = camera_matrix.reshape((3, 3))
+    camera_matrix_2 = camera_matrix_2.reshape((3, 3))
     distortion_coefficients_2 = np.squeeze(distortion_coefficients_2)
     rotation_vector_2 = rotation_vector_2.reshape(3)
     translation_vector_2 = translation_vector_2.reshape(3)
@@ -459,5 +459,19 @@ def triangulate_image_points(
         object_points_homogeneous.T
     )
     object_points = np.squeeze(object_points)
-    object_points.reshape(image_points_shape[:-1] + (, 3))
+    object_points.reshape(image_points_shape[:-1] + (3,))
     return object_points
+
+def pixel_distances(image_point_differences):
+    return np.linalg.norm(image_point_differences, axis=-1)
+
+def probability_distances(image_point_differences, pixel_distance_scale):
+    return np.multiply(
+        1/np.sqrt(2*np.pi*pixel_distance_scale**2),
+        np.exp(
+            np.divide(
+                -np.square(pixel_distances(image_point_differences)),
+                2*pixel_distance_scale**2
+            )
+        )
+    )
