@@ -27,28 +27,58 @@ def filter_pose_tracks(
     if max_pose_quality is not None:
         df_filtered = df_filtered.loc[df_filtered['pose_quality'] <= max_pose_quality]
     if min_keypoint_quality is not None or max_keypoint_quality is not None:
-        keypoint_arrays = df_filtered['keypoint_array'].values
-        num_keypoint_arrays = len(keypoint_arrays)
-        keypoints = np.concatenate(keypoint_arrays, axis = 0)
-        keypoints_quality_arrays = df_filtered['keypoint_quality_array'].values
-        num_keypoints_quality_arrays = len(keypoints_quality_arrays)
-        keypoints_quality = np.concatenate(keypoints_quality_arrays)
-        if num_keypoint_arrays != num_keypoints_quality_arrays:
-            raise ValueError('Number of keypoint arrays ({}) does not match number of keypoint quality arrays ({})'.format(
-                num_keypoint_arrays,
-                num_keypoints_quality_arrays
-            ))
-        num_spatial_dimensions_per_keypoint = keypoints.shape[1]
-        if min_keypoint_quality is not None:
-            keypoints[np.less(keypoints_quality, min_keypoint_quality, where=~np.isnan(keypoints_quality))] = np.array(num_spatial_dimensions_per_keypoint*[np.nan])
-            keypoints_quality[np.less(keypoints_quality, min_keypoint_quality, where=~np.isnan(keypoints_quality))] = np.nan
-        if max_keypoint_quality is not None:
-            keypoints[np.greater(keypoints_quality, max_keypoint_quality, where=~np.isnan(keypoints_quality))] = np.array(num_spatial_dimensions_per_keypoint*[np.nan])
-            keypoints_quality[np.greater(keypoints_quality, max_keypoint_quality, where=~np.isnan(keypoints_quality))] = np.nan
-        df_filtered['keypoint_array'] = np.split(keypoints, num_keypoint_arrays)
-        df_filtered['keypoint_quality_array'] = np.split(keypoints_quality, num_keypoints_quality_arrays)
+        df_filtered = filter_keypoint_quality(
+            df=df_filtered,
+            min_keypoint_quality=min_keypoint_quality,
+            max_keypoint_quality=max_keypoint_quality,
+            inplace=False
+        )
     if min_num_poses_in_track is not None:
         df_filtered = df.groupby(['camera_device_id', 'track_label']).filter(lambda x: len(x) >= min_num_poses_in_track)
+    if not inplace:
+        return df_filtered
+
+def filter_keypoint_quality(
+    df,
+    min_keypoint_quality=None,
+    max_keypoint_quality=None,
+    inplace=False
+):
+    # Make copy of input dataframe if operation is not in place
+    if inplace:
+        df_filtered = df
+    else:
+        df_filtered = df.copy()
+    keypoint_arrays = df_filtered['keypoint_array'].values
+    num_keypoint_arrays = len(keypoint_arrays)
+    keypoints = np.concatenate(keypoint_arrays, axis = 0)
+    keypoints_quality_arrays = df_filtered['keypoint_quality_array'].values
+    num_keypoints_quality_arrays = len(keypoints_quality_arrays)
+    keypoints_quality = np.concatenate(keypoints_quality_arrays)
+    if num_keypoint_arrays != num_keypoints_quality_arrays:
+        raise ValueError('Number of keypoint arrays ({}) does not match number of keypoint quality arrays ({})'.format(
+            num_keypoint_arrays,
+            num_keypoints_quality_arrays
+        ))
+    num_spatial_dimensions_per_keypoint = keypoints.shape[1]
+    if min_keypoint_quality is not None:
+        mask = np.less(
+            keypoints_quality,
+            min_keypoint_quality,
+            where=~np.isnan(keypoints_quality)
+        )
+        keypoints[mask] = np.array(num_spatial_dimensions_per_keypoint*[np.nan])
+        keypoints_quality[mask] = np.nan
+    if max_keypoint_quality is not None:
+        mask = np.greater(
+            keypoints_quality,
+            max_keypoint_quality,
+            where=~np.isnan(keypoints_quality)
+        )
+        keypoints[mask] = np.array(num_spatial_dimensions_per_keypoint*[np.nan])
+        keypoints_quality[mask] = np.nan
+    df_filtered['keypoint_array'] = np.split(keypoints, num_keypoint_arrays)
+    df_filtered['keypoint_quality_array'] = np.split(keypoints_quality, num_keypoints_quality_arrays)
     if not inplace:
         return df_filtered
 
