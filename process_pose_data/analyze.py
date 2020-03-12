@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import logging
 import time
+import itertools
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +121,36 @@ def filter_pose_quality(
         df_filtered = df_filtered.loc[df_filtered['pose_quality'] <= max_pose_quality]
     if not inplace:
         return df_filtered
+
+def generate_pose_pairs(
+    df
+):
+    timestamps = df['timestamp'].unique()
+    camera_device_ids = df['camera_device_id'].unique().tolist()
+    camera_device_id_pairs = list(itertools.combinations(camera_device_ids, 2))
+    pose_id_pairs = list()
+    for timestamp in timestamps:
+        for camera_device_id_pair in camera_device_id_pairs:
+            df_timestamp = df.loc[df['timestamp'] == timestamp]
+            pose_ids_a = df_timestamp.loc[df_timestamp['camera_device_id'] == camera_device_id_pair[0]].index.tolist()
+            pose_ids_b = df_timestamp.loc[df_timestamp['camera_device_id'] == camera_device_id_pair[1]].index.tolist()
+            pose_id_pairs_timestamp = list(itertools.product(pose_ids_a, pose_ids_b))
+            pose_id_pairs.extend(pose_id_pairs_timestamp)
+    pose_ids_a, pose_ids_b = map(list, zip(*pose_id_pairs))
+    pose_pairs = pd.concat(
+        (df.loc[pose_ids_a].reset_index(), df.loc[pose_ids_b].reset_index()),
+        keys=['a', 'b'],
+        axis=1
+    )
+    pose_pairs.set_index(
+        [('a', 'pose_id'), ('b', 'pose_id')],
+        inplace=True
+    )
+    pose_pairs.rename_axis(
+        ['a', 'b'],
+        inplace=True
+    )
+    return pose_pairs
 
 def score_pose_track_matches(
     df,
