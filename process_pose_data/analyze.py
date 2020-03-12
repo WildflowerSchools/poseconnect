@@ -125,32 +125,44 @@ def filter_pose_quality(
 def generate_pose_pairs(
     df
 ):
-    timestamps = df['timestamp'].unique()
-    camera_device_ids = df['camera_device_id'].unique().tolist()
-    camera_device_id_pairs = list(itertools.combinations(camera_device_ids, 2))
+    pose_pairs = df.groupby('timestamp').apply(generate_pose_pairs_timestamp)
+    return pose_pairs
+
+def generate_pose_pairs_timestamp(
+    df
+):
+    df_reduced = df.reindex(columns=[
+        'camera_device_id',
+        'track_label',
+        'keypoint_array',
+        'keypoint_quality_array',
+        'pose_quality'
+    ])
+    camera_device_ids = df_reduced['camera_device_id'].unique().tolist()
     pose_id_pairs = list()
-    for timestamp in timestamps:
-        for camera_device_id_pair in camera_device_id_pairs:
-            df_timestamp = df.loc[df['timestamp'] == timestamp]
-            pose_ids_a = df_timestamp.loc[df_timestamp['camera_device_id'] == camera_device_id_pair[0]].index.tolist()
-            pose_ids_b = df_timestamp.loc[df_timestamp['camera_device_id'] == camera_device_id_pair[1]].index.tolist()
-            pose_id_pairs_timestamp = list(itertools.product(pose_ids_a, pose_ids_b))
-            pose_id_pairs.extend(pose_id_pairs_timestamp)
-    pose_ids_a, pose_ids_b = map(list, zip(*pose_id_pairs))
-    pose_pairs = pd.concat(
-        (df.loc[pose_ids_a].reset_index(), df.loc[pose_ids_b].reset_index()),
+    for camera_device_id_a, camera_device_id_b in itertools.combinations(camera_device_ids, 2):
+        pose_ids_a = df_reduced.loc[df_reduced['camera_device_id'] == camera_device_id_a].index.tolist()
+        pose_ids_b = df_reduced.loc[df_reduced['camera_device_id'] == camera_device_id_b].index.tolist()
+        pose_id_pairs_camera_pair = list(itertools.product(pose_ids_a, pose_ids_b))
+        pose_id_pairs.extend(pose_id_pairs_camera_pair)
+    pose_ids_a = list()
+    pose_ids_b = list()
+    if len(pose_id_pairs) > 0:
+        pose_ids_a, pose_ids_b = map(list, zip(*pose_id_pairs))
+    pose_pairs_timestamp = pd.concat(
+        (df_reduced.loc[pose_ids_a].reset_index(), df_reduced.loc[pose_ids_b].reset_index()),
         keys=['a', 'b'],
         axis=1
     )
-    pose_pairs.set_index(
+    pose_pairs_timestamp.set_index(
         [('a', 'pose_id'), ('b', 'pose_id')],
         inplace=True
     )
-    pose_pairs.rename_axis(
-        ['a', 'b'],
+    pose_pairs_timestamp.rename_axis(
+        ['pose_id_a', 'pose_id_b'],
         inplace=True
     )
-    return pose_pairs
+    return pose_pairs_timestamp
 
 def score_pose_track_matches(
     df,
