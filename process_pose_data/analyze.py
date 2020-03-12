@@ -82,6 +82,27 @@ def filter_keypoint_quality(
     if not inplace:
         return df_filtered
 
+def filter_num_valid_keypoints(
+    df,
+    min_num_keypoints=None,
+    max_num_keypoints=None,
+    inplace=False
+):
+    # Make copy of input dataframe if operation is not in place
+    if inplace:
+        df_filtered = df
+    else:
+        df_filtered = df.copy()
+    num_keypoints = df['keypoint_quality_array'].apply(
+        lambda x: np.count_nonzero(~np.isnan(x))
+    )
+    if min_num_keypoints is not None:
+        df_filtered = df_filtered.loc[num_keypoints >= min_num_keypoints]
+    if max_num_keypoints is not None:
+        df_filtered = df_filtered.loc[num_keypoints <= max_num_keypoints]
+    if not inplace:
+        return df_filtered
+
 def score_pose_track_matches(
     df,
     camera_info
