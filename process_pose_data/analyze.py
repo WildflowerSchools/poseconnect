@@ -50,36 +50,36 @@ def filter_keypoint_quality(
         df_filtered = df
     else:
         df_filtered = df.copy()
-    keypoint_arrays = df_filtered['keypoint_array'].values
-    num_keypoint_arrays = len(keypoint_arrays)
-    keypoints = np.concatenate(keypoint_arrays, axis = 0)
-    keypoints_quality_arrays = df_filtered['keypoint_quality_array'].values
-    num_keypoints_quality_arrays = len(keypoints_quality_arrays)
-    keypoints_quality = np.concatenate(keypoints_quality_arrays)
-    if num_keypoint_arrays != num_keypoints_quality_arrays:
-        raise ValueError('Number of keypoint arrays ({}) does not match number of keypoint quality arrays ({})'.format(
-            num_keypoint_arrays,
-            num_keypoints_quality_arrays
+    keypoint_coordinate_arrays = df_filtered['keypoint_coordinates'].values
+    num_keypoint_coordinate_arrays = len(keypoint_coordinate_arrays)
+    keypoint_coordinates = np.concatenate(keypoint_coordinate_arrays, axis = 0)
+    keypoint_quality_arrays = df_filtered['keypoint_quality'].values
+    num_keypoint_quality_arrays = len(keypoint_quality_arrays)
+    keypoint_quality = np.concatenate(keypoint_quality_arrays)
+    if num_keypoint_coordinate_arrays != num_keypoint_quality_arrays:
+        raise ValueError('Number of keypoint coordinate arrays ({}) does not match number of keypoint quality arrays ({})'.format(
+            num_keypoint_coordinate_arrays,
+            num_keypoint_quality_arrays
         ))
-    num_spatial_dimensions_per_keypoint = keypoints.shape[1]
+    num_spatial_dimensions_per_keypoint = keypoint_coordinates.shape[1]
     if min_keypoint_quality is not None:
         mask = np.less(
-            keypoints_quality,
+            keypoint_quality,
             min_keypoint_quality,
-            where=~np.isnan(keypoints_quality)
+            where=~np.isnan(keypoint_quality)
         )
-        keypoints[mask] = np.array(num_spatial_dimensions_per_keypoint*[np.nan])
-        keypoints_quality[mask] = np.nan
+        keypoint_coordinates[mask] = np.array(num_spatial_dimensions_per_keypoint*[np.nan])
+        keypoint_quality[mask] = np.nan
     if max_keypoint_quality is not None:
         mask = np.greater(
-            keypoints_quality,
+            keypoint_quality,
             max_keypoint_quality,
-            where=~np.isnan(keypoints_quality)
+            where=~np.isnan(keypoint_quality)
         )
-        keypoints[mask] = np.array(num_spatial_dimensions_per_keypoint*[np.nan])
-        keypoints_quality[mask] = np.nan
-    df_filtered['keypoint_array'] = np.split(keypoints, num_keypoint_arrays)
-    df_filtered['keypoint_quality_array'] = np.split(keypoints_quality, num_keypoints_quality_arrays)
+        keypoint_coordinates[mask] = np.array(num_spatial_dimensions_per_keypoint*[np.nan])
+        keypoint_quality[mask] = np.nan
+    df_filtered['keypoint_coordinates'] = np.split(keypoint_coordinates, num_keypoint_coordinate_arrays)
+    df_filtered['keypoint_quality'] = np.split(keypoint_quality, num_keypoint_quality_arrays)
     if not inplace:
         return df_filtered
 

@@ -161,7 +161,7 @@ def keypoint_quality_histograms(
     fig_width_inches=10.5,
     fig_height_inches=8
 ):
-    for camera_device_id, group_df in df.groupby('camera_device_id'):
+    for camera_id, group_df in df.groupby('camera_id'):
         keypoint_quality_histogram(
             df=group_df,
             bins=bins,
@@ -186,8 +186,8 @@ def keypoint_quality_histogram(
     fig_height_inches=8
 ):
     # Extract camera info
-    camera_info = extract_camera_info(df)
-    keypoint_quality = np.concatenate(df['keypoint_quality_array'].values)
+    # camera_info = extract_camera_info(df)
+    keypoint_quality = np.concatenate(df['keypoint_quality'].values)
     # Build plot
     fig, axes = plt.subplots()
     plot_object=axes.hist(
@@ -196,9 +196,9 @@ def keypoint_quality_histogram(
     )
     axes.set_xlabel('Keypoint quality')
     axes.set_ylabel('Number of keypoints')
-    fig.suptitle('{} ({})'.format(
-        camera_info['camera_name'],
-        df['timestamp'].min().isoformat()))
+    # fig.suptitle('{} ({})'.format(
+    #     camera_info['camera_name'],
+    #     df['timestamp'].min().isoformat()))
     fig.set_size_inches(fig_width_inches, fig_height_inches)
     # Show plot
     if show:
@@ -358,22 +358,22 @@ def pose_track_scores_heatmap(
         )
         fig.savefig(path)
 
-def extract_camera_info(df):
-    # Extract camera device ID
-    camera_device_ids = df['camera_device_id'].unique().tolist()
-    if len(camera_device_ids) > 1:
-        raise ValueError('Data contains more than one camera device ID: {}'.format(
-            camera_device_ids
-        ))
-    camera_device_id = camera_device_ids[0]
-    # Extract camera name
-    camera_names = df['camera_name'].unique().tolist()
-    if len(camera_names) > 1:
-        raise ValueError('Data contains more than one camera name: {}'.format(
-            camera_names
-        ))
-    camera_name = camera_names[0]
-    return {
-        'camera_device_id': camera_device_id,
-        'camera_name': camera_name
-    }
+# def extract_camera_info(df):
+#     # Extract camera device ID
+#     camera_device_ids = df['camera_device_id'].unique().tolist()
+#     if len(camera_device_ids) > 1:
+#         raise ValueError('Data contains more than one camera device ID: {}'.format(
+#             camera_device_ids
+#         ))
+#     camera_device_id = camera_device_ids[0]
+#     # Extract camera name
+#     camera_names = df['camera_name'].unique().tolist()
+#     if len(camera_names) > 1:
+#         raise ValueError('Data contains more than one camera name: {}'.format(
+#             camera_names
+#         ))
+#     camera_name = camera_names[0]
+#     return {
+#         'camera_device_id': camera_device_id,
+#         'camera_name': camera_name
+#     }
