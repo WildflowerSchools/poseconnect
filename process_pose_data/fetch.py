@@ -345,8 +345,10 @@ def fetch_2d_pose_data(
         })
     df = pd.DataFrame(data)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
-    # TODO: Check for multiple pose models
-    # TODO: Check for multiple inference runs at a timestep
+    if df['pose_model_id'].nunique() > 1:
+        raise ValueError('Returned poses are associated with multiple pose models')
+    if (df.groupby(['timestamp', 'camera_id'])['inference_id'].nunique() > 1).any():
+        raise ValueError('Returned poses have multiple inference IDs for some camera IDs at some timestamps')
     df.set_index('pose_id', inplace=True)
     return_columns = [
         'timestamp',
