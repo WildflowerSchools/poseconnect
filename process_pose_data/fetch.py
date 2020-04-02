@@ -202,10 +202,10 @@ def fetch_2d_pose_data(
     inference_models=None,
     inference_versions=None,
     return_track_label=False,
-    return_pose_quality=False,
-    return_pose_model_id=False,
     return_person_id=False,
     return_inference_id=False,
+    return_pose_model_id=False,
+    return_pose_quality=False,
     chunk_size=100,
     uri=None,
     token_uri=None,
@@ -336,17 +336,37 @@ def fetch_2d_pose_data(
             'timestamp': datum.get('timestamp'),
             'camera_id': (datum.get('camera') if datum.get('camera') is not None else {}).get('device_id'),
             'track_label': datum.get('track_label'),
+            'person_id': (datum.get('person') if datum.get('person') is not None else {}).get('person_id'),
+            'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id'),
             'pose_model_id': (datum.get('pose_model') if datum.get('pose_model') is not None else {}).get('pose_model_id'),
             'keypoint_coordinates': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')]),
             'keypoint_quality': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')]),
-            'person_id': (datum.get('person') if datum.get('person') is not None else {}).get('person_id'),
-            'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id')
+            'pose_quality': datum.get('quality')
         })
     df = pd.DataFrame(data)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     # TODO: Check for multiple pose models
     # TODO: Check for multiple inference runs at a timestep
-    # TODO: Trim output columns
+    df.set_index('pose_id', inplace=True)
+    return_columns = [
+        'timestamp',
+        'camera_id'
+    ]
+    if return_track_label:
+        return_columns.append('track_label')
+    if return_person_id:
+        return_columns.append('person_id')
+    if return_inference_id:
+        return_columns.append('inference_id')
+    if return_pose_model_id:
+        return_columns.append('pose_model_id')
+    return_columns.extend([
+        'keypoint_coordinates',
+        'keypoint_quality'
+    ])
+    if return_pose_quality:
+        return_columns.append('pose_quality')
+    df = df.reindex(columns=return_columns)
     return df
 
 def fetch_camera_ids_from_environment(
