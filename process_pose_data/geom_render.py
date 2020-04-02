@@ -1,4 +1,4 @@
-import process_pose_data.core
+import process_pose_data.fetch
 import geom_render
 import minimal_honeycomb
 import pandas as pd
@@ -33,7 +33,7 @@ def fetch_geoms_2d_by_inference_execution(
     client_secret=None
 ):
     logger.info('Fetching pose data')
-    df = process_pose_data.core.fetch_2d_pose_data_by_inference_execution(
+    df = process_pose_data.fetch.fetch_2d_pose_data_by_inference_execution(
         inference_id=inference_id,
         inference_name=inference_name,
         inference_model=inference_model,
@@ -91,7 +91,7 @@ def fetch_geoms_2d_by_time_span(
     client_secret=None
 ):
     logger.info('Fetching pose data')
-    df = process_pose_data.core.fetch_2d_pose_data_by_time_span(
+    df = process_pose_data.fetch.fetch_2d_pose_data_by_time_span(
         environment_name=environment_name,
         start_time=start_time,
         end_time=end_time,
@@ -145,9 +145,9 @@ def create_geom_collection_2d_dict(
     client_secret=None
 ):
     logger.info('Extracting pose model ID from data')
-    pose_model_id = process_pose_data.core.extract_pose_model_id(df)
+    pose_model_id = process_pose_data.fetch.extract_pose_model_id(df)
     logger.info('Fetching pose model info')
-    pose_model_info = process_pose_data.core.fetch_pose_model_info(
+    pose_model_info = process_pose_data.fetch.fetch_pose_model_info(
         pose_model_id=pose_model_id,
         uri=uri,
         token_uri=token_uri,
