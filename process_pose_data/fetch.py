@@ -682,8 +682,6 @@ def search_2d_poses(
     client_id=None,
     client_secret=None
 ):
-    print(query_list)
-    print(return_data)
     client = minimal_honeycomb.MinimalHoneycombClient(
         uri=uri,
         token_uri=token_uri,
