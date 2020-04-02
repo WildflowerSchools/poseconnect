@@ -94,7 +94,7 @@ def filter_num_valid_keypoints(
         df_filtered = df
     else:
         df_filtered = df.copy()
-    num_keypoints = df['keypoint_quality_array'].apply(
+    num_keypoints = df['keypoint_quality'].apply(
         lambda x: np.count_nonzero(~np.isnan(x))
     )
     if min_num_keypoints is not None:
