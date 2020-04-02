@@ -258,6 +258,7 @@ def fetch_2d_pose_data(
         client_id=client_id,
         client_secret=client_secret
     )
+    logger.info('Building query list for 2D pose search')
     query_list = list()
     if start is not None:
         query_list.append({
@@ -330,6 +331,7 @@ def fetch_2d_pose_data(
         client_secret=client_secret
     )
     data = list()
+    logger.info('Parsing {} returned poses'.format(len(result)))
     for datum in result:
         data.append({
             'pose_id': datum.get('pose_id'),
@@ -399,6 +401,7 @@ def fetch_camera_ids_from_environment(
     )
     if environment_id is None:
         return None
+    logger.info('Fetching camera assignments for specified environment and time span')
     client = minimal_honeycomb.MinimalHoneycombClient(
         uri=uri,
         token_uri=token_uri,
@@ -439,7 +442,8 @@ def fetch_camera_ids_from_environment(
         if device_type is not None and device_type in camera_device_types:
             camera_device_ids.append(assignment.get('assigned').get('device_id'))
     if len(camera_device_ids) == 0:
-        raise ValueError('No camera devices found in specified environment for specified start and end times')
+        raise ValueError('No camera devices found in specified environment for specified time span')
+    logger.info('Found {} camera assignments for specified environment and time span'.format(len(camera_device_ids)))
     return camera_device_ids
 
 def fetch_environment_id(
@@ -456,6 +460,7 @@ def fetch_environment_id(
             raise ValueError('If environment ID is specified, environment name cannot be specified')
         return environment_id
     if environment_name is not None:
+        logger.info('Fetching environment ID for specified environment name')
         client = minimal_honeycomb.MinimalHoneycombClient(
             uri=uri,
             token_uri=token_uri,
@@ -485,6 +490,7 @@ def fetch_environment_id(
                 environment_name
             ))
         environment_id = result[0].get('environment_id')
+        logger.info('Found environment ID for specified environment name')
         return environment_id
     return None
 
@@ -530,6 +536,7 @@ def fetch_camera_ids_from_camera_properties(
                 'operator': 'IN',
                 'values': camera_serial_numbers
             })
+        logger.info('Fetching camera IDs for cameras with specified properties')
         client = minimal_honeycomb.MinimalHoneycombClient(
             uri=uri,
             token_uri=token_uri,
@@ -556,6 +563,7 @@ def fetch_camera_ids_from_camera_properties(
         if len(result) == 0:
             raise ValueError('No devices match specified device types/part numbers/names/serial numbers')
         camera_ids = [datum.get('device_id') for datum in result]
+        logger.info('Found {} camera IDs that match specified properties'.format(len(camera_ids)))
         return camera_ids
     return None
 
@@ -585,6 +593,7 @@ def fetch_pose_model_id(
                 'type': 'String',
                 'value': pose_model_variant_name
             }
+        logger.info('Fetching pose model ID for pose model with specified properties')
         client = minimal_honeycomb.MinimalHoneycombClient(
             uri=uri,
             token_uri=token_uri,
@@ -605,6 +614,7 @@ def fetch_pose_model_id(
         if len(result) > 1:
             raise ValueError('Multiple pose models match specified model name/model variant name')
         pose_model_id = result[0].get('pose_model_id')
+        logger.info('Found pose model ID for pose model with specified properties')
         return pose_model_id
     return None
 
@@ -643,6 +653,7 @@ def fetch_inference_ids(
                 'operator': 'IN',
                 'values': inference_versions
             })
+        logger.info('Fetching inference IDs for inference runs with specified properties')
         client = minimal_honeycomb.MinimalHoneycombClient(
             uri=uri,
             token_uri=token_uri,
@@ -669,6 +680,7 @@ def fetch_inference_ids(
         if len(result) == 0:
             raise ValueError('No inference executions match specified inference names/models/versions')
         inference_ids = [datum.get('inference_id') for datum in result]
+        logger.info('Found {} inference runs that match specified properties'.format(len(inference_ids)))
         return inference_ids
     return None
 
