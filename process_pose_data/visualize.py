@@ -6,6 +6,8 @@ import seaborn as sns
 import slugify
 import os
 
+sns.set()
+
 register_matplotlib_converters()
 
 def track_timelines(
@@ -176,29 +178,53 @@ def keypoint_quality_histograms(
 
 def keypoint_quality_histogram(
     df,
-    bins=30,
+    bins=None,
+    plot_title=None,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
     show=True,
     save=False,
     save_directory='.',
-    filename_suffix='_keypoint_quality',
+    filename_prefix='keypoint_quality',
+    file_identifier=None,
+    filename_datetime_format='%Y%m%d_%H%M%S',
     filename_extension='png',
     fig_width_inches=10.5,
     fig_height_inches=8
 ):
-    # Extract camera info
-    camera_id = extract_camera_id(df)
-    keypoint_quality = np.concatenate(df['keypoint_quality'].values)
-    # Build plot
-    fig, axes = plt.subplots()
-    plot_object=axes.hist(
-        keypoint_quality[~np.isnan(keypoint_quality)],
-        bins=bins
+    if plot_title is not None:
+        fig_suptitle = '{} ({}-{})'.format(
+            plot_title,
+            df['timestamp'].min().strftime(plot_title_datetime_format),
+            df['timestamp'].max().strftime(plot_title_datetime_format)
+        )
+    else:
+        fig_suptitle = '{}-{}'.format(
+            df['timestamp'].min().strftime(plot_title_datetime_format),
+            df['timestamp'].max().strftime(plot_title_datetime_format)
+        )
+    if file_identifier is not None:
+        save_filename = '{}_{}_{}_{}.{}'.format(
+            filename_prefix,
+            slugify.slufify(file_identifier),
+            df['timestamp'].min().strftime(filename_datetime_format),
+            df['timestamp'].max().strftime(filename_datetime_format),
+            filename_extension
+        )
+    else:
+        save_filename = '{}_{}_{}.{}'.format(
+            filename_prefix,
+            df['timestamp'].min().strftime(filename_datetime_format),
+            df['timestamp'].max().strftime(filename_datetime_format),
+            filename_extension
+        )
+    sns_plot = sns.distplot(
+        np.concatenate(df['keypoint_quality'].values),
+        kde=False
     )
-    axes.set_xlabel('Keypoint quality')
-    axes.set_ylabel('Number of keypoints')
-    fig.suptitle('{} ({})'.format(
-        camera_id,
-        df['timestamp'].min().isoformat()))
+    plt.xlabel('Keypoint quality')
+    plt.ylabel('Number of keypoints')
+    fig = sns_plot.get_figure()
+    fig.suptitle(fig_suptitle)
     fig.set_size_inches(fig_width_inches, fig_height_inches)
     # Show plot
     if show:
@@ -207,11 +233,7 @@ def keypoint_quality_histogram(
     if save:
         path = os.path.join(
             save_directory,
-            '{}{}.{}'.format(
-                slugify.slugify(camera_id),
-                filename_suffix,
-                filename_extension
-            )
+            save_filename
         )
         fig.savefig(path)
 
