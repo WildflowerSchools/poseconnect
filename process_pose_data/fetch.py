@@ -720,6 +720,46 @@ def search_2d_poses(
     logger.info('Fetched {} poses'.format(len(result)))
     return result
 
+def fetch_camera_names(
+    camera_ids,
+    chunk_size=100,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = minimal_honeycomb.MinimalHoneycombClient(
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Fetching camera names for specified camera device IDs')
+    result = client.bulk_query(
+        request_name='searchDevices',
+        arguments={
+            'query': {
+                'type': 'QueryExpression!',
+                'value': {
+                    'field': 'device_id',
+                    'operator': 'IN',
+                    'values': camera_ids
+                }
+            }
+        },
+        return_data=[
+            'device_id',
+            'name'
+        ],
+        id_field_name = 'device_id',
+        chunk_size=chunk_size
+    )
+    camera_name_lookup = {device.get('device_id'): device.get('name') for device in result}
+    logger.info('Fetched {} camera names'.format(len(camera_name_lookup)))
+    return camera_name_lookup
+
 # def poses_2d_to_dataframe(
 #     poses_2d,
 #     progress_bar=False,

@@ -1,3 +1,4 @@
+import process_pose_data.fetch
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -152,25 +153,43 @@ def pose_quality_histogram(
         )
         fig.savefig(path)
 
-def keypoint_quality_histograms(
+def keypoint_quality_histogram_by_camera(
     df,
-    bins=30,
+    display_camera_name=False,
+    camera_name_lookup=None,
+    bins=None,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
     show=True,
     save=False,
     save_directory='.',
-    filename_suffix='_keypoint_quality',
+    filename_prefix='keypoint_quality',
+    filename_datetime_format='%Y%m%d_%H%M%S',
     filename_extension='png',
     fig_width_inches=10.5,
     fig_height_inches=8
 ):
+    if display_camera_name:
+        if camera_name_lookup is None:
+            camera_ids = df['camera_id'].unique().tolist()
+            camera_name_lookup = process_pose_data.fetch.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
+        if display_camera_name:
+            camera_id_string = camera_name_lookup.get(camera_id)
+        else:
+            camera_id_string = camera_id
+        plot_title = camera_id_string
+        file_identifier = camera_id_string
         keypoint_quality_histogram(
             df=group_df,
             bins=bins,
+            plot_title=plot_title,
+            plot_title_datetime_format=plot_title_datetime_format,
             show=show,
             save=save,
             save_directory=save_directory,
-            filename_suffix=filename_suffix,
+            filename_prefix=filename_prefix,
+            file_identifier=file_identifier,
+            filename_datetime_format=filename_datetime_format,
             filename_extension=filename_extension,
             fig_width_inches=fig_width_inches,
             fig_height_inches=fig_height_inches
@@ -192,20 +211,20 @@ def keypoint_quality_histogram(
     fig_height_inches=8
 ):
     if plot_title is not None:
-        fig_suptitle = '{} ({}-{})'.format(
+        fig_suptitle = '{} ({} - {})'.format(
             plot_title,
             df['timestamp'].min().strftime(plot_title_datetime_format),
             df['timestamp'].max().strftime(plot_title_datetime_format)
         )
     else:
-        fig_suptitle = '{}-{}'.format(
+        fig_suptitle = '{} - {}'.format(
             df['timestamp'].min().strftime(plot_title_datetime_format),
             df['timestamp'].max().strftime(plot_title_datetime_format)
         )
     if file_identifier is not None:
         save_filename = '{}_{}_{}_{}.{}'.format(
             filename_prefix,
-            slugify.slufify(file_identifier),
+            slugify.slugify(file_identifier),
             df['timestamp'].min().strftime(filename_datetime_format),
             df['timestamp'].max().strftime(filename_datetime_format),
             filename_extension
@@ -380,15 +399,15 @@ def pose_keypoint_quality_scatter(
 #         )
 #         fig.savefig(path)
 
-def extract_camera_id(df):
-    # Extract camera device ID
-    camera_device_ids = df['camera_id'].unique().tolist()
-    if len(camera_device_ids) > 1:
-        raise ValueError('Data contains more than one camera device ID: {}'.format(
-            camera_device_ids
-        ))
-    camera_device_id = camera_device_ids[0]
-    return camera_device_id
+# def extract_camera_id(df):
+#     # Extract camera device ID
+#     camera_device_ids = df['camera_id'].unique().tolist()
+#     if len(camera_device_ids) > 1:
+#         raise ValueError('Data contains more than one camera device ID: {}'.format(
+#             camera_device_ids
+#         ))
+#     camera_device_id = camera_device_ids[0]
+#     return camera_device_id
 
 # def extract_camera_info(df):
 #     # Extract camera device ID
