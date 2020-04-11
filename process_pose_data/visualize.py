@@ -256,6 +256,109 @@ def keypoint_quality_histogram(
         )
         fig.savefig(path)
 
+def num_valid_keypoints_histogram_by_camera(
+    df,
+    display_camera_name=False,
+    camera_name_lookup=None,
+    bins=None,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_prefix='num_valid_keypoints',
+    filename_datetime_format='%Y%m%d_%H%M%S',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    if display_camera_name:
+        if camera_name_lookup is None:
+            camera_ids = df['camera_id'].unique().tolist()
+            camera_name_lookup = process_pose_data.fetch.fetch_camera_names(camera_ids)
+    for camera_id, group_df in df.groupby('camera_id'):
+        if display_camera_name:
+            camera_id_string = camera_name_lookup.get(camera_id)
+        else:
+            camera_id_string = camera_id
+        plot_title = camera_id_string
+        file_identifier = camera_id_string
+        num_valid_keypoints_histogram(
+            df=group_df,
+            bins=bins,
+            plot_title=plot_title,
+            plot_title_datetime_format=plot_title_datetime_format,
+            show=show,
+            save=save,
+            save_directory=save_directory,
+            filename_prefix=filename_prefix,
+            file_identifier=file_identifier,
+            filename_datetime_format=filename_datetime_format,
+            filename_extension=filename_extension,
+            fig_width_inches=fig_width_inches,
+            fig_height_inches=fig_height_inches
+        )
+
+def num_valid_keypoints_histogram(
+    df,
+    bins=None,
+    plot_title=None,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_prefix='num_valid_keypoints',
+    file_identifier=None,
+    filename_datetime_format='%Y%m%d_%H%M%S',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    if plot_title is not None:
+        fig_suptitle = '{} ({} - {})'.format(
+            plot_title,
+            df['timestamp'].min().strftime(plot_title_datetime_format),
+            df['timestamp'].max().strftime(plot_title_datetime_format)
+        )
+    else:
+        fig_suptitle = '{} - {}'.format(
+            df['timestamp'].min().strftime(plot_title_datetime_format),
+            df['timestamp'].max().strftime(plot_title_datetime_format)
+        )
+    if file_identifier is not None:
+        save_filename = '{}_{}_{}_{}.{}'.format(
+            filename_prefix,
+            slugify.slugify(file_identifier),
+            df['timestamp'].min().strftime(filename_datetime_format),
+            df['timestamp'].max().strftime(filename_datetime_format),
+            filename_extension
+        )
+    else:
+        save_filename = '{}_{}_{}.{}'.format(
+            filename_prefix,
+            df['timestamp'].min().strftime(filename_datetime_format),
+            df['timestamp'].max().strftime(filename_datetime_format),
+            filename_extension
+        )
+    sns_plot = sns.distplot(
+        df['keypoint_quality'].apply(lambda x: np.count_nonzero(~np.isnan(x))),
+        kde=False
+    )
+    plt.xlabel('Number of valid keypoints')
+    plt.ylabel('Number of poses')
+    fig = sns_plot.get_figure()
+    fig.suptitle(fig_suptitle)
+    fig.set_size_inches(fig_width_inches, fig_height_inches)
+    # Show plot
+    if show:
+        plt.show()
+    # Save plot
+    if save:
+        path = os.path.join(
+            save_directory,
+            save_filename
+        )
+        fig.savefig(path)
+
 def pose_keypoint_quality_scatters(
     df,
     show=True,
