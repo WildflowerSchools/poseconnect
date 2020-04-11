@@ -339,9 +339,12 @@ def num_valid_keypoints_histogram(
             df['timestamp'].max().strftime(filename_datetime_format),
             filename_extension
         )
-    sns_plot = sns.distplot(
-        df['keypoint_quality'].apply(lambda x: np.count_nonzero(~np.isnan(x))),
-        kde=False
+    num_valid_keypoints_series = df['keypoint_quality'].apply(lambda x: np.count_nonzero(~np.isnan(x)))
+    max_num_valid_keypoints = num_valid_keypoints_series.max()
+    sns_plot = sns.countplot(
+        x = num_valid_keypoints_series,
+        order = range(max_num_valid_keypoints + 1),
+        color=sns.color_palette()[0]
     )
     plt.xlabel('Number of valid keypoints')
     plt.ylabel('Number of poses')
