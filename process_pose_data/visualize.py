@@ -11,84 +11,6 @@ sns.set()
 
 register_matplotlib_converters()
 
-def track_timelines(
-    df,
-    show=True,
-    save=False,
-    pose_quality_colormap_name='summer_r',
-    save_directory='.',
-    filename_suffix='_track_timeline',
-    filename_extension='png',
-    fig_width_inches=10.5,
-    fig_height_inches=8
-):
-    for camera_device_id, group_df in df.groupby('camera_id'):
-        track_timeline(
-            df=group_df,
-            show=show,
-            save=save,
-            pose_quality_colormap_name=pose_quality_colormap_name,
-            save_directory=save_directory,
-            filename_suffix=filename_suffix,
-            filename_extension=filename_extension,
-            fig_width_inches=fig_width_inches,
-            fig_height_inches=fig_height_inches
-        )
-
-def track_timeline(
-    df,
-    show=True,
-    save=False,
-    pose_quality_colormap_name='summer_r',
-    save_directory='.',
-    filename_suffix='_track_timeline',
-    filename_extension='png',
-    fig_width_inches=10.5,
-    fig_height_inches=8
-):
-    # Extract camera info
-    camera_id = extract_camera_id(df)
-    # Convert track labels to integers if possible
-    try:
-        track_labels=df['track_label'].astype('int')
-    except:
-        track_labels=df['track_label']
-    # Build plot
-    fig, axes = plt.subplots()
-    plot_object=axes.scatter(
-        # df['timestamp'].tz_convert(None),
-        df['timestamp'],
-        track_labels,
-        c=df['pose_quality'],
-        cmap=plt.get_cmap(pose_quality_colormap_name),
-        marker='.'
-    )
-    axes.set_xlim(
-        df['timestamp'].min(),
-        df['timestamp'].max()
-    )
-    axes.set_xlabel('Time (UTC)')
-    axes.set_ylabel('Track label')
-    fig.colorbar(plot_object, ax=axes).set_label('Pose quality')
-    fig.suptitle('{} ({})'.format(
-        camera_id,
-        df['timestamp'].min().isoformat()))
-    fig.set_size_inches(fig_width_inches, fig_height_inches)
-    # Show plot
-    if show:
-        plt.show()
-    # Save plot
-    if save:
-        path = os.path.join(
-            save_directory,
-            '{}{}.{}'.format(
-                slugify.slugify(camera_id),
-                filename_suffix,
-                filename_extension
-            )
-        )
-        fig.savefig(path)
-
 def keypoint_quality_histogram_by_camera(
     df,
     display_camera_name=False,
@@ -606,6 +528,85 @@ def mean_keypoint_quality_pose_quality_scatter(
             save_filename
         )
         fig.savefig(path)
+
+# def track_timelines(
+#     df,
+#     show=True,
+#     save=False,
+#     pose_quality_colormap_name='summer_r',
+#     save_directory='.',
+#     filename_suffix='_track_timeline',
+#     filename_extension='png',
+#     fig_width_inches=10.5,
+#     fig_height_inches=8
+# ):
+#     for camera_device_id, group_df in df.groupby('camera_id'):
+#         track_timeline(
+#             df=group_df,
+#             show=show,
+#             save=save,
+#             pose_quality_colormap_name=pose_quality_colormap_name,
+#             save_directory=save_directory,
+#             filename_suffix=filename_suffix,
+#             filename_extension=filename_extension,
+#             fig_width_inches=fig_width_inches,
+#             fig_height_inches=fig_height_inches
+#         )
+#
+# def track_timeline(
+#     df,
+#     show=True,
+#     save=False,
+#     pose_quality_colormap_name='summer_r',
+#     save_directory='.',
+#     filename_suffix='_track_timeline',
+#     filename_extension='png',
+#     fig_width_inches=10.5,
+#     fig_height_inches=8
+# ):
+#     # Extract camera info
+#     camera_id = extract_camera_id(df)
+#     # Convert track labels to integers if possible
+#     try:
+#         track_labels=df['track_label'].astype('int')
+#     except:
+#         track_labels=df['track_label']
+#     # Build plot
+#     fig, axes = plt.subplots()
+#     plot_object=axes.scatter(
+#         # df['timestamp'].tz_convert(None),
+#         df['timestamp'],
+#         track_labels,
+#         c=df['pose_quality'],
+#         cmap=plt.get_cmap(pose_quality_colormap_name),
+#         marker='.'
+#     )
+#     axes.set_xlim(
+#         df['timestamp'].min(),
+#         df['timestamp'].max()
+#     )
+#     axes.set_xlabel('Time (UTC)')
+#     axes.set_ylabel('Track label')
+#     fig.colorbar(plot_object, ax=axes).set_label('Pose quality')
+#     fig.suptitle('{} ({})'.format(
+#         camera_id,
+#         df['timestamp'].min().isoformat()))
+#     fig.set_size_inches(fig_width_inches, fig_height_inches)
+#     # Show plot
+#     if show:
+#         plt.show()
+#     # Save plot
+#     if save:
+#         path = os.path.join(
+#             save_directory,
+#             '{}{}.{}'.format(
+#                 slugify.slugify(camera_id),
+#                 filename_suffix,
+#                 filename_extension
+#             )
+#         )
+#         fig.savefig(path)
+#
 
 # def pose_track_scores_heatmap(
 #     df,
