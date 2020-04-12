@@ -529,84 +529,117 @@ def mean_keypoint_quality_pose_quality_scatter(
         )
         fig.savefig(path)
 
-# def track_timelines(
-#     df,
-#     show=True,
-#     save=False,
-#     pose_quality_colormap_name='summer_r',
-#     save_directory='.',
-#     filename_suffix='_track_timeline',
-#     filename_extension='png',
-#     fig_width_inches=10.5,
-#     fig_height_inches=8
-# ):
-#     for camera_device_id, group_df in df.groupby('camera_id'):
-#         track_timeline(
-#             df=group_df,
-#             show=show,
-#             save=save,
-#             pose_quality_colormap_name=pose_quality_colormap_name,
-#             save_directory=save_directory,
-#             filename_suffix=filename_suffix,
-#             filename_extension=filename_extension,
-#             fig_width_inches=fig_width_inches,
-#             fig_height_inches=fig_height_inches
-#         )
-#
-# def track_timeline(
-#     df,
-#     show=True,
-#     save=False,
-#     pose_quality_colormap_name='summer_r',
-#     save_directory='.',
-#     filename_suffix='_track_timeline',
-#     filename_extension='png',
-#     fig_width_inches=10.5,
-#     fig_height_inches=8
-# ):
-#     # Extract camera info
-#     camera_id = extract_camera_id(df)
-#     # Convert track labels to integers if possible
-#     try:
-#         track_labels=df['track_label'].astype('int')
-#     except:
-#         track_labels=df['track_label']
-#     # Build plot
-#     fig, axes = plt.subplots()
-#     plot_object=axes.scatter(
-#         # df['timestamp'].tz_convert(None),
-#         df['timestamp'],
-#         track_labels,
-#         c=df['pose_quality'],
-#         cmap=plt.get_cmap(pose_quality_colormap_name),
-#         marker='.'
-#     )
-#     axes.set_xlim(
-#         df['timestamp'].min(),
-#         df['timestamp'].max()
-#     )
-#     axes.set_xlabel('Time (UTC)')
-#     axes.set_ylabel('Track label')
-#     fig.colorbar(plot_object, ax=axes).set_label('Pose quality')
-#     fig.suptitle('{} ({})'.format(
-#         camera_id,
-#         df['timestamp'].min().isoformat()))
-#     fig.set_size_inches(fig_width_inches, fig_height_inches)
-#     # Show plot
-#     if show:
-#         plt.show()
-#     # Save plot
-#     if save:
-#         path = os.path.join(
-#             save_directory,
-#             '{}{}.{}'.format(
-#                 slugify.slugify(camera_id),
-#                 filename_suffix,
-#                 filename_extension
-#             )
-#         )
-#         fig.savefig(path)
-#
+def pose_track_timelines_by_camera(
+    df,
+    color_by_pose_quality=False,
+    display_camera_name=False,
+    camera_name_lookup=None,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_prefix='pose_track_timelines',
+    filename_datetime_format='%Y%m%d_%H%M%S',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    if display_camera_name:
+        if camera_name_lookup is None:
+            camera_ids = df['camera_id'].unique().tolist()
+            camera_name_lookup = process_pose_data.fetch.fetch_camera_names(camera_ids)
+    for camera_id, group_df in df.groupby('camera_id'):
+        if display_camera_name:
+            camera_id_string = camera_name_lookup.get(camera_id)
+        else:
+            camera_id_string = camera_id
+        plot_title = camera_id_string
+        file_identifier = camera_id_string
+        pose_track_timelines(
+            df=group_df,
+            color_by_pose_quality=color_by_pose_quality,
+            plot_title=plot_title,
+            plot_title_datetime_format=plot_title_datetime_format,
+            show=show,
+            save=save,
+            save_directory=save_directory,
+            filename_prefix=filename_prefix,
+            file_identifier=file_identifier,
+            filename_datetime_format=filename_datetime_format,
+            filename_extension=filename_extension,
+            fig_width_inches=fig_width_inches,
+            fig_height_inches=fig_height_inches
+        )
+
+def pose_track_timelines(
+    df,
+    color_by_pose_quality=False,
+    plot_title=None,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_prefix='pose_track_timelines',
+    file_identifier=None,
+    filename_datetime_format='%Y%m%d_%H%M%S',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    if plot_title is not None:
+        fig_suptitle = '{} ({} - {})'.format(
+            plot_title,
+            df['timestamp'].min().strftime(plot_title_datetime_format),
+            df['timestamp'].max().strftime(plot_title_datetime_format)
+        )
+    else:
+        fig_suptitle = '{} - {}'.format(
+            df['timestamp'].min().strftime(plot_title_datetime_format),
+            df['timestamp'].max().strftime(plot_title_datetime_format)
+        )
+    if file_identifier is not None:
+        save_filename = '{}_{}_{}_{}.{}'.format(
+            filename_prefix,
+            slugify.slugify(file_identifier),
+            df['timestamp'].min().strftime(filename_datetime_format),
+            df['timestamp'].max().strftime(filename_datetime_format),
+            filename_extension
+        )
+    else:
+        save_filename = '{}_{}_{}.{}'.format(
+            filename_prefix,
+            df['timestamp'].min().strftime(filename_datetime_format),
+            df['timestamp'].max().strftime(filename_datetime_format),
+            filename_extension
+        )
+    if color_by_pose_quality:
+        hue=df['pose_quality']
+    else:
+        hue=None
+    sns_plot = sns.scatterplot(
+        x=df['timestamp'],
+        y=df['track_label'],
+        hue=hue
+    )
+    sns_plot.set_xlim(
+        df['timestamp'].min(),
+        df['timestamp'].max()
+    )
+    plt.xlabel('Time')
+    plt.ylabel('Track label')
+    fig = sns_plot.get_figure()
+    fig.suptitle(fig_suptitle)
+    fig.set_size_inches(fig_width_inches, fig_height_inches)
+    # Show plot
+    if show:
+        plt.show()
+    # Save plot
+    if save:
+        path = os.path.join(
+            save_directory,
+            save_filename
+        )
+        fig.savefig(path)
 
 # def pose_track_scores_heatmap(
 #     df,
