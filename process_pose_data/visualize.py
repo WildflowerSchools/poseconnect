@@ -238,6 +238,7 @@ def keypoint_quality_histogram(
         )
     sns_plot = sns.distplot(
         np.concatenate(df['keypoint_quality'].values),
+        bins=bins,
         kde=False
     )
     plt.xlabel('Keypoint quality')
@@ -447,6 +448,7 @@ def pose_quality_histogram(
         )
     sns_plot = sns.distplot(
         df['pose_quality'],
+        bins=bins,
         kde=False
     )
     plt.xlabel('Pose quality')
@@ -550,6 +552,7 @@ def mean_keypoint_quality_histogram(
         )
     sns_plot = sns.distplot(
         df['keypoint_quality'].apply(lambda x: np.nanmean(x)),
+        bins=bins,
         kde=False
     )
     plt.xlabel('Mean keypoint quality')
