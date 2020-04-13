@@ -760,6 +760,52 @@ def fetch_camera_names(
     logger.info('Fetched {} camera names'.format(len(camera_names)))
     return camera_names
 
+def fetch_camera_calibrations(
+    camera_ids,
+    start=None,
+    end=None,
+    chunk_size=100,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    intrinsic_calibrations = fetch_intrinsic_calibrations(
+        camera_ids=camera_ids,
+        start=start,
+        end=end,
+        chunk_size=chunk_size,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    extrinsic_calibrations = fetch_extrinsic_calibrations(
+        camera_ids=camera_ids,
+        start=start,
+        end=end,
+        chunk_size=chunk_size,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    camera_calibrations = dict()
+    for camera_id in camera_ids:
+        if camera_id not in intrinsic_calibrations.keys():
+            raise ValueError('No intrinsic calibration found for camera ID {}'.format(
+                camera_id
+            ))
+        if camera_id not in extrinsic_calibrations.keys():
+            raise ValueError('No extrinsic calibration found for camera ID {}'.format(
+                camera_id
+            ))
+        camera_calibrations[camera_id] = {**intrinsic_calibrations[camera_id], **extrinsic_calibrations[camera_id]}
+    return camera_calibrations
+
 def fetch_intrinsic_calibrations(
     camera_ids,
     start=None,
