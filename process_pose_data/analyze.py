@@ -125,12 +125,21 @@ def filter_pose_quality(
 def generate_pose_pairs(
     df
 ):
+    logger.info('Generating potential pairs from {} poses'.format(
+        len(df)
+    ))
     pose_pairs = df.groupby('timestamp').apply(generate_pose_pairs_timestamp)
+    logger.info('Generated {} potential pose pairs'.format(
+        len(pose_pairs)
+    ))
     return pose_pairs
 
 def generate_pose_pairs_timestamp(
     df
 ):
+    timestamps = df['timestamp'].unique()
+    if len(timestamps) > 1:
+        raise ValueError('More than one timestamp in data frame')
     camera_ids = df['camera_id'].unique().tolist()
     pose_id_pairs = list()
     for camera_id_a, camera_id_b in itertools.combinations(camera_ids, 2):
@@ -138,8 +147,8 @@ def generate_pose_pairs_timestamp(
         pose_ids_b = df.loc[df['camera_id'] == camera_id_b].index.tolist()
         pose_id_pairs_camera_pair = list(itertools.product(pose_ids_a, pose_ids_b))
         pose_id_pairs.extend(pose_id_pairs_camera_pair)
-        # pose_ids_a = list()
-        # pose_ids_b = list()
+    pose_ids_a = list()
+    pose_ids_b = list()
     if len(pose_id_pairs) > 0:
         pose_ids_a, pose_ids_b = map(list, zip(*pose_id_pairs))
     pose_pairs_timestamp = pd.concat(
@@ -153,6 +162,11 @@ def generate_pose_pairs_timestamp(
     )
     pose_pairs_timestamp.rename_axis(
         ['pose_id_a', 'pose_id_b'],
+        inplace=True
+    )
+    pose_pairs_timestamp.columns = ['{}_{}'.format(column_name[1], column_name[0]) for column_name in pose_pairs_timestamp.columns.values]
+    pose_pairs_timestamp.drop(
+        columns=['timestamp_a', 'timestamp_b'],
         inplace=True
     )
     return pose_pairs_timestamp
