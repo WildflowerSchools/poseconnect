@@ -760,6 +760,74 @@ def fetch_camera_names(
     logger.info('Fetched {} camera names'.format(len(camera_names)))
     return camera_names
 
+def fetch_intrinsic_calibrations(
+    camera_ids,
+    start=None,
+    end=None,
+    chunk_size=100,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = minimal_honeycomb.MinimalHoneycombClient(
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Fetching intrinsic calibrations for specified camera device IDs and time span')
+    result = client.bulk_query(
+        request_name='searchIntrinsicCalibrations',
+        arguments={
+            'query': {
+                'type': 'QueryExpression!',
+                'value': {
+                    'field': 'device',
+                    'operator': 'IN',
+                    'values': camera_ids
+                }
+            }
+        },
+        return_data=[
+            'intrinsic_calibration_id',
+            'start',
+            'end',
+            {'device': [
+                'device_id'
+            ]},
+            'camera_matrix',
+            'distortion_coefficients',
+            'image_width',
+            'image_height'
+        ],
+        id_field_name = 'intrinsic_calibration_id',
+        chunk_size=chunk_size
+    )
+    logger.info('Fetched {} calibrations for specified camera IDs'.format(len(result)))
+    filtered_result = minimal_honeycomb.filter_assignments(
+        result,
+        start,
+        end
+    )
+    logger.info('{} calibrations are consistent with specified start and end times'.format(len(filtered_result)))
+    intrinsic_calibrations = dict()
+    for datum in filtered_result:
+        camera_id = datum.get('device').get('device_id')
+        if camera_id in intrinsic_calibrations.keys():
+            raise ValueError('More than one intrinsic calibration found for camera {}'.format(
+                camera_id
+            ))
+        intrinsic_calibrations[camera_id] = {
+            'camera_matrix': np.asarray(datum.get('camera_matrix')),
+            'distortion_coefficients': np.asarray(datum.get('distortion_coefficients')),
+            'image_width': datum.get('image_width'),
+            'image_height': datum.get('image_height')
+        }
+    return intrinsic_calibrations
+
 # def poses_2d_to_dataframe(
 #     poses_2d,
 #     progress_bar=False,
