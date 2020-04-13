@@ -806,13 +806,13 @@ def fetch_intrinsic_calibrations(
         id_field_name = 'intrinsic_calibration_id',
         chunk_size=chunk_size
     )
-    logger.info('Fetched {} calibrations for specified camera IDs'.format(len(result)))
+    logger.info('Fetched {} intrinsic calibrations for specified camera IDs'.format(len(result)))
     filtered_result = minimal_honeycomb.filter_assignments(
         result,
         start,
         end
     )
-    logger.info('{} calibrations are consistent with specified start and end times'.format(len(filtered_result)))
+    logger.info('{} intrinsic calibrations are consistent with specified start and end times'.format(len(filtered_result)))
     intrinsic_calibrations = dict()
     for datum in filtered_result:
         camera_id = datum.get('device').get('device_id')
@@ -827,6 +827,79 @@ def fetch_intrinsic_calibrations(
             'image_height': datum.get('image_height')
         }
     return intrinsic_calibrations
+
+def fetch_extrinsic_calibrations(
+    camera_ids,
+    start=None,
+    end=None,
+    chunk_size=100,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = minimal_honeycomb.MinimalHoneycombClient(
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Fetching extrinsic calibrations for specified camera device IDs and time span')
+    result = client.bulk_query(
+        request_name='searchExtrinsicCalibrations',
+        arguments={
+            'query': {
+                'type': 'QueryExpression!',
+                'value': {
+                    'field': 'device',
+                    'operator': 'IN',
+                    'values': camera_ids
+                }
+            }
+        },
+        return_data=[
+            'extrinsic_calibration_id',
+            'start',
+            'end',
+            {'device': [
+                'device_id'
+            ]},
+            {'coordinate_space': [
+                'space_id'
+            ]},
+            'translation_vector',
+            'rotation_vector'
+        ],
+        id_field_name = 'extrinsic_calibration_id',
+        chunk_size=chunk_size
+    )
+    logger.info('Fetched {} extrinsic calibrations for specified camera IDs'.format(len(result)))
+    filtered_result = minimal_honeycomb.filter_assignments(
+        result,
+        start,
+        end
+    )
+    logger.info('{} extrinsic calibrations are consistent with specified start and end times'.format(len(filtered_result)))
+    extrinsic_calibrations = dict()
+    space_ids = list()
+    for datum in filtered_result:
+        camera_id = datum.get('device').get('device_id')
+        space_id = datum.get('coordinate_space').get('space_id')
+        space_ids.append(space_id)
+        if camera_id in extrinsic_calibrations.keys():
+            raise ValueError('More than one extrinsic calibration found for camera {}'.format(
+                camera_id
+            ))
+        extrinsic_calibrations[camera_id] = {
+            'space_id': space_id,
+            'rotation_vector': np.asarray(datum.get('rotation_vector')),
+            'translation_vector': np.asarray(datum.get('translation_vector'))
+        }
+    if len(np.unique(space_ids)) > 1:
+        raise ValueError('More than one coordinate space found among fetched calibrations')
+    return extrinsic_calibrations
 
 # def poses_2d_to_dataframe(
 #     poses_2d,
