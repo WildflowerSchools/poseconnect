@@ -756,9 +756,9 @@ def fetch_camera_names(
         id_field_name = 'device_id',
         chunk_size=chunk_size
     )
-    camera_name_lookup = {device.get('device_id'): device.get('name') for device in result}
-    logger.info('Fetched {} camera names'.format(len(camera_name_lookup)))
-    return camera_name_lookup
+    camera_names = {device.get('device_id'): device.get('name') for device in result}
+    logger.info('Fetched {} camera names'.format(len(camera_names)))
+    return camera_names
 
 # def poses_2d_to_dataframe(
 #     poses_2d,

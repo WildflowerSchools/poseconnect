@@ -14,7 +14,7 @@ register_matplotlib_converters()
 def keypoint_quality_histogram_by_camera(
     df,
     display_camera_name=False,
-    camera_name_lookup=None,
+    camera_names=None,
     bins=None,
     plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
     show=True,
@@ -27,12 +27,12 @@ def keypoint_quality_histogram_by_camera(
     fig_height_inches=8
 ):
     if display_camera_name:
-        if camera_name_lookup is None:
+        if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_name_lookup = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
-            camera_id_string = camera_name_lookup.get(camera_id)
+            camera_id_string = camera_names.get(camera_id)
         else:
             camera_id_string = camera_id
         plot_title = camera_id_string
@@ -118,7 +118,7 @@ def keypoint_quality_histogram(
 def num_valid_keypoints_histogram_by_camera(
     df,
     display_camera_name=False,
-    camera_name_lookup=None,
+    camera_names=None,
     bins=None,
     plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
     show=True,
@@ -131,12 +131,12 @@ def num_valid_keypoints_histogram_by_camera(
     fig_height_inches=8
 ):
     if display_camera_name:
-        if camera_name_lookup is None:
+        if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_name_lookup = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
-            camera_id_string = camera_name_lookup.get(camera_id)
+            camera_id_string = camera_names.get(camera_id)
         else:
             camera_id_string = camera_id
         plot_title = camera_id_string
@@ -224,7 +224,7 @@ def num_valid_keypoints_histogram(
 def pose_quality_histogram_by_camera(
     df,
     display_camera_name=False,
-    camera_name_lookup=None,
+    camera_names=None,
     bins=None,
     plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
     show=True,
@@ -237,12 +237,12 @@ def pose_quality_histogram_by_camera(
     fig_height_inches=8
 ):
     if display_camera_name:
-        if camera_name_lookup is None:
+        if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_name_lookup = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
-            camera_id_string = camera_name_lookup.get(camera_id)
+            camera_id_string = camera_names.get(camera_id)
         else:
             camera_id_string = camera_id
         plot_title = camera_id_string
@@ -328,7 +328,7 @@ def pose_quality_histogram(
 def mean_keypoint_quality_histogram_by_camera(
     df,
     display_camera_name=False,
-    camera_name_lookup=None,
+    camera_names=None,
     bins=None,
     plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
     show=True,
@@ -341,12 +341,12 @@ def mean_keypoint_quality_histogram_by_camera(
     fig_height_inches=8
 ):
     if display_camera_name:
-        if camera_name_lookup is None:
+        if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_name_lookup = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
-            camera_id_string = camera_name_lookup.get(camera_id)
+            camera_id_string = camera_names.get(camera_id)
         else:
             camera_id_string = camera_id
         plot_title = camera_id_string
@@ -432,7 +432,7 @@ def mean_keypoint_quality_histogram(
 def mean_keypoint_quality_pose_quality_scatter_by_camera(
     df,
     display_camera_name=False,
-    camera_name_lookup=None,
+    camera_names=None,
     plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
     show=True,
     save=False,
@@ -444,12 +444,12 @@ def mean_keypoint_quality_pose_quality_scatter_by_camera(
     fig_height_inches=8
 ):
     if display_camera_name:
-        if camera_name_lookup is None:
+        if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_name_lookup = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
-            camera_id_string = camera_name_lookup.get(camera_id)
+            camera_id_string = camera_names.get(camera_id)
         else:
             camera_id_string = camera_id
         plot_title = camera_id_string
@@ -533,7 +533,7 @@ def pose_track_timelines_by_camera(
     df,
     color_by_pose_quality=False,
     display_camera_name=False,
-    camera_name_lookup=None,
+    camera_names=None,
     plot_title_datetime_format='%m/%d/%Y %H:%M:%S',
     show=True,
     save=False,
@@ -545,12 +545,12 @@ def pose_track_timelines_by_camera(
     fig_height_inches=8
 ):
     if display_camera_name:
-        if camera_name_lookup is None:
+        if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_name_lookup = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
-            camera_id_string = camera_name_lookup.get(camera_id)
+            camera_id_string = camera_names.get(camera_id)
         else:
             camera_id_string = camera_id
         plot_title = camera_id_string
