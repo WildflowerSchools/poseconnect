@@ -131,26 +131,19 @@ def generate_pose_pairs(
 def generate_pose_pairs_timestamp(
     df
 ):
-    df_reduced = df.reindex(columns=[
-        'camera_device_id',
-        'track_label',
-        'keypoint_array',
-        'keypoint_quality_array',
-        'pose_quality'
-    ])
-    camera_device_ids = df_reduced['camera_device_id'].unique().tolist()
+    camera_ids = df['camera_id'].unique().tolist()
     pose_id_pairs = list()
-    for camera_device_id_a, camera_device_id_b in itertools.combinations(camera_device_ids, 2):
-        pose_ids_a = df_reduced.loc[df_reduced['camera_device_id'] == camera_device_id_a].index.tolist()
-        pose_ids_b = df_reduced.loc[df_reduced['camera_device_id'] == camera_device_id_b].index.tolist()
+    for camera_id_a, camera_id_b in itertools.combinations(camera_ids, 2):
+        pose_ids_a = df.loc[df['camera_id'] == camera_id_a].index.tolist()
+        pose_ids_b = df.loc[df['camera_id'] == camera_id_b].index.tolist()
         pose_id_pairs_camera_pair = list(itertools.product(pose_ids_a, pose_ids_b))
         pose_id_pairs.extend(pose_id_pairs_camera_pair)
-    pose_ids_a = list()
-    pose_ids_b = list()
+        # pose_ids_a = list()
+        # pose_ids_b = list()
     if len(pose_id_pairs) > 0:
         pose_ids_a, pose_ids_b = map(list, zip(*pose_id_pairs))
     pose_pairs_timestamp = pd.concat(
-        (df_reduced.loc[pose_ids_a].reset_index(), df_reduced.loc[pose_ids_b].reset_index()),
+        (df.loc[pose_ids_a].reset_index(), df.loc[pose_ids_b].reset_index()),
         keys=['a', 'b'],
         axis=1
     )
