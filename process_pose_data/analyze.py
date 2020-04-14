@@ -171,6 +171,79 @@ def generate_pose_pairs_timestamp(
     )
     return pose_pairs_timestamp
 
+def calculate_3d_poses(
+    df,
+    camera_calibrations
+):
+    df = df.groupby(['camera_id_a', 'camera_id_b']).apply(
+        lambda x: calculate_3d_poses_camera_pair(x, camera_calibrations)
+    )
+    return df
+
+def calculate_3d_poses_camera_pair(
+    df,
+    camera_calibrations
+):
+    num_pose_pairs = len(df)
+    camera_ids_a = df['camera_id_a'].unique()
+    camera_ids_b = df['camera_id_b'].unique()
+    if len(camera_ids_a) > 1:
+        raise ValueError('More than one camera ID found for camera A')
+    if len(camera_ids_b) > 1:
+        raise ValueError('More than one camera ID found for camera B')
+    camera_id_a = camera_ids_a[0]
+    camera_id_b = camera_ids_b[0]
+    if camera_id_a not in camera_calibrations.keys():
+        raise ValueError('Camera ID {} not found in camera calibration data'.format(
+            camera_id_a
+        ))
+    if camera_id_b not in camera_calibrations.keys():
+        raise ValueError('Camera ID {} not found in camera calibration data'.format(
+            camera_id_b
+        ))
+    camera_calibration_a = camera_calibrations[camera_id_a]
+    camera_calibration_b = camera_calibrations[camera_id_b]
+    keypoint_a_lengths = df['keypoint_coordinates_a'].apply(lambda x: x.shape[0]).unique()
+    keypoint_b_lengths = df['keypoint_coordinates_b'].apply(lambda x: x.shape[0]).unique()
+    if len(keypoint_a_lengths) > 1:
+        raise ValueError('Keypoint arrays in column A have differing numbers of keypoints')
+    if len(keypoint_b_lengths) > 1:
+        raise ValueError('Keypoint arrays in column B have differing numbers of keypoints')
+    if keypoint_a_lengths[0] != keypoint_b_lengths[0]:
+        raise ValueError('Keypoint arrays in column A have different number of keypoints than keypoint arrays in column B')
+    keypoints_a = np.concatenate(df['keypoint_coordinates_a'].values)
+    keypoints_b = np.concatenate(df['keypoint_coordinates_b'].values)
+    keypoints_3d = triangulate_image_points(
+        image_points_1=keypoints_a,
+        image_points_2=keypoints_b,
+        camera_matrix_1=camera_calibration_a['camera_matrix'],
+        distortion_coefficients_1=camera_calibration_a['distortion_coefficients'],
+        rotation_vector_1=camera_calibration_a['rotation_vector'],
+        translation_vector_1=camera_calibration_a['translation_vector'],
+        camera_matrix_2=camera_calibration_b['camera_matrix'],
+        distortion_coefficients_2=camera_calibration_b['distortion_coefficients'],
+        rotation_vector_2=camera_calibration_b['rotation_vector'],
+        translation_vector_2=camera_calibration_b['translation_vector']
+    )
+    keypoints_a_reprojected = cv_utils.project_points(
+        object_points=keypoints_3d,
+        rotation_vector=camera_calibration_a['rotation_vector'],
+        translation_vector=camera_calibration_a['translation_vector'],
+        camera_matrix=camera_calibration_a['camera_matrix'],
+        distortion_coefficients=camera_calibration_a['distortion_coefficients']
+    )
+    keypoints_b_reprojected = cv_utils.project_points(
+        object_points=keypoints_3d,
+        rotation_vector=camera_calibration_b['rotation_vector'],
+        translation_vector=camera_calibration_b['translation_vector'],
+        camera_matrix=camera_calibration_b['camera_matrix'],
+        distortion_coefficients=camera_calibration_b['distortion_coefficients']
+    )
+    df['keypoint_coordinates_3d'] = np.split(keypoints_3d, num_pose_pairs)
+    df['keypoint_coordinates_a_reprojected'] = np.split(keypoints_a_reprojected, num_pose_pairs)
+    df['keypoint_coordinates_b_reprojected'] = np.split(keypoints_b_reprojected, num_pose_pairs)
+    return df
+
 # def score_pose_track_matches(
 #     df,
 #     camera_info
