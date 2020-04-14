@@ -129,9 +129,19 @@ def generate_pose_pairs(
     logger.info('Generating potential pairs from {} poses'.format(
         len(df)
     ))
+    num_poses = len(df)
+    logger.info('Generating pose pairs for {} poses'.format(
+        num_poses
+    ))
+    start_time = time.time()
     pose_pairs = df.groupby('timestamp').apply(generate_pose_pairs_timestamp)
-    logger.info('Generated {} potential pose pairs'.format(
-        len(pose_pairs)
+    elapsed_time = time.time() - start_time
+    num_pose_pairs = len(pose_pairs)
+    logger.info('Generated {} pose pairs in {:.1f} seconds ({:.3f} ms per pose, {:.3f} ms per pose pair)'.format(
+        num_pose_pairs,
+        elapsed_time,
+        1000*elapsed_time/num_poses,
+        1000*elapsed_time/num_pose_pairs
     ))
     return pose_pairs
 
@@ -188,9 +198,20 @@ def calculate_3d_poses(
             start=start,
             end=end
         )
+    num_pose_pairs = len(df)
+    logger.info('Calculating 3D poses for {} 2D pose pairs'.format(
+        num_pose_pairs
+    ))
+    start_time = time.time()
     df = df.groupby(['camera_id_a', 'camera_id_b']).apply(
         lambda x: calculate_3d_poses_camera_pair(x, camera_calibrations)
     )
+    elapsed_time = time.time() - start_time
+    logger.info('Calculated 3D poses for {} 2D pose pairs in {:.3f} seconds ({:.3f} ms per pose pair)'.format(
+        num_pose_pairs,
+        elapsed_time,
+        1000*elapsed_time/num_pose_pairs
+    ))
     return df
 
 def calculate_3d_poses_camera_pair(
