@@ -278,6 +278,87 @@ def calculate_3d_poses_camera_pair(
     df['keypoint_coordinates_b_reprojected'] = np.split(keypoints_b_reprojected, num_pose_pairs)
     return df
 
+def triangulate_image_points(
+    image_points_1,
+    image_points_2,
+    camera_matrix_1,
+    distortion_coefficients_1,
+    rotation_vector_1,
+    translation_vector_1,
+    camera_matrix_2,
+    distortion_coefficients_2,
+    rotation_vector_2,
+    translation_vector_2
+):
+    image_points_1 = np.asarray(image_points_1)
+    image_points_2 = np.asarray(image_points_2)
+    camera_matrix_1 = np.asarray(camera_matrix_1)
+    distortion_coefficients_1 = np.asarray(distortion_coefficients_1)
+    rotation_vector_1 = np.asarray(rotation_vector_1)
+    translation_vector_1 = np.asarray(translation_vector_1)
+    camera_matrix_2 = np.asarray(camera_matrix_2)
+    distortion_coefficients_2 = np.asarray(distortion_coefficients_2)
+    rotation_vector_2 = np.asarray(rotation_vector_2)
+    translation_vector_2 = np.asarray(translation_vector_2)
+    if image_points_1.size == 0 or image_points_2.size == 0:
+        return np.zeros((0, 3))
+    if image_points_1.shape != image_points_2.shape:
+        raise ValueError('Sets of image points do not appear to be the same shape')
+    image_points_shape = image_points_1.shape
+    image_points_1 = image_points_1.reshape((-1, 2))
+    image_points_2 = image_points_2.reshape((-1, 2))
+    camera_matrix_1 = camera_matrix_1.reshape((3, 3))
+    distortion_coefficients_1 = np.squeeze(distortion_coefficients_1)
+    rotation_vector_1 = rotation_vector_1.reshape(3)
+    translation_vector_1 = translation_vector_1.reshape(3)
+    camera_matrix_2 = camera_matrix_2.reshape((3, 3))
+    distortion_coefficients_2 = np.squeeze(distortion_coefficients_2)
+    rotation_vector_2 = rotation_vector_2.reshape(3)
+    translation_vector_2 = translation_vector_2.reshape(3)
+    image_points_1_undistorted = cv_utils.undistort_points(
+        image_points_1,
+        camera_matrix_1,
+        distortion_coefficients_1
+    )
+    image_points_2_undistorted = cv_utils.undistort_points(
+        image_points_2,
+        camera_matrix_2,
+        distortion_coefficients_2
+    )
+    projection_matrix_1 = cv_utils.generate_projection_matrix(
+        camera_matrix_1,
+        rotation_vector_1,
+        translation_vector_1)
+    projection_matrix_2 = cv_utils.generate_projection_matrix(
+        camera_matrix_2,
+        rotation_vector_2,
+        translation_vector_2)
+    object_points_homogeneous = cv.triangulatePoints(
+        projection_matrix_1,
+        projection_matrix_2,
+        image_points_1.T,
+        image_points_2.T)
+    object_points = cv.convertPointsFromHomogeneous(
+        object_points_homogeneous.T
+    )
+    object_points = np.squeeze(object_points)
+    object_points.reshape(image_points_shape[:-1] + (3,))
+    return object_points
+
+def pixel_distances(image_point_differences):
+    return np.linalg.norm(image_point_differences, axis=-1)
+
+def probability_distances(image_point_differences, pixel_distance_scale):
+    return np.multiply(
+        1/np.sqrt(2*np.pi*pixel_distance_scale**2),
+        np.exp(
+            np.divide(
+                -np.square(pixel_distances(image_point_differences)),
+                2*pixel_distance_scale**2
+            )
+        )
+    )
+
 # def score_pose_track_matches(
 #     df,
 #     camera_info
@@ -620,84 +701,3 @@ def calculate_3d_poses_camera_pair(
 #         inplace=True
 #     )
 #     return pose_tracks_3d_scored
-
-def triangulate_image_points(
-    image_points_1,
-    image_points_2,
-    camera_matrix_1,
-    distortion_coefficients_1,
-    rotation_vector_1,
-    translation_vector_1,
-    camera_matrix_2,
-    distortion_coefficients_2,
-    rotation_vector_2,
-    translation_vector_2
-):
-    image_points_1 = np.asarray(image_points_1)
-    image_points_2 = np.asarray(image_points_2)
-    camera_matrix_1 = np.asarray(camera_matrix_1)
-    distortion_coefficients_1 = np.asarray(distortion_coefficients_1)
-    rotation_vector_1 = np.asarray(rotation_vector_1)
-    translation_vector_1 = np.asarray(translation_vector_1)
-    camera_matrix_2 = np.asarray(camera_matrix_2)
-    distortion_coefficients_2 = np.asarray(distortion_coefficients_2)
-    rotation_vector_2 = np.asarray(rotation_vector_2)
-    translation_vector_2 = np.asarray(translation_vector_2)
-    if image_points_1.size == 0 or image_points_2.size == 0:
-        return np.zeros((0, 3))
-    if image_points_1.shape != image_points_2.shape:
-        raise ValueError('Sets of image points do not appear to be the same shape')
-    image_points_shape = image_points_1.shape
-    image_points_1 = image_points_1.reshape((-1, 2))
-    image_points_2 = image_points_2.reshape((-1, 2))
-    camera_matrix_1 = camera_matrix_1.reshape((3, 3))
-    distortion_coefficients_1 = np.squeeze(distortion_coefficients_1)
-    rotation_vector_1 = rotation_vector_1.reshape(3)
-    translation_vector_1 = translation_vector_1.reshape(3)
-    camera_matrix_2 = camera_matrix_2.reshape((3, 3))
-    distortion_coefficients_2 = np.squeeze(distortion_coefficients_2)
-    rotation_vector_2 = rotation_vector_2.reshape(3)
-    translation_vector_2 = translation_vector_2.reshape(3)
-    image_points_1_undistorted = cv_utils.undistort_points(
-        image_points_1,
-        camera_matrix_1,
-        distortion_coefficients_1
-    )
-    image_points_2_undistorted = cv_utils.undistort_points(
-        image_points_2,
-        camera_matrix_2,
-        distortion_coefficients_2
-    )
-    projection_matrix_1 = cv_utils.generate_projection_matrix(
-        camera_matrix_1,
-        rotation_vector_1,
-        translation_vector_1)
-    projection_matrix_2 = cv_utils.generate_projection_matrix(
-        camera_matrix_2,
-        rotation_vector_2,
-        translation_vector_2)
-    object_points_homogeneous = cv.triangulatePoints(
-        projection_matrix_1,
-        projection_matrix_2,
-        image_points_1.T,
-        image_points_2.T)
-    object_points = cv.convertPointsFromHomogeneous(
-        object_points_homogeneous.T
-    )
-    object_points = np.squeeze(object_points)
-    object_points.reshape(image_points_shape[:-1] + (3,))
-    return object_points
-
-def pixel_distances(image_point_differences):
-    return np.linalg.norm(image_point_differences, axis=-1)
-
-def probability_distances(image_point_differences, pixel_distance_scale):
-    return np.multiply(
-        1/np.sqrt(2*np.pi*pixel_distance_scale**2),
-        np.exp(
-            np.divide(
-                -np.square(pixel_distances(image_point_differences)),
-                2*pixel_distance_scale**2
-            )
-        )
-    )
