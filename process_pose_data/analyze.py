@@ -1,3 +1,4 @@
+import process_pose_data.fetch
 import cv_utils
 import cv2 as cv
 import pandas as pd
@@ -173,8 +174,20 @@ def generate_pose_pairs_timestamp(
 
 def calculate_3d_poses(
     df,
-    camera_calibrations
+    camera_calibrations=None
 ):
+    if camera_calibrations is None:
+        camera_ids = np.union1d(
+            df['camera_id_a'].unique(),
+            df['camera_id_b'].unique()
+        ).tolist()
+        start = df.index.get_level_values('timestamp').min().to_pydatetime()
+        end = df.index.get_level_values('timestamp').max().to_pydatetime()
+        camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+            camera_ids=camera_ids,
+            start=start,
+            end=end
+        )
     df = df.groupby(['camera_id_a', 'camera_id_b']).apply(
         lambda x: calculate_3d_poses_camera_pair(x, camera_calibrations)
     )
