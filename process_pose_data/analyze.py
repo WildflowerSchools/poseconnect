@@ -278,6 +278,75 @@ def calculate_3d_poses_camera_pair(
     df['keypoint_coordinates_b_reprojected'] = np.split(keypoints_b_reprojected, num_pose_pairs)
     return df
 
+def score_pose_pairs(
+    df,
+    distance_method='pixels',
+    summary_method='rms',
+    pixel_distance_scale=5.0
+):
+    num_pose_pairs = len(df)
+    logger.info('Calculating reprojection differences for {} pose pairs'.format(
+        num_pose_pairs
+    ))
+    start_time=time.time()
+    reprojection_difference = np.stack(
+        (
+            np.subtract(
+                np.stack(df['keypoint_coordinates_a_reprojected']),
+                np.stack(df['keypoint_coordinates_a'])
+            ),
+            np.subtract(
+                np.stack(df['keypoint_coordinates_b_reprojected']),
+                np.stack(df['keypoint_coordinates_b'])
+            )
+        ),
+        axis=-2
+    )
+    elapsed_time = time.time() - start_time
+    logger.info('Calculated reprojection differences for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
+        num_pose_pairs,
+        elapsed_time,
+        1000*elapsed_time/num_pose_pairs
+    ))
+    logger.info('Calculating distances for {} pose pairs'.format(
+        num_pose_pairs
+    ))
+    start_time=time.time()
+    if distance_method == 'pixels':
+        distance = pixel_distance(reprojection_difference)
+    elif distance_method == 'probability':
+        distance = probability_distance(
+            reprojection_difference,
+            pixel_distance_scale=pixel_distance_scale
+        )
+    else:
+        raise ValueError('Distance method not recognized')
+    elapsed_time = time.time() - start_time
+    logger.info('Calculated distances for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
+        num_pose_pairs,
+        elapsed_time,
+        1000*elapsed_time/num_pose_pairs
+    ))
+    logger.info('Summarizing distances across keypoints for {} pose pairs'.format(
+        num_pose_pairs
+    ))
+    start_time=time.time()
+    if summary_method == 'rms':
+        score = np.sqrt(np.nanmean(np.square(distance), axis=(-1, -2)))
+    elif summary_method == 'sum':
+        score = np.nansum(distance, axis=(-1, -2))
+    else:
+        raise ValueError('Summary method not recognized')
+    elapsed_time = time.time() - start_time
+    logger.info('Summarized distances across keypoints for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
+        num_pose_pairs,
+        elapsed_time,
+        1000*elapsed_time/num_pose_pairs
+    ))
+    df_copy = df.copy()
+    df_copy['score'] = score
+    return df_copy
+
 def triangulate_image_points(
     image_points_1,
     image_points_2,
@@ -345,15 +414,15 @@ def triangulate_image_points(
     object_points.reshape(image_points_shape[:-1] + (3,))
     return object_points
 
-def pixel_distances(image_point_differences):
+def pixel_distance(image_point_differences):
     return np.linalg.norm(image_point_differences, axis=-1)
 
-def probability_distances(image_point_differences, pixel_distance_scale):
+def probability_distance(image_point_differences, pixel_distance_scale):
     return np.multiply(
         1/np.sqrt(2*np.pi*pixel_distance_scale**2),
         np.exp(
             np.divide(
-                -np.square(pixel_distances(image_point_differences)),
+                -np.square(pixel_distance(image_point_differences)),
                 2*pixel_distance_scale**2
             )
         )
