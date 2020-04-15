@@ -127,79 +127,115 @@ def process_poses_bulk(
     df,
     distance_method='pixels',
     summary_method='rms',
-    pixel_distance_scale=5.0,
-    verbose=False
+    pixel_distance_scale=5.0
 ):
     num_poses = len(df)
+    num_timestamps = len(df['timestamp'].unique())
     start = df['timestamp'].min().to_pydatetime()
     end = df['timestamp'].max().to_pydatetime()
     time_span = end - start
     time_span_seconds = time_span.total_seconds()
     camera_ids = df['camera_id'].unique().tolist()
     num_cameras = len(camera_ids)
-    num_timestamps = len(df['timestamp'].unique())
-    if verbose:
-        logger.info('Processing {} 2D poses spanning {} cameras and {:.1f} seconds ({} time steps)'.format(
-            num_poses,
-            num_cameras,
-            time_span_seconds,
-            num_timestamps
-        ))
-    start_time = time.time()
-    df_processed = df.copy()
-    df_processed = generate_pose_pairs(
-        df=df_processed,
-        verbose=verbose
+    logger.info('Fetching camera calibration data for {} cameras'.format(
+        num_cameras
+    ))
+    camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+        camera_ids=camera_ids,
+        start=start,
+        end=end
     )
+    logger.info('Processing {} 2D poses spanning {} cameras and {:.1f} seconds ({} time steps)'.format(
+        num_poses,
+        num_cameras,
+        time_span_seconds,
+        num_timestamps
+    ))
+    overall_start_time = time.time()
+    df_processed = df.copy()
+    logger.info('Generating pose pairs for {} poses'.format(
+        num_poses
+    ))
+    start_time = time.time()
+    df_processed = generate_pose_pairs(
+        df=df_processed
+    )
+    elapsed_time = time.time() - start_time
+    num_pose_pairs = len(df_processed)
+    logger.info('Generated {} pose pairs in {:.1f} seconds ({:.3f} ms per pose, {:.3f} ms per pose pair)'.format(
+        num_pose_pairs,
+        elapsed_time,
+        1000*elapsed_time/num_poses,
+        1000*elapsed_time/num_pose_pairs
+    ))
+    logger.info('Calculating 3D poses for {} 2D pose pairs'.format(
+        num_pose_pairs
+    ))
+    start_time = time.time()
     df_processed = calculate_3d_poses(
         df=df_processed,
-        verbose=verbose
+        camera_calibrations=camera_calibrations
     )
+    elapsed_time = time.time() - start_time
+    logger.info('Calculated 3D poses for {} 2D pose pairs in {:.3f} seconds ({:.3f} ms per pose pair)'.format(
+        num_pose_pairs,
+        elapsed_time,
+        1000*elapsed_time/num_pose_pairs
+    ))
+    logger.info('Calculating scores for {} 2D pose pairs'.format(
+        num_pose_pairs
+    ))
+    start_time = time.time()
     df_processed = score_pose_pairs(
         df_processed,
         distance_method=distance_method,
         summary_method=summary_method,
-        pixel_distance_scale=pixel_distance_scale,
-        verbose=verbose
+        pixel_distance_scale=pixel_distance_scale
     )
     elapsed_time = time.time() - start_time
-    if verbose:
-        logger.info('Processed {} 2D poses spanning {:.1f} seconds in {:.1f} seconds'.format(
-            num_poses,
-            time_span_seconds,
-            elapsed_time
-        ))
+    logger.info('Calculated scores for {} 2D pose pairs in {:.3f} seconds ({:.3f} ms per pose pair)'.format(
+        num_pose_pairs,
+        elapsed_time,
+        1000*elapsed_time/num_pose_pairs
+    ))
+    overall_elapsed_time = time.time() - overall_start_time
+    logger.info('Processed {} 2D poses spanning {:.1f} seconds in {:.1f} seconds (ratio of {:.3f})'.format(
+        num_poses,
+        time_span_seconds,
+        overall_elapsed_time,
+        overall_elapsed_time/time_span_seconds
+    ))
     return df_processed
 
 def process_poses_by_timestamp(
     df,
     distance_method='pixels',
     summary_method='rms',
-    pixel_distance_scale=5.0,
-    verbose=False
+    pixel_distance_scale=5.0
 ):
     num_poses = len(df)
+    num_timestamps = len(df['timestamp'].unique())
     start = df['timestamp'].min().to_pydatetime()
     end = df['timestamp'].max().to_pydatetime()
     time_span = end - start
     time_span_seconds = time_span.total_seconds()
     camera_ids = df['camera_id'].unique().tolist()
     num_cameras = len(camera_ids)
-    num_timestamps = len(df['timestamp'].unique())
-    logger.info('Fetching camera calibration data')
+    logger.info('Fetching camera calibration data for {} cameras'.format(
+        num_cameras
+    ))
     camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
         camera_ids=camera_ids,
         start=start,
         end=end
     )
-    if verbose:
-        logger.info('Processing {} 2D poses spanning {} cameras and {:.1f} seconds ({} time steps)'.format(
-            num_poses,
-            num_cameras,
-            time_span_seconds,
-            num_timestamps
-        ))
-    start_time = time.time()
+    logger.info('Processing {} 2D poses spanning {} cameras and {:.1f} seconds ({} time steps)'.format(
+        num_poses,
+        num_cameras,
+        time_span_seconds,
+        num_timestamps
+    ))
+    overall_start_time = time.time()
     df_timestamp_list = list()
     for timestamp, df_timestamp in df.groupby('timestamp'):
         df_timestamp = generate_pose_pairs_timestamp(
@@ -218,35 +254,19 @@ def process_poses_by_timestamp(
         df_timestamp['timestamp'] = timestamp
         df_timestamp_list.append(df_timestamp)
     df_processed = pd.concat(df_timestamp_list)
-    elapsed_time = time.time() - start_time
-    if verbose:
-        logger.info('Processed {} 2D poses spanning {:.1f} seconds in {:.1f} seconds'.format(
-            num_poses,
-            time_span_seconds,
-            elapsed_time
-        ))
+    overall_elapsed_time = time.time() - overall_start_time
+    logger.info('Processed {} 2D poses spanning {:.1f} seconds in {:.1f} seconds (ratio of {:.3f})'.format(
+        num_poses,
+        time_span_seconds,
+        overall_elapsed_time,
+        overall_elapsed_time/time_span_seconds
+    ))
     return df_processed
 
 def generate_pose_pairs(
-    df,
-    verbose=False
+    df
 ):
-    num_poses = len(df)
-    if verbose:
-        logger.info('Generating pose pairs for {} poses'.format(
-            num_poses
-        ))
-    start_time = time.time()
     pose_pairs = df.groupby('timestamp').apply(generate_pose_pairs_timestamp)
-    elapsed_time = time.time() - start_time
-    num_pose_pairs = len(pose_pairs)
-    if verbose:
-        logger.info('Generated {} pose pairs in {:.1f} seconds ({:.3f} ms per pose, {:.3f} ms per pose pair)'.format(
-            num_pose_pairs,
-            elapsed_time,
-            1000*elapsed_time/num_poses,
-            1000*elapsed_time/num_pose_pairs
-        ))
     return pose_pairs
 
 def generate_pose_pairs_timestamp(
@@ -288,8 +308,7 @@ def generate_pose_pairs_timestamp(
 
 def calculate_3d_poses(
     df,
-    camera_calibrations=None,
-    verbose=False
+    camera_calibrations=None
 ):
     if camera_calibrations is None:
         camera_ids = np.union1d(
@@ -303,22 +322,9 @@ def calculate_3d_poses(
             start=start,
             end=end
         )
-    num_pose_pairs = len(df)
-    if verbose:
-        logger.info('Calculating 3D poses for {} 2D pose pairs'.format(
-            num_pose_pairs
-        ))
-    start_time = time.time()
     df = df.groupby(['camera_id_a', 'camera_id_b']).apply(
         lambda x: calculate_3d_poses_camera_pair(x, camera_calibrations)
     )
-    elapsed_time = time.time() - start_time
-    if verbose:
-        logger.info('Calculated 3D poses for {} 2D pose pairs in {:.3f} seconds ({:.3f} ms per pose pair)'.format(
-            num_pose_pairs,
-            elapsed_time,
-            1000*elapsed_time/num_pose_pairs
-        ))
     return df
 
 def calculate_3d_poses_camera_pair(
@@ -456,15 +462,8 @@ def score_pose_pairs(
     df,
     distance_method='pixels',
     summary_method='rms',
-    pixel_distance_scale=5.0,
-    verbose=False
+    pixel_distance_scale=5.0
 ):
-    num_pose_pairs = len(df)
-    if verbose:
-        logger.info('Calculating reprojection differences for {} pose pairs'.format(
-            num_pose_pairs
-        ))
-    start_time=time.time()
     reprojection_difference = np.stack(
         (
             np.subtract(
@@ -478,17 +477,6 @@ def score_pose_pairs(
         ),
         axis=-2
     )
-    elapsed_time = time.time() - start_time
-    if verbose:
-        logger.info('Calculated reprojection differences for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
-            num_pose_pairs,
-            elapsed_time,
-            1000*elapsed_time/num_pose_pairs
-        ))
-        logger.info('Calculating distances for {} pose pairs'.format(
-            num_pose_pairs
-        ))
-    start_time=time.time()
     if distance_method == 'pixels':
         distance = pixel_distance(reprojection_difference)
     elif distance_method == 'probability':
@@ -498,30 +486,12 @@ def score_pose_pairs(
         )
     else:
         raise ValueError('Distance method not recognized')
-    elapsed_time = time.time() - start_time
-    if verbose:
-        logger.info('Calculated distances for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
-            num_pose_pairs,
-            elapsed_time,
-            1000*elapsed_time/num_pose_pairs
-        ))
-        logger.info('Summarizing distances across keypoints for {} pose pairs'.format(
-            num_pose_pairs
-        ))
-    start_time=time.time()
     if summary_method == 'rms':
         score = np.sqrt(np.nanmean(np.square(distance), axis=(-1, -2)))
     elif summary_method == 'sum':
         score = np.nansum(distance, axis=(-1, -2))
     else:
         raise ValueError('Summary method not recognized')
-    elapsed_time = time.time() - start_time
-    if verbose:
-        logger.info('Summarized distances across keypoints for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
-            num_pose_pairs,
-            elapsed_time,
-            1000*elapsed_time/num_pose_pairs
-        ))
     df_copy = df.copy()
     df_copy['score'] = score
     return df_copy
