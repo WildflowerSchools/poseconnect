@@ -254,6 +254,12 @@ def process_poses_by_timestamp(
         df_timestamp['timestamp'] = timestamp
         df_timestamp_list.append(df_timestamp)
     df_processed = pd.concat(df_timestamp_list)
+    df_processed.set_index('timestamp', append=True, inplace=True)
+    df_processed = df_processed.reorder_levels([
+        'timestamp',
+        'pose_id_a',
+        'pose_id_b'
+    ])
     overall_elapsed_time = time.time() - overall_start_time
     logger.info('Processed {} 2D poses spanning {:.1f} seconds in {:.1f} seconds (ratio of {:.3f})'.format(
         num_poses,
