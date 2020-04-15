@@ -635,6 +635,101 @@ def pose_pair_score_histogram(
         )
         fig.savefig(path)
 
+def pose_pair_score_heatmap(
+    df,
+    min_score=None,
+    max_score=None,
+    color_map_name='summer_r',
+    display_camera_names=False,
+    camera_names=None,
+    plot_title=None,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S.%f',
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_prefix='pose_pair_score_heatmap',
+    file_identifier=None,
+    filename_datetime_format='%Y%m%d_%H%M%S_%f',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    timestamps = df.index.get_level_values('timestamp').unique()
+    camera_ids_a = df['camera_id_a'].unique()
+    camera_ids_b = df['camera_id_b'].unique()
+    if len(timestamps) > 1:
+        raise ValueError('More than one timestamp in data frame')
+    if len(camera_ids_a) > 1:
+        raise ValueError('More than one camera A in data frame')
+    if len(camera_ids_b) > 1:
+        raise ValueError('More than one camera B in data frame')
+    timestamp = timestamps[0]
+    camera_id_a = camera_ids_a[0]
+    camera_id_b = camera_ids_b[0]
+    if display_camera_names:
+        if camera_names is None:
+            camera_ids = [camera_id_a, camera_id_b]
+            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
+    if plot_title is not None:
+        fig_suptitle = '{} ({})'.format(
+            plot_title,
+            timestamp.strftime(plot_title_datetime_format)
+        )
+    else:
+        fig_suptitle = '{}'.format(
+            timestamp.strftime(plot_title_datetime_format)
+        )
+    if file_identifier is not None:
+        save_filename = '{}_{}_{}.{}'.format(
+            filename_prefix,
+            slugify.slugify(file_identifier),
+            timestamp.strftime(filename_datetime_format),
+            filename_extension
+        )
+    else:
+        save_filename = '{}_{}.{}'.format(
+            filename_prefix,
+            timestamp.strftime(filename_datetime_format),
+            filename_extension
+        )
+    if min_score is not None:
+        df.loc[df['score'] < min_score, 'score'] = np.nan
+    if max_score is not None:
+        df.loc[df['score'] > max_score, 'score'] = np.nan
+    pivot_df=df.reset_index().pivot(index='pose_id_a', columns='pose_id_b', values='score')
+    pivot_df.index = np.arange(pivot_df.shape[0])
+    pivot_df.columns = np.arange(pivot_df.shape[1])
+    sns_plot = sns.heatmap(
+        pivot_df,
+        cmap=color_map_name,
+        linewidths=0.1,
+        linecolor='gray',
+        annot=True,
+        square=True,
+        cbar_kws = {
+            'label': 'Pose pair score'
+        }
+    )
+    if display_camera_names:
+        plt.xlabel(camera_names[camera_id_b])
+        plt.ylabel(camera_names[camera_id_a])
+    else:
+        plt.xlabel(camera_id_b)
+        plt.ylabel(camera_id_a)
+    fig = sns_plot.get_figure()
+    fig.suptitle(fig_suptitle)
+    fig.set_size_inches(fig_width_inches, fig_height_inches)
+    # Show plot
+    if show:
+        plt.show()
+    # Save plot
+    if save:
+        path = os.path.join(
+            save_directory,
+            save_filename
+        )
+        fig.savefig(path)
+
 def pose_track_timelines_by_camera(
     df,
     color_by_pose_quality=False,
