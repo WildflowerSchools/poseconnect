@@ -123,26 +123,74 @@ def filter_pose_quality(
     if not inplace:
         return df_filtered
 
-def generate_pose_pairs(
-    df
+def process_poses_bulk(
+    df,
+    distance_method='pixels',
+    summary_method='rms',
+    pixel_distance_scale=5.0,
+    verbose=False
 ):
-    logger.info('Generating potential pairs from {} poses'.format(
-        len(df)
-    ))
     num_poses = len(df)
-    logger.info('Generating pose pairs for {} poses'.format(
-        num_poses
-    ))
+    start = df['timestamp'].min().to_pydatetime()
+    end = df['timestamp'].max().to_pydatetime()
+    time_span = end - start
+    time_span_seconds = time_span.total_seconds()
+    camera_ids = df['camera_id'].unique().tolist()
+    num_cameras = len(camera_ids)
+    num_timestamps = len(df['timestamp'].unique())
+    if verbose:
+        logger.info('Processing {} 2D poses spanning {} cameras and {:.1f} seconds ({} time steps)'.format(
+            num_poses,
+            num_cameras,
+            time_span_seconds,
+            num_timestamps
+        ))
+    start_time = time.time()
+    df_processed = df.copy()
+    df_processed = generate_pose_pairs(
+        df=df_processed,
+        verbose=verbose
+    )
+    df_processed = calculate_3d_poses(
+        df=df_processed,
+        verbose=verbose
+    )
+    df_processed = score_pose_pairs(
+        df_processed,
+        distance_method=distance_method,
+        summary_method=summary_method,
+        pixel_distance_scale=pixel_distance_scale,
+        verbose=verbose
+    )
+    elapsed_time = time.time() - start_time
+    if verbose:
+        logger.info('Processed {} 2D poses spanning {:.1f} seconds in {:.1f} seconds'.format(
+            num_poses,
+            time_span_seconds,
+            elapsed_time
+        ))
+    return df_processed
+
+def generate_pose_pairs(
+    df,
+    verbose=False
+):
+    num_poses = len(df)
+    if verbose:
+        logger.info('Generating pose pairs for {} poses'.format(
+            num_poses
+        ))
     start_time = time.time()
     pose_pairs = df.groupby('timestamp').apply(generate_pose_pairs_timestamp)
     elapsed_time = time.time() - start_time
     num_pose_pairs = len(pose_pairs)
-    logger.info('Generated {} pose pairs in {:.1f} seconds ({:.3f} ms per pose, {:.3f} ms per pose pair)'.format(
-        num_pose_pairs,
-        elapsed_time,
-        1000*elapsed_time/num_poses,
-        1000*elapsed_time/num_pose_pairs
-    ))
+    if verbose:
+        logger.info('Generated {} pose pairs in {:.1f} seconds ({:.3f} ms per pose, {:.3f} ms per pose pair)'.format(
+            num_pose_pairs,
+            elapsed_time,
+            1000*elapsed_time/num_poses,
+            1000*elapsed_time/num_pose_pairs
+        ))
     return pose_pairs
 
 def generate_pose_pairs_timestamp(
