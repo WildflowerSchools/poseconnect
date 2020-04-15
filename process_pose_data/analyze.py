@@ -124,6 +124,24 @@ def filter_pose_quality(
     if not inplace:
         return df_filtered
 
+def filter_pose_pairs_by_score(
+    df,
+    min_score=None,
+    max_score=None,
+    inplace=False
+):
+    # Make copy of input dataframe if operation is not in place
+    if inplace:
+        df_filtered = df
+    else:
+        df_filtered = df.copy()
+    if min_score is not None:
+        df_filtered = df_filtered.loc[df_filtered['score'] >= min_score]
+    if max_score is not None:
+        df_filtered = df_filtered.loc[df_filtered['score'] <= max_score]
+    if not inplace:
+        return df_filtered
+
 def process_poses_bulk(
     df,
     distance_method='pixels',
