@@ -171,6 +171,62 @@ def process_poses_bulk(
         ))
     return df_processed
 
+def process_poses_by_timestamp(
+    df,
+    distance_method='pixels',
+    summary_method='rms',
+    pixel_distance_scale=5.0,
+    verbose=False
+):
+    num_poses = len(df)
+    start = df['timestamp'].min().to_pydatetime()
+    end = df['timestamp'].max().to_pydatetime()
+    time_span = end - start
+    time_span_seconds = time_span.total_seconds()
+    camera_ids = df['camera_id'].unique().tolist()
+    num_cameras = len(camera_ids)
+    num_timestamps = len(df['timestamp'].unique())
+    logger.info('Fetching camera calibration data')
+    camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+        camera_ids=camera_ids,
+        start=start,
+        end=end
+    )
+    if verbose:
+        logger.info('Processing {} 2D poses spanning {} cameras and {:.1f} seconds ({} time steps)'.format(
+            num_poses,
+            num_cameras,
+            time_span_seconds,
+            num_timestamps
+        ))
+    start_time = time.time()
+    df_timestamp_list = list()
+    for timestamp, df_timestamp in df.groupby('timestamp'):
+        df_timestamp = generate_pose_pairs_timestamp(
+            df=df_timestamp
+        )
+        df_timestamp = calculate_3d_poses(
+            df=df_timestamp,
+            camera_calibrations=camera_calibrations
+        )
+        df_timestamp = score_pose_pairs(
+            df_timestamp,
+            distance_method=distance_method,
+            summary_method=summary_method,
+            pixel_distance_scale=pixel_distance_scale
+        )
+        df_timestamp['timestamp'] = timestamp
+        df_timestamp_list.append(df_timestamp)
+    df_processed = pd.concat(df_timestamp_list)
+    elapsed_time = time.time() - start_time
+    if verbose:
+        logger.info('Processed {} 2D poses spanning {:.1f} seconds in {:.1f} seconds'.format(
+            num_poses,
+            time_span_seconds,
+            elapsed_time
+        ))
+    return df_processed
+
 def generate_pose_pairs(
     df,
     verbose=False
