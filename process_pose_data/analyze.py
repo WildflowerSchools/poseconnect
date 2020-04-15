@@ -278,15 +278,13 @@ def process_poses_by_timestamp(
             summary_method=summary_method,
             pixel_distance_scale=pixel_distance_scale
         )
-        df_timestamp['timestamp'] = timestamp
+        df_timestamp.insert(
+            loc=0,
+            column='timestamp',
+            value=timestamp
+        )
         df_timestamp_list.append(df_timestamp)
     df_processed = pd.concat(df_timestamp_list)
-    df_processed.set_index('timestamp', append=True, inplace=True)
-    df_processed = df_processed.reorder_levels([
-        'timestamp',
-        'pose_id_a',
-        'pose_id_b'
-    ])
     overall_elapsed_time = time.time() - overall_start_time
     logger.info('Processed {} 2D poses spanning {:.1f} seconds in {:.1f} seconds (ratio of {:.3f})'.format(
         num_poses,
@@ -300,6 +298,10 @@ def generate_pose_pairs(
     df
 ):
     pose_pairs = df.groupby('timestamp').apply(generate_pose_pairs_timestamp)
+    pose_pairs.reset_index(
+        level='timestamp',
+        inplace=True
+    )
     return pose_pairs
 
 def generate_pose_pairs_timestamp(
@@ -348,8 +350,8 @@ def calculate_3d_poses(
             df['camera_id_a'].unique(),
             df['camera_id_b'].unique()
         ).tolist()
-        start = df.index.get_level_values('timestamp').min().to_pydatetime()
-        end = df.index.get_level_values('timestamp').max().to_pydatetime()
+        start = df['timestamp'].min().to_pydatetime()
+        end = df['timestamp'].max().to_pydatetime()
         camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
             camera_ids=camera_ids,
             start=start,

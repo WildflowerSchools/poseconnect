@@ -586,8 +586,8 @@ def pose_pair_score_histogram(
     fig_width_inches=10.5,
     fig_height_inches=8
 ):
-    timestamp_min = df.index.get_level_values('timestamp').min()
-    timestamp_max = df.index.get_level_values('timestamp').max()
+    timestamp_min = df['timestamp'].min()
+    timestamp_max = df['timestamp'].max()
     if plot_title is not None:
         fig_suptitle = '{} ({} - {})'.format(
             plot_title,
@@ -654,7 +654,7 @@ def pose_pair_score_heatmap(
     fig_width_inches=10.5,
     fig_height_inches=8
 ):
-    timestamps = df.index.get_level_values('timestamp').unique()
+    timestamps = df['timestamp'].unique()
     camera_ids_a = df['camera_id_a'].unique()
     camera_ids_b = df['camera_id_b'].unique()
     if len(timestamps) > 1:
