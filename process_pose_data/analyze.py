@@ -184,7 +184,8 @@ def generate_pose_pairs_timestamp(
 
 def calculate_3d_poses(
     df,
-    camera_calibrations=None
+    camera_calibrations=None,
+    verbose=False
 ):
     if camera_calibrations is None:
         camera_ids = np.union1d(
@@ -199,19 +200,21 @@ def calculate_3d_poses(
             end=end
         )
     num_pose_pairs = len(df)
-    logger.info('Calculating 3D poses for {} 2D pose pairs'.format(
-        num_pose_pairs
-    ))
+    if verbose:
+        logger.info('Calculating 3D poses for {} 2D pose pairs'.format(
+            num_pose_pairs
+        ))
     start_time = time.time()
     df = df.groupby(['camera_id_a', 'camera_id_b']).apply(
         lambda x: calculate_3d_poses_camera_pair(x, camera_calibrations)
     )
     elapsed_time = time.time() - start_time
-    logger.info('Calculated 3D poses for {} 2D pose pairs in {:.3f} seconds ({:.3f} ms per pose pair)'.format(
-        num_pose_pairs,
-        elapsed_time,
-        1000*elapsed_time/num_pose_pairs
-    ))
+    if verbose:
+        logger.info('Calculated 3D poses for {} 2D pose pairs in {:.3f} seconds ({:.3f} ms per pose pair)'.format(
+            num_pose_pairs,
+            elapsed_time,
+            1000*elapsed_time/num_pose_pairs
+        ))
     return df
 
 def calculate_3d_poses_camera_pair(
@@ -349,12 +352,14 @@ def score_pose_pairs(
     df,
     distance_method='pixels',
     summary_method='rms',
-    pixel_distance_scale=5.0
+    pixel_distance_scale=5.0,
+    verbose=False
 ):
     num_pose_pairs = len(df)
-    logger.info('Calculating reprojection differences for {} pose pairs'.format(
-        num_pose_pairs
-    ))
+    if verbose:
+        logger.info('Calculating reprojection differences for {} pose pairs'.format(
+            num_pose_pairs
+        ))
     start_time=time.time()
     reprojection_difference = np.stack(
         (
@@ -370,14 +375,15 @@ def score_pose_pairs(
         axis=-2
     )
     elapsed_time = time.time() - start_time
-    logger.info('Calculated reprojection differences for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
-        num_pose_pairs,
-        elapsed_time,
-        1000*elapsed_time/num_pose_pairs
-    ))
-    logger.info('Calculating distances for {} pose pairs'.format(
-        num_pose_pairs
-    ))
+    if verbose:
+        logger.info('Calculated reprojection differences for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
+            num_pose_pairs,
+            elapsed_time,
+            1000*elapsed_time/num_pose_pairs
+        ))
+        logger.info('Calculating distances for {} pose pairs'.format(
+            num_pose_pairs
+        ))
     start_time=time.time()
     if distance_method == 'pixels':
         distance = pixel_distance(reprojection_difference)
@@ -389,14 +395,15 @@ def score_pose_pairs(
     else:
         raise ValueError('Distance method not recognized')
     elapsed_time = time.time() - start_time
-    logger.info('Calculated distances for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
-        num_pose_pairs,
-        elapsed_time,
-        1000*elapsed_time/num_pose_pairs
-    ))
-    logger.info('Summarizing distances across keypoints for {} pose pairs'.format(
-        num_pose_pairs
-    ))
+    if verbose:
+        logger.info('Calculated distances for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
+            num_pose_pairs,
+            elapsed_time,
+            1000*elapsed_time/num_pose_pairs
+        ))
+        logger.info('Summarizing distances across keypoints for {} pose pairs'.format(
+            num_pose_pairs
+        ))
     start_time=time.time()
     if summary_method == 'rms':
         score = np.sqrt(np.nanmean(np.square(distance), axis=(-1, -2)))
@@ -405,11 +412,12 @@ def score_pose_pairs(
     else:
         raise ValueError('Summary method not recognized')
     elapsed_time = time.time() - start_time
-    logger.info('Summarized distances across keypoints for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
-        num_pose_pairs,
-        elapsed_time,
-        1000*elapsed_time/num_pose_pairs
-    ))
+    if verbose:
+        logger.info('Summarized distances across keypoints for {} pose pairs in {:.1f} seconds ({:.3f} ms per pose pair)'.format(
+            num_pose_pairs,
+            elapsed_time,
+            1000*elapsed_time/num_pose_pairs
+        ))
     df_copy = df.copy()
     df_copy['score'] = score
     return df_copy
