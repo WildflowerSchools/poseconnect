@@ -3,6 +3,7 @@ import cv_utils
 import cv2 as cv
 import pandas as pd
 import numpy as np
+import tqdm
 import logging
 import time
 import itertools
@@ -211,7 +212,9 @@ def process_poses_by_timestamp(
     df,
     distance_method='pixels',
     summary_method='rms',
-    pixel_distance_scale=5.0
+    pixel_distance_scale=5.0,
+    progress_bar=False,
+    notebook=False
 ):
     num_poses = len(df)
     num_timestamps = len(df['timestamp'].unique())
@@ -237,7 +240,13 @@ def process_poses_by_timestamp(
     ))
     overall_start_time = time.time()
     df_timestamp_list = list()
-    for timestamp, df_timestamp in df.groupby('timestamp'):
+    timestamp_iterator = df.groupby('timestamp')
+    if progress_bar:
+        if notebook:
+            timestamp_iterator = tqdm.tqdm_notebook(timestamp_iterator)
+        else:
+            timestamp_iterator = tqdm.tqdm(timestamp_iterator)
+    for timestamp, df_timestamp in timestamp_iterator:
         df_timestamp = generate_pose_pairs_timestamp(
             df=df_timestamp
         )
