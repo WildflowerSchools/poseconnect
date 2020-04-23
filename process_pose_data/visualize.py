@@ -1,13 +1,16 @@
 import process_pose_data.fetch
+import cv_utils
+import video_io
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from pandas.plotting import register_matplotlib_converters
 import seaborn as sns
 import slugify
+import string
 import os
 
-sns.set()
+# sns.set()
 
 register_matplotlib_converters()
 
@@ -640,6 +643,8 @@ def pose_pair_score_heatmap(
     min_score=None,
     max_score=None,
     color_map_name='summer_r',
+    pose_label_map_a=None,
+    pose_label_map_b=None,
     display_camera_names=False,
     camera_names=None,
     plot_title=None,
@@ -696,9 +701,32 @@ def pose_pair_score_heatmap(
         df.loc[df['score'] < min_score, 'score'] = np.nan
     if max_score is not None:
         df.loc[df['score'] > max_score, 'score'] = np.nan
+    df = df.sort_index()
+    pose_ids_a = df.index.get_level_values('pose_id_a').unique().sort_values().tolist()
+    pose_ids_b = df.index.get_level_values('pose_id_b').unique().sort_values().tolist()
+    if pose_label_map_a is None:
+        if 'track_label_a' in df.columns:
+            track_labels_a = df['track_label_a'].reset_index(level='pose_id_b', drop=True).drop_duplicates()
+            pose_labels_a = [track_labels_a.loc[pose_id] for pose_id in pose_ids_a]
+        elif len(pose_ids_a) <= 26:
+            pose_labels_a = string.ascii_uppercase[:len(pose_ids_a)]
+        else:
+            pose_labels_a = range(len(pose_ids_a))
+        pose_label_map_a = dict(zip(pose_ids_a, pose_labels_a))
+    if pose_label_map_b is None:
+        if 'track_label_b' in df.columns:
+            track_labels_b = df['track_label_b'].reset_index(level='pose_id_a', drop=True).drop_duplicates()
+            pose_labels_b = [track_labels_b.loc[pose_id] for pose_id in pose_ids_b]
+        elif len(pose_ids_b) <= 26:
+            pose_labels_b = string.ascii_uppercase[:len(pose_ids_b)]
+        else:
+            pose_labels_b = range(len(pose_ids_b))
+        pose_label_map_b = dict(zip(pose_ids_b, pose_labels_b))
     pivot_df=df.reset_index().pivot(index='pose_id_a', columns='pose_id_b', values='score')
-    pivot_df.index = np.arange(pivot_df.shape[0])
-    pivot_df.columns = np.arange(pivot_df.shape[1])
+    pivot_df.rename(index=pose_label_map_a, inplace=True)
+    pivot_df.rename(columns=pose_label_map_b, inplace=True)
+    pivot_df.sort_index(axis=0, inplace=True)
+    pivot_df.sort_index(axis=1, inplace=True)
     sns_plot = sns.heatmap(
         pivot_df,
         cmap=color_map_name,
@@ -729,6 +757,145 @@ def pose_pair_score_heatmap(
             save_filename
         )
         fig.savefig(path)
+
+def extract_single_camera_data(
+    df,
+):
+    single_camera_columns = list()
+    for column in df.columns:
+        if column[-2:]=='_a' or column[-2:]=='_b':
+            single_camera_column = column[:-2]
+            if single_camera_column not in single_camera_columns:
+                single_camera_columns.append(single_camera_column)
+    df = df.reset_index()
+    dfs = list()
+    for suffix in ['_a', '_b']:
+        extraction_columns = ['pose_id' + suffix, 'timestamp']
+        extraction_columns.extend([single_camera_column + suffix for single_camera_column in single_camera_columns])
+        target_columns = ['pose_id', 'timestamp']
+        target_columns.extend(single_camera_columns)
+        print(extraction_columns)
+        print(target_columns)
+        column_map = dict(zip(extraction_columns, target_columns))
+        print(column_map)
+        df_single_camera = df.reindex(columns=extraction_columns)
+        df_single_camera.rename(columns=column_map, inplace=True)
+        print(df_single_camera.columns)
+        df_single_camera.drop_duplicates(subset='pose_id', inplace=True)
+        df_single_camera.set_index('pose_id', inplace=True)
+        dfs.append(df_single_camera)
+    return dfs
+
+def draw_poses_2d(
+    df,
+    pose_label_map=None,
+    image_size=None,
+    show_axes=False,
+    show_background_image=True,
+    background_image=None,
+    display_camera_name=False,
+    camera_name=None,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S.%f',
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_prefix='poses_2d',
+    filename_datetime_format='%Y%m%d_%H%M%S_%f',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    timestamps = df['timestamp'].unique()
+    camera_ids = df['camera_id'].unique()
+    if len(timestamps) > 1:
+        raise ValueError('More than one timestamp in data frame')
+    if len(camera_ids) > 1:
+        raise ValueError('More than one camera in data frame')
+    timestamp = timestamps[0]
+    camera_id = camera_ids[0]
+    camera_identifier = camera_id
+    if display_camera_name:
+        if camera_name is None:
+            camera_name = process_pose_data.fetch.fetch_camera_names([camera_id])[camera_id]
+        camera_identifier = camera_name
+    fig_suptitle = '{} ({})'.format(
+        camera_identifier,
+        timestamp.strftime(plot_title_datetime_format)
+    )
+    save_filename = '{}_{}_{}.{}'.format(
+        filename_prefix,
+        slugify.slugify(camera_identifier),
+        timestamp.strftime(filename_datetime_format),
+        filename_extension
+    )
+    df = df.sort_index()
+    pose_ids = df.index.sort_values().tolist()
+    if pose_label_map is None:
+        if 'track_label' in df.columns:
+            pose_labels = df['track_label'].values.tolist()
+        elif len(pose_ids) <= 26:
+            pose_labels = string.ascii_uppercase[:len(pose_ids)]
+        else:
+            pose_labels = range(len(pose_ids))
+        pose_label_map = dict(zip(pose_ids, pose_labels))
+    for pose_id, row in df.iterrows():
+        process_pose_data.draw_pose_2d(
+            row['keypoint_coordinates'],
+            keypoint_connectors=None,
+            pose_label=pose_label_map[pose_id],
+            keypoint_connector_alpha=0.2
+        )
+    if show_background_image:
+        if background_image is None:
+            image_metadata = video_io.fetch_images(
+                image_timestamps = [timestamp.to_pydatetime()],
+                camera_device_ids=[camera_id]
+            )
+            image_local_path = image_metadata[0]['image_local_path']
+            background_image = cv_utils.fetch_image_from_local_drive(image_local_path)
+        cv_utils.draw_background_image(background_image)
+    cv_utils.format_2d_image_plot(
+        image_size=image_size,
+        show_axes=show_axes
+    )
+    fig = plt.gcf()
+    fig.suptitle(fig_suptitle)
+    fig.set_size_inches(fig_width_inches, fig_height_inches)
+    # Show plot
+    if show:
+        plt.show()
+    # Save plot
+    if save:
+        path = os.path.join(
+            save_directory,
+            save_filename
+        )
+        fig.savefig(path)
+
+def draw_pose_2d(
+    keypoint_coordinates,
+    keypoint_connectors=None,
+    pose_label=None,
+    keypoint_connector_alpha=0.2
+):
+    keypoint_coordinates = np.asarray(keypoint_coordinates).reshape((-1, 2))
+    valid_keypoints = np.all(np.isfinite(keypoint_coordinates), axis=1)
+    plottable_points = keypoint_coordinates[valid_keypoints]
+    cv_utils.draw_2d_image_points(plottable_points)
+    if keypoint_connectors is not None:
+        for keypoint_connector in keypoint_connectors:
+            keypoint_from_index = keypoint_connector[0]
+            keypoint_to_index = keypoint_connector[1]
+            if valid_keypoints[keypoint_from_index] and valid_keypoints[keypoint_to_index]:
+                plt.plot(
+                    [keypoint_coordinates[keypoint_from_index,0],keypoint_coordinates[keypoint_to_index, 0]],
+                    [keypoint_coordinates[keypoint_from_index,1],keypoint_coordinates[keypoint_to_index, 1]],
+                    'k-',
+                    alpha = keypoint_connector_alpha
+                )
+    if pose_label is not None:
+        pose_label_anchor = np.nanmean(keypoint_coordinates, axis=0)
+        plt.text(pose_label_anchor[0], pose_label_anchor[1], pose_label)
 
 def pose_track_timelines_by_camera(
     df,
@@ -841,6 +1008,7 @@ def pose_track_timelines(
             save_filename
         )
         fig.savefig(path)
+
 
 # def pose_track_scores_heatmap(
 #     df,
