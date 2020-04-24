@@ -618,6 +618,44 @@ def fetch_pose_model_id(
         return pose_model_id
     return None
 
+def fetch_pose_model(
+    pose_id,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    logger.info('Fetching pose model information for specified pose')
+    client = minimal_honeycomb.MinimalHoneycombClient(
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result = client.request(
+        request_type='query',
+        request_name='getPose2D',
+        arguments={
+            'pose_id': {
+                'type': 'ID!',
+                'value': pose_id
+            }
+        },
+        return_object=[
+            {'pose_model': [
+                'pose_model_id',
+                'model_name',
+                'model_variant_name',
+                'keypoint_names',
+                'keypoint_descriptions',
+                'keypoint_connectors'
+            ]}
+        ])
+    pose_model = result.get('pose_model')
+    return pose_model
+
 def fetch_inference_ids(
     inference_ids=None,
     inference_names=None,

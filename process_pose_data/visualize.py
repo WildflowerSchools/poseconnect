@@ -798,6 +798,8 @@ def extract_single_camera_data(
 
 def draw_poses_2d(
     df,
+    draw_keypoint_connectors=True,
+    keypoint_connectors=None,
     pose_label_map=None,
     image_size=None,
     show_axes=False,
@@ -848,10 +850,17 @@ def draw_poses_2d(
         else:
             pose_labels = range(len(pose_ids))
         pose_label_map = dict(zip(pose_ids, pose_labels))
+    if draw_keypoint_connectors:
+        if keypoint_connectors is None:
+            pose_model = process_pose_data.fetch.fetch_pose_model(
+                pose_id=pose_ids[0]
+            )
+            keypoint_connectors = pose_model.get('keypoint_connectors')
     for pose_id, row in df.iterrows():
         process_pose_data.draw_pose_2d(
             row['keypoint_coordinates'],
-            keypoint_connectors=None,
+            draw_keypoint_connectors=draw_keypoint_connectors,
+            keypoint_connectors=keypoint_connectors,
             pose_label=pose_label_map[pose_id],
             keypoint_connector_alpha=0.2
         )
@@ -884,6 +893,7 @@ def draw_poses_2d(
 
 def draw_pose_2d(
     keypoint_coordinates,
+    draw_keypoint_connectors=True,
     keypoint_connectors=None,
     pose_label=None,
     keypoint_connector_alpha=0.2
@@ -892,7 +902,7 @@ def draw_pose_2d(
     valid_keypoints = np.all(np.isfinite(keypoint_coordinates), axis=1)
     plottable_points = keypoint_coordinates[valid_keypoints]
     cv_utils.draw_2d_image_points(plottable_points)
-    if keypoint_connectors is not None:
+    if draw_keypoint_connectors and (keypoint_connectors is not None):
         for keypoint_connector in keypoint_connectors:
             keypoint_from_index = keypoint_connector[0]
             keypoint_to_index = keypoint_connector[1]
