@@ -4,7 +4,6 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 * Add option of specifying Honeycomb client info for visualization functions that require Honeycomb
-* Get control of color cycle for pose drawing
 * Add functions for extracting random timestamp, camera pair
 * Add function which produces heatmap and both camera views for chosen timestamp, camera pair
 * Fix up `fetch` module to match design of `wf-video-io`

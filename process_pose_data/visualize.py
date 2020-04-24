@@ -801,10 +801,17 @@ def draw_poses_2d(
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
     pose_label_map=None,
+    keypoint_alpha=0.3,
+    keypoint_connector_alpha=0.3,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.5,
+    pose_label_boxstyle='circle',
     image_size=None,
     show_axes=False,
     show_background_image=True,
     background_image=None,
+    background_image_alpha=0.4,
     display_camera_name=False,
     camera_name=None,
     plot_title_datetime_format='%m/%d/%Y %H:%M:%S.%f',
@@ -862,7 +869,12 @@ def draw_poses_2d(
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
             pose_label=pose_label_map[pose_id],
-            keypoint_connector_alpha=0.2
+            keypoint_alpha=keypoint_alpha,
+            keypoint_connector_alpha=keypoint_connector_alpha,
+            keypoint_connector_linewidth=keypoint_connector_linewidth,
+            pose_label_color=pose_label_color,
+            pose_label_background_alpha=pose_label_background_alpha,
+            pose_label_boxstyle=pose_label_boxstyle
         )
     if show_background_image:
         if background_image is None:
@@ -872,7 +884,10 @@ def draw_poses_2d(
             )
             image_local_path = image_metadata[0]['image_local_path']
             background_image = cv_utils.fetch_image_from_local_drive(image_local_path)
-        cv_utils.draw_background_image(background_image)
+        cv_utils.draw_background_image(
+            image=background_image,
+            alpha=background_image_alpha
+        )
     cv_utils.format_2d_image_plot(
         image_size=image_size,
         show_axes=show_axes
@@ -896,12 +911,24 @@ def draw_pose_2d(
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
     pose_label=None,
-    keypoint_connector_alpha=0.2
+    keypoint_alpha=0.3,
+    keypoint_connector_alpha=0.3,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.5,
+    pose_label_boxstyle='circle'
 ):
     keypoint_coordinates = np.asarray(keypoint_coordinates).reshape((-1, 2))
     valid_keypoints = np.all(np.isfinite(keypoint_coordinates), axis=1)
     plottable_points = keypoint_coordinates[valid_keypoints]
-    cv_utils.draw_2d_image_points(plottable_points)
+    points_image_u = plottable_points[:, 0]
+    points_image_v = plottable_points[:, 1]
+    plot, = plt.plot(
+        points_image_u,
+        points_image_v,
+        '.',
+        alpha=keypoint_alpha)
+    plot_color=color=plot.get_color()
     if draw_keypoint_connectors and (keypoint_connectors is not None):
         for keypoint_connector in keypoint_connectors:
             keypoint_from_index = keypoint_connector[0]
@@ -910,12 +937,24 @@ def draw_pose_2d(
                 plt.plot(
                     [keypoint_coordinates[keypoint_from_index,0],keypoint_coordinates[keypoint_to_index, 0]],
                     [keypoint_coordinates[keypoint_from_index,1],keypoint_coordinates[keypoint_to_index, 1]],
-                    'k-',
-                    alpha = keypoint_connector_alpha
+                    linewidth=keypoint_connector_linewidth,
+                    color=plot_color,
+                    alpha=keypoint_connector_alpha
                 )
     if pose_label is not None:
         pose_label_anchor = np.nanmean(keypoint_coordinates, axis=0)
-        plt.text(pose_label_anchor[0], pose_label_anchor[1], pose_label)
+        plt.text(
+            pose_label_anchor[0],
+            pose_label_anchor[1],
+            pose_label,
+            color=pose_label_color,
+            bbox={
+                'alpha': pose_label_background_alpha,
+                'facecolor': plot_color,
+                'edgecolor': 'none',
+                'boxstyle': pose_label_boxstyle
+            }
+        )
 
 def pose_track_timelines_by_camera(
     df,
