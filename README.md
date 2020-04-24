@@ -3,8 +3,6 @@
 Tools for fetching, processing, visualizing, and analyzing Wildflower human pose data
 
 ## Task list
-* Fix problem in heat map for empty data
-* Add outer frame on heat map
 * Add keypoint connectors to pose drawing
 * Get control of color cycle for pose drawing
 * Add functions for extracting random timestamp, camera pair

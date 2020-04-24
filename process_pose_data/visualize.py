@@ -1,6 +1,7 @@
 import process_pose_data.fetch
 import cv_utils
 import video_io
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -9,6 +10,9 @@ import seaborn as sns
 import slugify
 import string
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 # sns.set()
 
@@ -697,10 +701,14 @@ def pose_pair_score_heatmap(
             timestamp.strftime(filename_datetime_format),
             filename_extension
         )
+    df = df.copy()
     if min_score is not None:
         df.loc[df['score'] < min_score, 'score'] = np.nan
     if max_score is not None:
         df.loc[df['score'] > max_score, 'score'] = np.nan
+    if pd.isnull(df['score']).all():
+        logger.warn('No pose pairs meet score criteria')
+        return
     df = df.sort_index()
     pose_ids_a = df.index.get_level_values('pose_id_a').unique().sort_values().tolist()
     pose_ids_b = df.index.get_level_values('pose_id_b').unique().sort_values().tolist()
