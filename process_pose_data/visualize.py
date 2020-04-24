@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.colors
 from pandas.plotting import register_matplotlib_converters
 import seaborn as sns
 import slugify
@@ -646,7 +647,8 @@ def pose_pair_score_heatmap(
     df,
     min_score=None,
     max_score=None,
-    color_map_name='summer_r',
+    color_rule='score',
+    score_color_map_name='summer_r',
     pose_label_map_a=None,
     pose_label_map_b=None,
     display_camera_names=False,
@@ -730,21 +732,42 @@ def pose_pair_score_heatmap(
         else:
             pose_labels_b = range(len(pose_ids_b))
         pose_label_map_b = dict(zip(pose_ids_b, pose_labels_b))
-    pivot_df=df.reset_index().pivot(index='pose_id_a', columns='pose_id_b', values='score')
-    pivot_df.rename(index=pose_label_map_a, inplace=True)
-    pivot_df.rename(columns=pose_label_map_b, inplace=True)
-    pivot_df.sort_index(axis=0, inplace=True)
-    pivot_df.sort_index(axis=1, inplace=True)
-    ax = sns_plot = sns.heatmap(
-        pivot_df,
-        cmap=color_map_name,
-        linewidths=0.1,
-        linecolor='gray',
-        annot=True,
-        square=True,
+    scores_df=df.reset_index().pivot(index='pose_id_a', columns='pose_id_b', values='score')
+    scores_df.rename(index=pose_label_map_a, inplace=True)
+    scores_df.rename(columns=pose_label_map_b, inplace=True)
+    scores_df.sort_index(axis=0, inplace=True)
+    scores_df.sort_index(axis=1, inplace=True)
+    matches_df=df.reset_index().pivot(index='pose_id_a', columns='pose_id_b', values='match')
+    matches_df.rename(index=pose_label_map_a, inplace=True)
+    matches_df.rename(columns=pose_label_map_b, inplace=True)
+    matches_df.sort_index(axis=0, inplace=True)
+    matches_df.sort_index(axis=1, inplace=True)
+    if color_rule == 'score':
+        data = scores_df
+        cmap = score_color_map_name
+        annot=True
+        cbar = True
         cbar_kws = {
             'label': 'Pose pair score'
         }
+    elif color_rule == 'match':
+        data = matches_df
+        annot = scores_df
+        cmap = matplotlib.colors.ListedColormap(['lightgray', 'lightgreen'])
+        cbar = False
+        cbar_kws = None
+    else:
+        raise ValueError('Color rule \'{}\' not recognized'.format(color_rule))
+    ax = sns_plot = sns.heatmap(
+        data=data,
+        cmap=cmap,
+        linewidths=0.1,
+        linecolor='gray',
+        annot=annot,
+        mask=scores_df.isnull(),
+        square=True,
+        cbar=cbar,
+        cbar_kws = cbar_kws
     )
     for _, spine in ax.spines.items():
         spine.set_visible(True)
