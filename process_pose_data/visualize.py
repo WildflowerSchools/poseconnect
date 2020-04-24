@@ -727,7 +727,7 @@ def pose_pair_score_heatmap(
     pivot_df.rename(columns=pose_label_map_b, inplace=True)
     pivot_df.sort_index(axis=0, inplace=True)
     pivot_df.sort_index(axis=1, inplace=True)
-    sns_plot = sns.heatmap(
+    ax = sns_plot = sns.heatmap(
         pivot_df,
         cmap=color_map_name,
         linewidths=0.1,
@@ -738,6 +738,8 @@ def pose_pair_score_heatmap(
             'label': 'Pose pair score'
         }
     )
+    for _, spine in ax.spines.items():
+        spine.set_visible(True)
     if display_camera_names:
         plt.xlabel(camera_names[camera_id_b])
         plt.ylabel(camera_names[camera_id_a])
