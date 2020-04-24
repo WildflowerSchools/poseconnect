@@ -676,12 +676,12 @@ def pose_pair_score_heatmap(
             camera_ids = [camera_id_a, camera_id_b]
             camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
     if plot_title is not None:
-        fig_suptitle = '{} ({})'.format(
+        ax_title = '{} ({})'.format(
             plot_title,
             timestamp.strftime(plot_title_datetime_format)
         )
     else:
-        fig_suptitle = '{}'.format(
+        ax_title = '{}'.format(
             timestamp.strftime(plot_title_datetime_format)
         )
     if file_identifier is not None:
@@ -746,8 +746,8 @@ def pose_pair_score_heatmap(
     else:
         plt.xlabel(camera_id_b)
         plt.ylabel(camera_id_a)
+    ax.set_title(ax_title)
     fig = sns_plot.get_figure()
-    fig.suptitle(fig_suptitle)
     fig.set_size_inches(fig_width_inches, fig_height_inches)
     # Show plot
     if show:
