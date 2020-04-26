@@ -10,7 +10,7 @@ import itertools
 
 logger = logging.getLogger(__name__)
 
-def filter_keypoint_quality(
+def filter_keypoints_by_quality(
     df,
     min_keypoint_quality=None,
     max_keypoint_quality=None,
@@ -54,7 +54,7 @@ def filter_keypoint_quality(
     if not inplace:
         return df_filtered
 
-def filter_num_valid_keypoints(
+def filter_poses_by_num_valid_keypoints(
     df,
     min_num_keypoints=None,
     max_num_keypoints=None,
@@ -75,7 +75,7 @@ def filter_num_valid_keypoints(
     if not inplace:
         return df_filtered
 
-def filter_pose_quality(
+def filter_poses_by_quality(
     df,
     min_pose_quality=None,
     max_pose_quality=None,
