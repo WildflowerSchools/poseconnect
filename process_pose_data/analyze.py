@@ -164,11 +164,11 @@ def process_poses_by_timestamp(
             summary_method=summary_method,
             pixel_distance_scale=pixel_distance_scale
         )
-        df_timestamp.insert(
-            loc=0,
-            column='timestamp',
-            value=timestamp
-        )
+        # df_timestamp.insert(
+        #     loc=0,
+        #     column='timestamp',
+        #     value=timestamp
+        # )
         df_timestamp_list.append(df_timestamp)
     df_processed = pd.concat(df_timestamp_list)
     overall_elapsed_time = time.time() - overall_start_time
@@ -249,14 +249,21 @@ def calculate_3d_poses(
             end=end
         )
     df = df.groupby(['camera_id_a', 'camera_id_b']).apply(
-        lambda x: calculate_3d_poses_camera_pair(x, camera_calibrations)
+        lambda x: calculate_3d_poses_camera_pair(
+            x,
+            camera_calibrations,
+            inplace=False
+        )
     )
     return df
 
 def calculate_3d_poses_camera_pair(
     df,
-    camera_calibrations
+    camera_calibrations,
+    inplace=False
 ):
+    if not inplace:
+        df = df.copy()
     num_pose_pairs = len(df)
     camera_ids_a = df['camera_id_a'].unique()
     camera_ids_b = df['camera_id_b'].unique()
@@ -315,7 +322,8 @@ def calculate_3d_poses_camera_pair(
     df['keypoint_coordinates_3d'] = np.split(keypoints_3d, num_pose_pairs)
     df['keypoint_coordinates_a_reprojected'] = np.split(keypoints_a_reprojected, num_pose_pairs)
     df['keypoint_coordinates_b_reprojected'] = np.split(keypoints_b_reprojected, num_pose_pairs)
-    return df
+    if not inplace:
+        return df
 
 def triangulate_image_points(
     image_points_1,
