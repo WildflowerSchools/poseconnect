@@ -3,9 +3,9 @@
 Tools for fetching, processing, visualizing, and analyzing Wildflower human pose data
 
 ## Task list
-* For functions that act on dataframes make it clear in the name what structure they expect (e.g., only one timestamp and camera pair)
 * For functions that act on dataframes, make it optional to check dataframe structure (e.g., only one timestamp and camera pair)
 * For functions than iterate over previous functions, making naming and approach consistent (e.g., always use apply?)
+* Fix up interaction between `generate_pose_pairs()` and `generate_pose_pairs_timestamp()` (why is it messing with index?)
 * For functions that act on dataframes, be consistent about `inplace` option
 * Restructure `process_poses_by_timestamp` to use the two set of functions above
 * Add option of specifying Honeycomb client info for visualization functions that require Honeycomb

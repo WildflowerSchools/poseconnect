@@ -431,16 +431,16 @@ def probability_distance(image_point_differences, pixel_distance_scale):
         )
     )
 
-def identify_matches(
+def identify_matches_timestamp_camera_pair(
     df
 ):
     df_copy = df.copy()
-    match_indices = extract_match_indices(df)
+    match_indices = extract_match_indices_timestamp_camera_pair(df)
     df_copy['match'] = False
     df_copy.loc[match_indices, 'match'] = True
     return df_copy
 
-def extract_match_indices(
+def extract_match_indices_timestamp_camera_pair(
     df
 ):
     best_a_match_for_b = df['score'].groupby('pose_id_b').idxmin()

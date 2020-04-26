@@ -599,7 +599,7 @@ def pose_pair_score_histogram(
         )
         fig.savefig(path)
 
-def pose_pair_score_heatmap(
+def pose_pair_score_heatmap_timestamp_camera_pair(
     df,
     min_score=None,
     max_score=None,
@@ -775,7 +775,7 @@ def extract_single_camera_data(
         dfs.append(df_single_camera)
     return dfs
 
-def draw_poses_2d(
+def draw_poses_2d_timestamp_camera(
     df,
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
