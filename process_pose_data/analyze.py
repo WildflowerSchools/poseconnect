@@ -10,37 +10,6 @@ import itertools
 
 logger = logging.getLogger(__name__)
 
-def filter_pose_tracks(
-    df,
-    min_pose_quality=None,
-    max_pose_quality=None,
-    min_keypoint_quality=None,
-    max_keypoint_quality=None,
-    min_num_poses_in_track=None,
-    inplace=False
-):
-    # Make copy of input dataframe if operation is not in place
-    if inplace:
-        df_filtered = df
-    else:
-        df_filtered = df.copy()
-    # Apply filters
-    if min_pose_quality is not None:
-        df_filtered = df_filtered.loc[df_filtered['pose_quality'] >= min_pose_quality]
-    if max_pose_quality is not None:
-        df_filtered = df_filtered.loc[df_filtered['pose_quality'] <= max_pose_quality]
-    if min_keypoint_quality is not None or max_keypoint_quality is not None:
-        df_filtered = filter_keypoint_quality(
-            df=df_filtered,
-            min_keypoint_quality=min_keypoint_quality,
-            max_keypoint_quality=max_keypoint_quality,
-            inplace=False
-        )
-    if min_num_poses_in_track is not None:
-        df_filtered = df.groupby(['camera_device_id', 'track_label']).filter(lambda x: len(x) >= min_num_poses_in_track)
-    if not inplace:
-        return df_filtered
-
 def filter_keypoint_quality(
     df,
     min_keypoint_quality=None,
@@ -142,90 +111,7 @@ def filter_pose_pairs_by_score(
     if not inplace:
         return df_filtered
 
-def process_poses_bulk(
-    df,
-    distance_method='pixels',
-    summary_method='rms',
-    pixel_distance_scale=5.0
-):
-    num_poses = len(df)
-    num_timestamps = len(df['timestamp'].unique())
-    start = df['timestamp'].min().to_pydatetime()
-    end = df['timestamp'].max().to_pydatetime()
-    time_span = end - start
-    time_span_seconds = time_span.total_seconds()
-    camera_ids = df['camera_id'].unique().tolist()
-    num_cameras = len(camera_ids)
-    logger.info('Fetching camera calibration data for {} cameras'.format(
-        num_cameras
-    ))
-    camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
-        camera_ids=camera_ids,
-        start=start,
-        end=end
-    )
-    logger.info('Processing {} 2D poses spanning {} cameras and {:.1f} seconds ({} time steps)'.format(
-        num_poses,
-        num_cameras,
-        time_span_seconds,
-        num_timestamps
-    ))
-    overall_start_time = time.time()
-    df_processed = df.copy()
-    logger.info('Generating pose pairs for {} poses'.format(
-        num_poses
-    ))
-    start_time = time.time()
-    df_processed = generate_pose_pairs(
-        df=df_processed
-    )
-    elapsed_time = time.time() - start_time
-    num_pose_pairs = len(df_processed)
-    logger.info('Generated {} pose pairs in {:.1f} seconds ({:.3f} ms per pose, {:.3f} ms per pose pair)'.format(
-        num_pose_pairs,
-        elapsed_time,
-        1000*elapsed_time/num_poses,
-        1000*elapsed_time/num_pose_pairs
-    ))
-    logger.info('Calculating 3D poses for {} 2D pose pairs'.format(
-        num_pose_pairs
-    ))
-    start_time = time.time()
-    df_processed = calculate_3d_poses(
-        df=df_processed,
-        camera_calibrations=camera_calibrations
-    )
-    elapsed_time = time.time() - start_time
-    logger.info('Calculated 3D poses for {} 2D pose pairs in {:.3f} seconds ({:.3f} ms per pose pair)'.format(
-        num_pose_pairs,
-        elapsed_time,
-        1000*elapsed_time/num_pose_pairs
-    ))
-    logger.info('Calculating scores for {} 2D pose pairs'.format(
-        num_pose_pairs
-    ))
-    start_time = time.time()
-    df_processed = score_pose_pairs(
-        df_processed,
-        distance_method=distance_method,
-        summary_method=summary_method,
-        pixel_distance_scale=pixel_distance_scale
-    )
-    elapsed_time = time.time() - start_time
-    logger.info('Calculated scores for {} 2D pose pairs in {:.3f} seconds ({:.3f} ms per pose pair)'.format(
-        num_pose_pairs,
-        elapsed_time,
-        1000*elapsed_time/num_pose_pairs
-    ))
-    overall_elapsed_time = time.time() - overall_start_time
-    logger.info('Processed {} 2D poses spanning {:.1f} seconds in {:.1f} seconds (ratio of {:.3f})'.format(
-        num_poses,
-        time_span_seconds,
-        overall_elapsed_time,
-        overall_elapsed_time/time_span_seconds
-    ))
-    return df_processed
-
+# TODO: Replace this function with one that uses the other functions below
 def process_poses_by_timestamp(
     df,
     distance_method='pixels',

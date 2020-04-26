@@ -3,7 +3,17 @@
 Tools for fetching, processing, visualizing, and analyzing Wildflower human pose data
 
 ## Task list
+* For functions that act on dataframes, be consistent about `inplace` option
+* For functions that act on dataframes make it clear in the name what structure they expect (e.g., only one timestamp and camera pair)
+* For functions than iterate over previous functions, making naming and approach consistent (e.g., always use apply?)
+* For functions that act on dataframes, make it optional to check dataframe structure (e.g., only one timestamp and camera pair)
+* Restructure `process_poses_by_timestamp` to use the two set of functions above
+* Rename filtering functions so it's clear what they act on (keypoints, poses, pose tracks, etc.)
 * Add option of specifying Honeycomb client info for visualization functions that require Honeycomb
+* Reinstate `sns.set()` for Seaborn plots without making it spill over into non-Seaborn plots (see [here](https://stackoverflow.com/questions/26899310/python-seaborn-to-reset-back-to-the-matplotlib))
+* Refactor code in `visualize` to make it less repetitive (same pattern over and over for `[verb]_by_camera`)
+* Fix up legend on pose track timelines
+* Add visualization for number of poses per camera per timestamp
 * Add functions for extracting random timestamp, camera pair
 * Add function which produces heatmap and both camera views for chosen timestamp, camera pair
 * Fix up `fetch` module to match design of `wf-video-io`
