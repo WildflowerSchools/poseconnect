@@ -186,6 +186,7 @@ def generate_pose_pairs(
     pose_pairs = df.groupby('timestamp').apply(generate_pose_pairs_timestamp)
     pose_pairs.reset_index(
         level='timestamp',
+        drop=True,
         inplace=True
     )
     return pose_pairs
@@ -221,8 +222,12 @@ def generate_pose_pairs_timestamp(
         inplace=True
     )
     pose_pairs_timestamp.columns = ['{}_{}'.format(column_name[1], column_name[0]) for column_name in pose_pairs_timestamp.columns.values]
+    pose_pairs_timestamp.rename(
+        columns = {'timestamp_a': 'timestamp'},
+        inplace=True
+    )
     pose_pairs_timestamp.drop(
-        columns=['timestamp_a', 'timestamp_b'],
+        columns=['timestamp_b'],
         inplace=True
     )
     return pose_pairs_timestamp
