@@ -804,7 +804,12 @@ def draw_poses_2d_timestamp_camera_pair(
         'a': None,
         'b': None
     }
+    pose_color_maps = {
+        'a': None,
+        'b': None
+    }
     if annotate_matches:
+        num_matches = df['match'].sum()
         for camera_letter in ['a', 'b']:
             pose_ids = dfs_single_camera[camera_letter].index.values.tolist()
             if 'track_label' in dfs_single_camera[camera_letter].columns:
@@ -814,6 +819,8 @@ def draw_poses_2d_timestamp_camera_pair(
             else:
                 pose_labels = range(len(pose_ids))
             pose_label_maps[camera_letter] = dict(zip(pose_ids, pose_labels))
+            pose_color_maps[camera_letter] = {pose_id: 'grey' for pose_id in pose_ids}
+        match_colors = iter(sns.color_palette('husl', n_colors=num_matches))
         for (pose_id_a, pose_id_b), row in df.iterrows():
             if row['match']:
                 old_label_a = pose_label_maps['a'][pose_id_a]
@@ -826,12 +833,16 @@ def draw_poses_2d_timestamp_camera_pair(
                     old_label_b,
                     old_label_a
                 )
+                pose_color = next(match_colors)
+                pose_color_maps['a'][pose_id_a] = pose_color
+                pose_color_maps['b'][pose_id_b] = pose_color
     for camera_letter in ['a', 'b']:
         draw_poses_2d_timestamp_camera(
             df=dfs_single_camera[camera_letter],
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
             pose_label_map=pose_label_maps[camera_letter],
+            pose_color_map=pose_color_maps[camera_letter],
             keypoint_alpha=keypoint_alpha,
             keypoint_connector_alpha=keypoint_connector_alpha,
             keypoint_connector_linewidth=keypoint_connector_linewidth,
