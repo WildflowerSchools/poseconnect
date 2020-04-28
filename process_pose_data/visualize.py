@@ -862,6 +862,7 @@ def draw_poses_2d_timestamp_camera(
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
     pose_label_map=None,
+    pose_color_map=None,
     keypoint_alpha=0.3,
     keypoint_connector_alpha=0.3,
     keypoint_connector_linewidth=3,
@@ -918,6 +919,9 @@ def draw_poses_2d_timestamp_camera(
         else:
             pose_labels = range(len(pose_ids))
         pose_label_map = dict(zip(pose_ids, pose_labels))
+    if pose_color_map is None:
+        pose_colors = sns.color_palette('husl', n_colors=len(pose_ids))
+        pose_color_map = dict(zip(pose_ids, pose_colors))
     if draw_keypoint_connectors:
         if keypoint_connectors is None:
             pose_model = process_pose_data.fetch.fetch_pose_model(
@@ -930,6 +934,7 @@ def draw_poses_2d_timestamp_camera(
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
             pose_label=pose_label_map[pose_id],
+            pose_color=pose_color_map[pose_id],
             keypoint_alpha=keypoint_alpha,
             keypoint_connector_alpha=keypoint_connector_alpha,
             keypoint_connector_linewidth=keypoint_connector_linewidth,
@@ -972,6 +977,7 @@ def draw_pose_2d(
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
     pose_label=None,
+    pose_color=None,
     keypoint_alpha=0.3,
     keypoint_connector_alpha=0.3,
     keypoint_connector_linewidth=3,
@@ -988,6 +994,7 @@ def draw_pose_2d(
         points_image_u,
         points_image_v,
         '.',
+        color=pose_color,
         alpha=keypoint_alpha)
     plot_color=color=plot.get_color()
     if draw_keypoint_connectors and (keypoint_connectors is not None):
