@@ -466,13 +466,14 @@ def identify_matches_timestamp_camera_pair(
     df_copy = df.copy()
     match_indices = extract_match_indices_timestamp_camera_pair(df)
     df_copy['match'] = False
-    df_copy.loc[match_indices, 'match'] = True
+    if len(match_indices) > 0:
+        df_copy.loc[match_indices, 'match'] = True
     return df_copy
 
 def extract_match_indices_timestamp_camera_pair(
     df
 ):
-    best_a_match_for_b = df['score'].groupby('pose_id_b').idxmin()
-    best_b_match_for_a = df['score'].groupby('pose_id_a').idxmin()
+    best_a_match_for_b = df['score'].groupby('pose_id_b').idxmin().dropna()
+    best_b_match_for_a = df['score'].groupby('pose_id_a').idxmin().dropna()
     match_indices = list(set(best_a_match_for_b).intersection(best_b_match_for_a))
     return match_indices
