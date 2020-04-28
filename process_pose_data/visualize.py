@@ -774,6 +774,7 @@ def extract_single_camera_data(
 def draw_poses_2d_timestamp_camera_pair(
     df,
     annotate_matches=False,
+    generate_match_aliases=False,
     camera_names={'a': None, 'b': None},
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
@@ -812,14 +813,17 @@ def draw_poses_2d_timestamp_camera_pair(
         num_matches = df['match'].sum()
         for camera_letter in ['a', 'b']:
             pose_ids = dfs_single_camera[camera_letter].index.values.tolist()
-            if 'track_label' in dfs_single_camera[camera_letter].columns:
-                pose_labels = dfs_single_camera[camera_letter]['track_label'].values.tolist()
-            elif len(pose_ids) <= 26:
-                pose_labels = string.ascii_uppercase[:len(pose_ids)]
-            else:
-                pose_labels = range(len(pose_ids))
-            pose_label_maps[camera_letter] = dict(zip(pose_ids, pose_labels))
+            pose_label_maps[camera_letter] = {pose_id: '' for pose_id in pose_ids}
+            if not generate_match_aliases:
+                if 'track_label' in dfs_single_camera[camera_letter].columns:
+                    pose_labels = dfs_single_camera[camera_letter]['track_label'].values.tolist()
+                elif len(pose_ids) <= 26:
+                    pose_labels = string.ascii_uppercase[:len(pose_ids)]
+                else:
+                    pose_labels = range(len(pose_ids))
+                pose_label_maps[camera_letter] = dict(zip(pose_ids, pose_labels))
             pose_color_maps[camera_letter] = {pose_id: 'grey' for pose_id in pose_ids}
+        match_aliases = iter(list(string.ascii_uppercase[:num_matches]))
         match_colors = iter(sns.color_palette('husl', n_colors=num_matches))
         for (pose_id_a, pose_id_b), row in df.iterrows():
             if row['match']:
@@ -833,6 +837,10 @@ def draw_poses_2d_timestamp_camera_pair(
                     old_label_b,
                     old_label_a
                 )
+                if generate_match_aliases:
+                    match_alias = next(match_aliases)
+                    pose_label_maps['a'][pose_id_a] = match_alias
+                    pose_label_maps['b'][pose_id_b] = match_alias
                 pose_color = next(match_colors)
                 pose_color_maps['a'][pose_id_a] = pose_color
                 pose_color_maps['b'][pose_id_b] = pose_color

@@ -4,14 +4,15 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Incorporate identified matches into pose overlay visualizations
+* Add functions for extracting random timestamp, camera pair
+* Add score filter to match identification algorithm (or do we always want to filter pose pairs first?)
+* Get pose video overlays working again (for data with track labels)
+* Add pipeline stage to combine pose matches across camera view (using `networkx`, as before?)
 * Add option of specifying Honeycomb client info for visualization functions that require Honeycomb
 * Reinstate `sns.set()` for Seaborn plots without making it spill over into non-Seaborn plots (see [here](https://stackoverflow.com/questions/26899310/python-seaborn-to-reset-back-to-the-matplotlib))
 * Refactor code in `visualize` to make it less repetitive (same pattern over and over for `[verb]_by_camera`)
 * Fix up legend on pose track timelines
 * Add visualization for number of poses per camera per timestamp
-* Add functions for extracting random timestamp, camera pair
-* Add function which produces heatmap and both camera views for chosen timestamp, camera pair
 * Figure out inconsistent behavior of groupby-apply (under what conditions does it add grouping variables to index?)
 * For functions that act on dataframes, make it optional to check dataframe structure (e.g., only one timestamp and camera pair)
 * For functions than iterate over previous functions, making naming and approach consistent (e.g., always use apply?)
