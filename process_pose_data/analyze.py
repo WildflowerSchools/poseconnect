@@ -114,6 +114,7 @@ def filter_pose_pairs_by_score(
 # TODO: Replace this function with one that uses the other functions below
 def process_poses_by_timestamp(
     df,
+    room_corners=None,
     distance_method='pixels',
     summary_method='rms',
     pixel_distance_scale=5.0,
@@ -156,7 +157,8 @@ def process_poses_by_timestamp(
         )
         df_timestamp = calculate_3d_poses(
             df=df_timestamp,
-            camera_calibrations=camera_calibrations
+            camera_calibrations=camera_calibrations,
+            room_corners=room_corners
         )
         df_timestamp = score_pose_pairs(
             df_timestamp,
@@ -234,7 +236,8 @@ def generate_pose_pairs_timestamp(
 
 def calculate_3d_poses(
     df,
-    camera_calibrations=None
+    camera_calibrations=None,
+    room_corners=None
 ):
     if camera_calibrations is None:
         camera_ids = np.union1d(
@@ -252,6 +255,7 @@ def calculate_3d_poses(
         lambda x: calculate_3d_poses_camera_pair(
             x,
             camera_calibrations,
+            room_corners,
             inplace=False
         )
     )
@@ -260,6 +264,7 @@ def calculate_3d_poses(
 def calculate_3d_poses_camera_pair(
     df,
     camera_calibrations,
+    room_corners=None,
     inplace=False
 ):
     if not inplace:
@@ -305,6 +310,15 @@ def calculate_3d_poses_camera_pair(
         rotation_vector_2=camera_calibration_b['rotation_vector'],
         translation_vector_2=camera_calibration_b['translation_vector']
     )
+    if room_corners is not None:
+        keypoints_3d[(
+            (keypoints_3d[:, 0] < room_corners[0, 0]) |
+            (keypoints_3d[:, 0] > room_corners[1, 0]) |
+            (keypoints_3d[:, 1] < room_corners[0, 1]) |
+            (keypoints_3d[:, 1] > room_corners[1, 1]) |
+            (keypoints_3d[:, 2] < room_corners[0, 2]) |
+            (keypoints_3d[:, 2] > room_corners[1, 2])
+        )] = np.array([np.nan, np.nan, np.nan])
     keypoints_a_reprojected = cv_utils.project_points(
         object_points=keypoints_3d,
         rotation_vector=camera_calibration_a['rotation_vector'],
