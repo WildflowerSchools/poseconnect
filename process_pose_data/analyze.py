@@ -310,14 +310,16 @@ def calculate_3d_poses_camera_pair(
         rotation_vector=camera_calibration_a['rotation_vector'],
         translation_vector=camera_calibration_a['translation_vector'],
         camera_matrix=camera_calibration_a['camera_matrix'],
-        distortion_coefficients=camera_calibration_a['distortion_coefficients']
+        distortion_coefficients=camera_calibration_a['distortion_coefficients'],
+        remove_behind_camera=True
     )
     keypoints_b_reprojected = cv_utils.project_points(
         object_points=keypoints_3d,
         rotation_vector=camera_calibration_b['rotation_vector'],
         translation_vector=camera_calibration_b['translation_vector'],
         camera_matrix=camera_calibration_b['camera_matrix'],
-        distortion_coefficients=camera_calibration_b['distortion_coefficients']
+        distortion_coefficients=camera_calibration_b['distortion_coefficients'],
+        remove_behind_camera=True
     )
     df['keypoint_coordinates_3d'] = np.split(keypoints_3d, num_pose_pairs)
     df['keypoint_coordinates_a_reprojected'] = np.split(keypoints_a_reprojected, num_pose_pairs)
