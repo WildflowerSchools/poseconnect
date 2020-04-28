@@ -757,23 +757,105 @@ def extract_single_camera_data(
             if single_camera_column not in single_camera_columns:
                 single_camera_columns.append(single_camera_column)
     df = df.reset_index()
-    dfs = list()
-    for suffix in ['_a', '_b']:
-        extraction_columns = ['pose_id' + suffix, 'timestamp']
-        extraction_columns.extend([single_camera_column + suffix for single_camera_column in single_camera_columns])
+    dfs = dict()
+    for camera_letter in ['a', 'b']:
+        extraction_columns = ['pose_id_' + camera_letter, 'timestamp']
+        extraction_columns.extend([single_camera_column + '_' + camera_letter for single_camera_column in single_camera_columns])
         target_columns = ['pose_id', 'timestamp']
         target_columns.extend(single_camera_columns)
-        print(extraction_columns)
-        print(target_columns)
         column_map = dict(zip(extraction_columns, target_columns))
-        print(column_map)
         df_single_camera = df.reindex(columns=extraction_columns)
         df_single_camera.rename(columns=column_map, inplace=True)
-        print(df_single_camera.columns)
         df_single_camera.drop_duplicates(subset='pose_id', inplace=True)
         df_single_camera.set_index('pose_id', inplace=True)
-        dfs.append(df_single_camera)
+        dfs[camera_letter] = df_single_camera
     return dfs
+
+def draw_poses_2d_timestamp_camera_pair(
+    df,
+    annotate_matches=False,
+    camera_names={'a': None, 'b': None},
+    draw_keypoint_connectors=True,
+    keypoint_connectors=None,
+    keypoint_alpha=0.3,
+    keypoint_connector_alpha=0.3,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.5,
+    pose_label_boxstyle='circle',
+    image_size=None,
+    show_axes=False,
+    show_background_image=True,
+    background_image=None,
+    background_image_alpha=0.4,
+    display_camera_name=False,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S.%f',
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_prefix='poses_2d',
+    filename_datetime_format='%Y%m%d_%H%M%S_%f',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    dfs_single_camera = extract_single_camera_data(df)
+    pose_label_maps = {
+        'a': None,
+        'b': None
+    }
+    if annotate_matches:
+        for camera_letter in ['a', 'b']:
+            pose_ids = dfs_single_camera[camera_letter].index.values.tolist()
+            if 'track_label' in dfs_single_camera[camera_letter].columns:
+                pose_labels = dfs_single_camera[camera_letter]['track_label'].values.tolist()
+            elif len(pose_ids) <= 26:
+                pose_labels = string.ascii_uppercase[:len(pose_ids)]
+            else:
+                pose_labels = range(len(pose_ids))
+            pose_label_maps[camera_letter] = dict(zip(pose_ids, pose_labels))
+        for (pose_id_a, pose_id_b), row in df.iterrows():
+            if row['match']:
+                old_label_a = pose_label_maps['a'][pose_id_a]
+                old_label_b = pose_label_maps['b'][pose_id_b]
+                pose_label_maps['a'][pose_id_a] = '{} ({})'.format(
+                    old_label_a,
+                    old_label_b
+                )
+                pose_label_maps['b'][pose_id_b] = '{} ({})'.format(
+                    old_label_b,
+                    old_label_a
+                )
+    for camera_letter in ['a', 'b']:
+        draw_poses_2d_timestamp_camera(
+            df=dfs_single_camera[camera_letter],
+            draw_keypoint_connectors=draw_keypoint_connectors,
+            keypoint_connectors=keypoint_connectors,
+            pose_label_map=pose_label_maps[camera_letter],
+            keypoint_alpha=keypoint_alpha,
+            keypoint_connector_alpha=keypoint_connector_alpha,
+            keypoint_connector_linewidth=keypoint_connector_linewidth,
+            pose_label_color=pose_label_color,
+            pose_label_background_alpha=pose_label_background_alpha,
+            pose_label_boxstyle=pose_label_boxstyle,
+            image_size=image_size,
+            show_axes=show_axes,
+            show_background_image=show_background_image,
+            background_image=background_image,
+            background_image_alpha=background_image_alpha,
+            display_camera_name=display_camera_name,
+            camera_name=camera_names[camera_letter],
+            plot_title_datetime_format=plot_title_datetime_format,
+            show=show,
+            save=save,
+            save_directory=save_directory,
+            filename_prefix=filename_prefix,
+            filename_datetime_format=filename_datetime_format,
+            filename_extension=filename_extension,
+            fig_width_inches=fig_width_inches,
+            fig_height_inches=fig_height_inches
+        )
+
 
 def draw_poses_2d_timestamp_camera(
     df,
@@ -827,7 +909,7 @@ def draw_poses_2d_timestamp_camera(
         filename_extension
     )
     df = df.sort_index()
-    pose_ids = df.index.sort_values().tolist()
+    pose_ids = df.index.tolist()
     if pose_label_map is None:
         if 'track_label' in df.columns:
             pose_labels = df['track_label'].values.tolist()

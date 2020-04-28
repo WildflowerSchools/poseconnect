@@ -3,11 +3,8 @@
 Tools for fetching, processing, visualizing, and analyzing Wildflower human pose data
 
 ## Task list
-* Figure out inconsistent behavior of groupby-apply (under what conditions does it add grouping variables to index?)
-* For functions that act on dataframes, make it optional to check dataframe structure (e.g., only one timestamp and camera pair)
-* For functions than iterate over previous functions, making naming and approach consistent (e.g., always use apply?)
-* For functions that act on dataframes, be consistent about `inplace` option
-* Restructure `process_poses_by_timestamp` to use the set of functions above
+
+* Incorporate identified matches into pose overlay visualizations
 * Add option of specifying Honeycomb client info for visualization functions that require Honeycomb
 * Reinstate `sns.set()` for Seaborn plots without making it spill over into non-Seaborn plots (see [here](https://stackoverflow.com/questions/26899310/python-seaborn-to-reset-back-to-the-matplotlib))
 * Refactor code in `visualize` to make it less repetitive (same pattern over and over for `[verb]_by_camera`)
@@ -15,12 +12,18 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 * Add visualization for number of poses per camera per timestamp
 * Add functions for extracting random timestamp, camera pair
 * Add function which produces heatmap and both camera views for chosen timestamp, camera pair
+* Figure out inconsistent behavior of groupby-apply (under what conditions does it add grouping variables to index?)
+* For functions that act on dataframes, make it optional to check dataframe structure (e.g., only one timestamp and camera pair)
+* For functions than iterate over previous functions, making naming and approach consistent (e.g., always use apply?)
+* For functions that act on dataframes, be consistent about `inplace` option
+* Restructure `process_poses_by_timestamp` to use the set of functions above
+* Incorporate `tqdm.auto` to get rid of all of the `if` statements for notebook mode
+* Implement `tqdm` progress bars for `groupby(...).apply(...)` loops
 * Fix up `fetch` module to match design of `wf-video-io`
   - Allow user to supply Honeycomb client
   - Clean up default setting
   - Other?
 * Replace `cv.triangulatePoints()` to increase speed (and hopefully accuracy)
-* Write function(s) which select(s) pose pairs based on score
 * Write function which outputs 3D poses based on selected pose pairs
 * Write function which pushes 3D poses to Honeycomb
 * Rewrite geom rendering functions to handle the possibility of no track labels
