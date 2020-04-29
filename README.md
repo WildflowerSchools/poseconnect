@@ -4,7 +4,11 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Be consistent about whether to convert track labels to integers (where possible)
+* Be consistent about accepting timestamp arguments in any format parseable by `pd.to_datetime()`
 * Add functions for extracting random timestamp, camera pair
+* Add function to visualize 3D position of 3D pose centroid
+* Fix up _y_ axis inversion for images (go back to `cv_utils`?)
 * Add score filter to match identification algorithm (or do we always want to filter pose pairs first?)
 * Get pose video overlays working again (for data with track labels)
 * Add pipeline stage to combine pose matches across camera view (using `networkx`, as before?)

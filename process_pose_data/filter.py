@@ -172,3 +172,107 @@ def select_poses(
     combined_filter = np.bitwise_and.reduce(filter_list)
     df_selected = df.loc[combined_filter].copy()
     return df_selected
+
+def select_pose_pair(
+    df,
+    pose_id_a=None,
+    pose_id_b=None,
+    timestamp=None,
+    camera_id_a=None,
+    camera_id_b=None,
+    camera_name_a=None,
+    camera_name_b=None,
+    track_label_a=None,
+    track_label_b=None,
+    camera_names=None
+):
+    df_selected = select_pose_pairs(
+        df,
+        pose_id_a=pose_id_a,
+        pose_id_b=pose_id_b,
+        timestamp=timestamp,
+        camera_id_a=camera_id_a,
+        camera_id_b=camera_id_b,
+        camera_name_a=camera_name_a,
+        camera_name_b=camera_name_b,
+        track_label_a=track_label_a,
+        track_label_b=track_label_b,
+        camera_names=camera_names
+    )
+    if len(df_selected) == 0:
+        raise ValueError('No pose pairs matched criteria')
+    if len(df_selected) > 1:
+        raise ValueError('Multiple pose pairs matched criteria')
+    return(df_selected.iloc[0].to_dict())
+
+def select_pose_pairs(
+    df,
+    pose_id_a=None,
+    pose_id_b=None,
+    timestamp=None,
+    camera_id_a=None,
+    camera_id_b=None,
+    camera_name_a=None,
+    camera_name_b=None,
+    track_label_a=None,
+    track_label_b=None,
+    camera_names=None
+):
+    filter_list = list()
+    if pose_id_a is not None:
+        pose_id_a_filter = (df.index.get_level_values('pose_id_a') == pose_id_a)
+        filter_list.append(pose_id_a_filter)
+    if pose_id_b is not None:
+        pose_id_b_filter = (df.index.get_level_values('pose_id_b') == pose_id_b)
+        filter_list.append(pose_id_b_filter)
+    if timestamp is not None:
+        timestamp_pandas = pd.to_datetime(timestamp)
+        timestamp_filter = (df['timestamp'] == timestamp_pandas)
+        filter_list.append(timestamp_filter)
+    if camera_id_a is not None:
+        camera_id_a_filter = (df['camera_id_a'] == camera_id_a)
+        filter_list.append(camera_id_a_filter)
+    if camera_id_b is not None:
+        camera_id_b_filter = (df['camera_id_b'] == camera_id_b)
+        filter_list.append(camera_id_b_filter)
+    if camera_name_a is not None or camera_name_b is not None:
+        if camera_names is None:
+            camera_names = process_pose_data.fetch.fetch_camera_names(
+                camera_ids = np.union1d(
+                    df['camera_id_a'].unique(),
+                    df['camera_id_b'].unique()
+                ).tolist()
+            )
+    if camera_name_a is not None:
+        camera_ids = list()
+        for camera_id_in_dict, camera_name_in_dict in camera_names.items():
+            if camera_name_in_dict == camera_name_a:
+                camera_ids.append(camera_id_in_dict)
+        if len(camera_ids) == 0:
+            raise ValueError('No cameras match name {}'.format(camera_name_a))
+        if len(camera_ids) > 1:
+            raise ValueError('Multiple cameras match name {}'.format(camera_name_a))
+        camera_id_from_camera_name_a = camera_ids[0]
+        camera_id_from_camera_name_a_filter = (df['camera_id_a'] == camera_id_from_camera_name_a)
+        filter_list.append(camera_id_from_camera_name_a_filter)
+    if camera_name_b is not None:
+        camera_ids = list()
+        for camera_id_in_dict, camera_name_in_dict in camera_names.items():
+            if camera_name_in_dict == camera_name_b:
+                camera_ids.append(camera_id_in_dict)
+        if len(camera_ids) == 0:
+            raise ValueError('No cameras match name {}'.format(camera_name_b))
+        if len(camera_ids) > 1:
+            raise ValueError('Multiple cameras match name {}'.format(camera_name_b))
+        camera_id_from_camera_name_b = camera_ids[0]
+        camera_id_from_camera_name_b_filter = (df['camera_id_b'] == camera_id_from_camera_name_b)
+        filter_list.append(camera_id_from_camera_name_b_filter)
+    if track_label_a is not None:
+        track_label_a_filter = (df['track_label_a'] == track_label_a)
+        filter_list.append(track_label_a_filter)
+    if track_label_b is not None:
+        track_label_b_filter = (df['track_label_b'] == track_label_b)
+        filter_list.append(track_label_b_filter)
+    combined_filter = np.bitwise_and.reduce(filter_list)
+    df_selected = df.loc[combined_filter].copy()
+    return df_selected
