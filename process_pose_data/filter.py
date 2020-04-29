@@ -106,9 +106,33 @@ def filter_pose_pairs_by_score(
     if not inplace:
         return df_filtered
 
+def select_pose(
+    df,
+    pose_id=None,
+    timestamp=None,
+    camera_id=None,
+    camera_name=None,
+    track_label=None,
+    camera_names=None
+):
+    df_selected = select_poses(
+        df,
+        pose_id=pose_id,
+        timestamp=timestamp,
+        camera_id=camera_id,
+        camera_name=camera_name,
+        track_label=track_label,
+        camera_names=camera_names
+    )
+    if len(df_selected) == 0:
+        raise ValueError('No poses matched criteria')
+    if len(df_selected) > 1:
+        raise ValueError('Multiple poses matched criteria')
+    return(df_selected.iloc[0].to_dict())
+
 def select_poses(
     df,
-    pose_id = None,
+    pose_id=None,
     timestamp=None,
     camera_id=None,
     camera_name=None,
