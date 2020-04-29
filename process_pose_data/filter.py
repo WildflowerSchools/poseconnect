@@ -105,3 +105,46 @@ def filter_pose_pairs_by_score(
         df_filtered = df_filtered.loc[df_filtered['score'] <= max_score]
     if not inplace:
         return df_filtered
+
+def select_poses(
+    df,
+    pose_id = None,
+    timestamp=None,
+    camera_id=None,
+    camera_name=None,
+    track_label=None,
+    camera_names=None
+):
+    filter_list = list()
+    if pose_id is not None:
+        pose_id_filter = (df.index == pose_id)
+        filter_list.append(pose_id_filter)
+    if timestamp is not None:
+        timestamp_pandas = pd.to_datetime(timestamp)
+        timestamp_filter = (df['timestamp'] == timestamp_pandas)
+        filter_list.append(timestamp_filter)
+    if camera_id is not None:
+        camera_id_filter = (df['camera_id'] == camera_id)
+        filter_list.append(camera_id_filter)
+    if camera_name is not None:
+        if camera_names is None:
+            camera_names = process_pose_data.fetch.fetch_camera_names(
+                camera_ids = df['camera_id'].unique().tolist()
+            )
+        camera_ids = list()
+        for camera_id_in_dict, camera_name_in_dict in camera_names.items():
+            if camera_name_in_dict == camera_name:
+                camera_ids.append(camera_id_in_dict)
+        if len(camera_ids) == 0:
+            raise ValueError('No cameras match name {}'.format(camera_name))
+        if len(camera_ids) > 1:
+            raise ValueError('Multiple cameras match name {}'.format(camera_name))
+        camera_id_from_camera_name = camera_ids[0]
+        camera_id_from_camera_name_filter = (df['camera_id'] == camera_id_from_camera_name)
+        filter_list.append(camera_id_from_camera_name_filter)
+    if track_label is not None:
+        track_label_filter = (df['track_label'] == track_label)
+        filter_list.append(track_label_filter)
+    combined_filter = np.bitwise_and.reduce(filter_list)
+    df_selected = df.loc[combined_filter].copy()
+    return df_selected
