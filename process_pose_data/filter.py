@@ -106,6 +106,21 @@ def filter_pose_pairs_by_score(
     if not inplace:
         return df_filtered
 
+def select_random_pose(
+    df
+):
+    return df.sample(1).iloc[0].to_dict()
+
+def select_random_pose_pair(
+    df
+):
+    return df.sample(1).iloc[0].to_dict()
+
+def select_random_match(
+    df
+):
+    return df.loc[df['match']].sample(1).iloc[0].to_dict()
+
 def select_random_timestamp_camera_pair(
     df
 ):
