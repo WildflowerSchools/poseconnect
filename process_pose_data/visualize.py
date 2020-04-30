@@ -1,5 +1,6 @@
 import process_pose_data.fetch
 import cv_utils
+import cv2 as cv
 import video_io
 import pandas as pd
 import numpy as np
@@ -875,7 +876,6 @@ def draw_poses_2d_timestamp_camera_pair(
             fig_height_inches=fig_height_inches
         )
 
-
 def draw_poses_2d_timestamp_camera(
     df,
     draw_keypoint_connectors=True,
@@ -1042,6 +1042,175 @@ def draw_pose_2d(
                 'boxstyle': pose_label_boxstyle
             }
         )
+
+def visualize_pose_pair(
+    pose_pair,
+    camera_calibrations=None,
+    camera_names=None,
+    floor_marker_color='blue',
+    floor_marker_linewidth=2,
+    floor_marker_linestyle='-',
+    floor_marker_alpha=1.0,
+    vertical_line_color='blue',
+    vertical_line_linewidth=2,
+    vertical_line_linestyle='--',
+    vertical_line_alpha=1.0,
+    centroid_markersize=16,
+    centroid_color='red',
+    centroid_alpha=1.0,
+    pose_label_background_color='red',
+    pose_label_background_alpha=1.0,
+    pose_label_color='white',
+    pose_label_boxstyle='circle',
+    background_image_alpha=0.4,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S.%f',
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_prefix='pose_pair',
+    filename_datetime_format='%Y%m%d_%H%M%S_%f',
+    filename_extension='png',
+    fig_width_inches=8,
+    fig_height_inches=10.5
+):
+    timestamp = pose_pair.get('timestamp')
+    camera_id_a = pose_pair.get('camera_id_a')
+    camera_id_b = pose_pair.get('camera_id_b')
+    if camera_calibrations is None:
+        camera_calibrations = process_pose_data.fetch_camera_calibrations(
+            camera_ids=[camera_id_a, camera_id_b],
+            start=timestamp.to_pydatetime(),
+            end=timestamp.to_pydatetime()
+        )
+    if camera_names is None:
+        camera_names = process_pose_data.fetch_camera_names(
+            camera_ids=[camera_id_a, camera_id_b]
+        )
+    fig_suptitle = timestamp.strftime(plot_title_datetime_format)
+    save_filename = '{}_{}_{}.{}'.format(
+        filename_prefix,
+        slugify.slugify(pose_pair['pose_id_a']),
+        slugify.slugify(pose_pair['pose_id_b']),
+        filename_extension
+    )
+    centroid_3d = np.nanmean(pose_pair['keypoint_coordinates_3d'], axis=0)
+    floor_marker_x_3d = np.array([[x, centroid_3d[1], 0] for x in np.linspace(centroid_3d[0] - 1.0, centroid_3d[0] + 1.0, 100)])
+    floor_marker_y_3d = np.array([[centroid_3d[0], y, 0] for y in np.linspace(centroid_3d[1] - 1.0, centroid_3d[1] + 1.0, 100)])
+    vertical_line_3d = np.array([[centroid_3d[0], centroid_3d[1], z] for z in np.linspace(0, centroid_3d[2], 100)])
+    fig, axes = plt.subplots(2, 1)
+    for axis_index, suffix in enumerate(['a', 'b']):
+        axis_title = camera_names[pose_pair['camera_id_' + suffix]]
+        centroid = cv_utils.project_points(
+            object_points=centroid_3d,
+            rotation_vector=camera_calibrations[pose_pair['camera_id_' + suffix]]['rotation_vector'],
+            translation_vector=camera_calibrations[pose_pair['camera_id_' + suffix]]['translation_vector'],
+            camera_matrix=camera_calibrations[pose_pair['camera_id_' + suffix]]['camera_matrix'],
+            distortion_coefficients=camera_calibrations[pose_pair['camera_id_' + suffix]]['distortion_coefficients'],
+            remove_behind_camera=True
+        )
+        floor_marker_x = cv_utils.project_points(
+            object_points=floor_marker_x_3d,
+            rotation_vector=camera_calibrations[pose_pair['camera_id_' + suffix]]['rotation_vector'],
+            translation_vector=camera_calibrations[pose_pair['camera_id_' + suffix]]['translation_vector'],
+            camera_matrix=camera_calibrations[pose_pair['camera_id_' + suffix]]['camera_matrix'],
+            distortion_coefficients=camera_calibrations[pose_pair['camera_id_' + suffix]]['distortion_coefficients'],
+            remove_behind_camera=True
+        )
+        floor_marker_y = cv_utils.project_points(
+            object_points=floor_marker_y_3d,
+            rotation_vector=camera_calibrations[pose_pair['camera_id_' + suffix]]['rotation_vector'],
+            translation_vector=camera_calibrations[pose_pair['camera_id_' + suffix]]['translation_vector'],
+            camera_matrix=camera_calibrations[pose_pair['camera_id_' + suffix]]['camera_matrix'],
+            distortion_coefficients=camera_calibrations[pose_pair['camera_id_' + suffix]]['distortion_coefficients'],
+            remove_behind_camera=True
+        )
+        vertical_line = cv_utils.project_points(
+            object_points=vertical_line_3d,
+            rotation_vector=camera_calibrations[pose_pair['camera_id_' + suffix]]['rotation_vector'],
+            translation_vector=camera_calibrations[pose_pair['camera_id_' + suffix]]['translation_vector'],
+            camera_matrix=camera_calibrations[pose_pair['camera_id_' + suffix]]['camera_matrix'],
+            distortion_coefficients=camera_calibrations[pose_pair['camera_id_' + suffix]]['distortion_coefficients'],
+            remove_behind_camera=True
+        )
+        image_metadata = video_io.fetch_images(
+            image_timestamps = [timestamp.to_pydatetime()],
+            camera_device_ids=[pose_pair['camera_id_' + suffix]]
+        )
+        image_local_path = image_metadata[0]['image_local_path']
+        background_image = cv_utils.fetch_image_from_local_drive(image_local_path)
+        axes[axis_index].imshow(
+            cv.cvtColor(background_image, cv.COLOR_BGR2RGB),
+            alpha=background_image_alpha
+        )
+        if pose_pair.get('track_label_' + suffix) is not None:
+            axes[axis_index].text(
+                centroid[0],
+                centroid[1],
+                pose_pair.get('track_label_' + suffix),
+                color=pose_label_color,
+                bbox={
+                    'alpha': pose_label_background_alpha,
+                    'facecolor': pose_label_background_color,
+                    'edgecolor': 'none',
+                    'boxstyle': pose_label_boxstyle
+                }
+            )
+        else:
+            plt.plot(
+                centroid[0],
+                centroid[1],
+                '.',
+                color=centroid_color,
+                markersize=centroid_marker_size,
+                alpha=centroid_alpha
+            )
+        axes[axis_index].plot(
+            floor_marker_x[:, 0],
+            floor_marker_x[:, 1],
+            color=floor_marker_color,
+            linewidth=floor_marker_linewidth,
+            linestyle=floor_marker_linestyle,
+            alpha=floor_marker_alpha,
+        )
+        axes[axis_index].plot(
+            floor_marker_y[:, 0],
+            floor_marker_y[:, 1],
+            color=floor_marker_color,
+            linewidth=floor_marker_linewidth,
+            linestyle=floor_marker_linestyle,
+            alpha=floor_marker_alpha,
+        )
+        axes[axis_index].plot(
+            vertical_line[:, 0],
+            vertical_line[:, 1],
+            color=vertical_line_color,
+            linewidth=vertical_line_linewidth,
+            linestyle=vertical_line_linestyle,
+            alpha=vertical_line_alpha,
+        )
+        axes[axis_index].axis(
+            xmin=0,
+            xmax=camera_calibrations[pose_pair['camera_id_' + suffix]]['image_width'],
+            ymin=camera_calibrations[pose_pair['camera_id_' + suffix]]['image_height'],
+            ymax=0
+        )
+        axes[axis_index].axis('off')
+        axes[axis_index].set_title(axis_title)
+    fig.suptitle(fig_suptitle)
+    plt.subplots_adjust(top=0.95, hspace=0.1)
+    fig.set_size_inches(fig_width_inches, fig_height_inches)
+    plt.show()
+    # Show plot
+    if show:
+        plt.show()
+    # Save plot
+    if save:
+        path = os.path.join(
+            save_directory,
+            save_filename
+        )
+        fig.savefig(path)
+
 
 def pose_track_timelines_by_camera(
     df,

@@ -109,17 +109,17 @@ def filter_pose_pairs_by_score(
 def select_random_pose(
     df
 ):
-    return df.sample(1).iloc[0].to_dict()
+    return df.sample(1).reset_index().iloc[0].to_dict()
 
 def select_random_pose_pair(
     df
 ):
-    return df.sample(1).iloc[0].to_dict()
+    return df.sample(1).reset_index().iloc[0].to_dict()
 
 def select_random_match(
     df
 ):
-    return df.loc[df['match']].sample(1).iloc[0].to_dict()
+    return df.loc[df['match']].sample(1).reset_index().iloc[0].to_dict()
 
 def select_random_timestamp_camera_pair(
     df
@@ -154,7 +154,7 @@ def select_pose(
         raise ValueError('No poses matched criteria')
     if len(df_selected) > 1:
         raise ValueError('Multiple poses matched criteria')
-    return(df_selected.iloc[0].to_dict())
+    return(df_selected.reset_index().iloc[0].to_dict())
 
 def select_poses(
     df,
@@ -229,7 +229,7 @@ def select_pose_pair(
         raise ValueError('No pose pairs matched criteria')
     if len(df_selected) > 1:
         raise ValueError('Multiple pose pairs matched criteria')
-    return(df_selected.iloc[0].to_dict())
+    return(df_selected.reset_index().iloc[0].to_dict())
 
 def select_pose_pairs(
     df,
