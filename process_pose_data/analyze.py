@@ -460,6 +460,18 @@ def probability_distance(image_point_differences, pixel_distance_scale):
         )
     )
 
+def identify_matches_timestamp(
+    df
+):
+    df_copy = df.copy()
+    match_indices = list()
+    for group_name, group_df in df.groupby(['camera_id_a', 'camera_id_b']):
+        match_indices.extend(extract_match_indices_timestamp_camera_pair(group_df))
+    df_copy['match'] = False
+    if len(match_indices) > 0:
+        df_copy.loc[match_indices, 'match'] = True
+    return df_copy
+
 def identify_matches_timestamp_camera_pair(
     df
 ):

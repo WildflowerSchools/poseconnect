@@ -1211,7 +1211,6 @@ def visualize_pose_pair(
         )
         fig.savefig(path)
 
-
 def pose_track_timelines_by_camera(
     df,
     color_by_pose_quality=False,

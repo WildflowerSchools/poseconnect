@@ -132,6 +132,22 @@ def select_random_timestamp_camera_pair(
     df_filtered = process_pose_data.select_pose_pairs(df_filtered, camera_id_b=camera_id_b)
     return df_filtered
 
+def select_random_timestamp(
+    df
+):
+    timestamp = np.random.choice(df['timestamp'].unique())
+    df_filtered = process_pose_data.select_pose_pairs(df, timestamp=timestamp)
+    return df_filtered
+
+def select_random_camera_pair(
+    df
+):
+    camera_id_a = np.random.choice(df['camera_id_a'].unique())
+    df_filtered = process_pose_data.select_pose_pairs(df, camera_id_a=camera_id_a)
+    camera_id_b = np.random.choice(df_filtered['camera_id_b'].unique())
+    df_filtered = process_pose_data.select_pose_pairs(df_filtered, camera_id_b=camera_id_b)
+    return df_filtered
+
 def select_pose(
     df,
     pose_id=None,
