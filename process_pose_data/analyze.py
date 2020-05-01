@@ -460,32 +460,39 @@ def probability_distance(image_point_differences, pixel_distance_scale):
         )
     )
 
-def identify_matches_timestamp(
+def identify_matches(
     df
 ):
     df_copy = df.copy()
-    match_indices = list()
+    df_copy['match'] = df_copy['best_match']
+    return df_copy
+
+def identify_best_matches_timestamp(
+    df
+):
+    df_copy = df.copy()
+    best_match_indices = list()
     for group_name, group_df in df.groupby(['camera_id_a', 'camera_id_b']):
-        match_indices.extend(extract_match_indices_timestamp_camera_pair(group_df))
-    df_copy['match'] = False
-    if len(match_indices) > 0:
-        df_copy.loc[match_indices, 'match'] = True
+        best_match_indices.extend(extract_best_match_indices_timestamp_camera_pair(group_df))
+    df_copy['best_match'] = False
+    if len(best_match_indices) > 0:
+        df_copy.loc[best_match_indices, 'best_match'] = True
     return df_copy
 
-def identify_matches_timestamp_camera_pair(
+def identify_best_matches_timestamp_camera_pair(
     df
 ):
     df_copy = df.copy()
-    match_indices = extract_match_indices_timestamp_camera_pair(df)
-    df_copy['match'] = False
-    if len(match_indices) > 0:
-        df_copy.loc[match_indices, 'match'] = True
+    best_match_indices = extract_best_match_indices_timestamp_camera_pair(df)
+    df_copy['best_match'] = False
+    if len(best_match_indices) > 0:
+        df_copy.loc[best_match_indices, 'best_match'] = True
     return df_copy
 
-def extract_match_indices_timestamp_camera_pair(
+def extract_best_match_indices_timestamp_camera_pair(
     df
 ):
     best_a_match_for_b = df['score'].groupby('pose_id_b').idxmin().dropna()
     best_b_match_for_a = df['score'].groupby('pose_id_a').idxmin().dropna()
-    match_indices = list(set(best_a_match_for_b).intersection(best_b_match_for_a))
-    return match_indices
+    best_match_indices = list(set(best_a_match_for_b).intersection(best_b_match_for_a))
+    return best_match_indices
