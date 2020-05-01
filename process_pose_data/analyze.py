@@ -465,8 +465,8 @@ def identify_matches(
 ):
     df_copy = df.copy()
     df_copy['match'] = (
-        df_copy['best_score'] &
-        df_copy['score_in_range']
+        df_copy['score_in_range'] &
+        df_copy['best_score_in_range']
     )
     return df_copy
 
@@ -497,6 +497,18 @@ def identify_best_scores_timestamp(
         df_copy.loc[best_score_indices, 'best_score'] = True
     return df_copy
 
+def identify_best_scores_in_range_timestamp(
+    df
+):
+    df_copy = df.copy()
+    best_score_indices = list()
+    for group_name, group_df in df.groupby(['camera_id_a', 'camera_id_b']):
+        best_score_indices.extend(extract_best_score_indices_in_range_timestamp_camera_pair(group_df))
+    df_copy['best_score_in_range'] = False
+    if len(best_score_indices) > 0:
+        df_copy.loc[best_score_indices, 'best_score_in_range'] = True
+    return df_copy
+
 def identify_best_scores_timestamp_camera_pair(
     df
 ):
@@ -507,10 +519,28 @@ def identify_best_scores_timestamp_camera_pair(
         df_copy.loc[best_score_indices, 'best_score'] = True
     return df_copy
 
+def identify_best_scores_in_range_timestamp_camera_pair(
+    df
+):
+    df_copy = df.copy()
+    best_score_indices = extract_best_score_indices_in_range_timestamp_camera_pair(df)
+    df_copy['best_score_in_range'] = False
+    if len(best_score_indices) > 0:
+        df_copy.loc[best_score_indices, 'best_score_in_range'] = True
+    return df_copy
+
 def extract_best_score_indices_timestamp_camera_pair(
     df
 ):
     best_a_score_for_b = df['score'].groupby('pose_id_b').idxmin().dropna()
     best_b_score_for_a = df['score'].groupby('pose_id_a').idxmin().dropna()
+    best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
+    return best_score_indices
+
+def extract_best_score_indices_in_range_timestamp_camera_pair(
+    df
+):
+    best_a_score_for_b = df.loc[df['score_in_range']]['score'].groupby('pose_id_b').idxmin().dropna()
+    best_b_score_for_a = df.loc[df['score_in_range']]['score'].groupby('pose_id_a').idxmin().dropna()
     best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
     return best_score_indices
