@@ -464,7 +464,25 @@ def identify_matches(
     df
 ):
     df_copy = df.copy()
-    df_copy['match'] = df_copy['best_score']
+    df_copy['match'] = (
+        df_copy['best_score'] &
+        df_copy['score_in_range']
+    )
+    return df_copy
+
+def identify_scores_in_range(
+    df,
+    min_score=None,
+    max_score=None
+):
+    df_copy = df.copy()
+    score_above_min = True
+    if min_score is not None:
+        score_above_min = df_copy['score'] >= min_score
+    score_below_max = True
+    if max_score is not None:
+        score_below_max = df_copy['score'] <= max_score
+    df_copy['score_in_range'] = score_above_min & score_below_max
     return df_copy
 
 def identify_best_scores_timestamp(
