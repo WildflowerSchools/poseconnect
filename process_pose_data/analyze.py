@@ -466,6 +466,7 @@ def identify_matches(
     df_copy = df.copy()
     df_copy['match'] = (
         df_copy['score_in_range'] &
+        df_copy['pose_3d_in_range'] &
         df_copy['best_score_in_range']
     )
     return df_copy
@@ -484,6 +485,33 @@ def identify_scores_in_range(
         score_below_max = df_copy['score'] <= max_score
     df_copy['score_in_range'] = score_above_min & score_below_max
     return df_copy
+
+def identify_poses_3d_in_range(
+    df,
+    pose_3d_range
+):
+    df_copy = df.copy()
+    df_copy['pose_3d_in_range'] = df_copy['keypoint_coordinates_3d'].apply(lambda x: pose_3d_in_range(x, pose_3d_range))
+    return df_copy
+
+def pose_3d_in_range(
+    pose_3d,
+    pose_3d_range
+):
+    return np.logical_and(
+        np.all(np.greater_equal(
+            pose_3d,
+            pose_3d_range[0],
+            out=np.full_like(pose_3d, True),
+            where=(np.isfinite(pose_3d) & np.isfinite(pose_3d_range[0]))
+        )),
+        np.all(np.less_equal(
+            pose_3d,
+            pose_3d_range[1],
+            out=np.full_like(pose_3d, True),
+            where=(np.isfinite(pose_3d) & np.isfinite(pose_3d_range[1]))
+        ))
+    )
 
 def identify_best_scores_timestamp(
     df
@@ -540,7 +568,7 @@ def extract_best_score_indices_timestamp_camera_pair(
 def extract_best_score_indices_in_range_timestamp_camera_pair(
     df
 ):
-    best_a_score_for_b = df.loc[df['score_in_range']]['score'].groupby('pose_id_b').idxmin().dropna()
-    best_b_score_for_a = df.loc[df['score_in_range']]['score'].groupby('pose_id_a').idxmin().dropna()
+    best_a_score_for_b = df.loc[df['score_in_range'] & df['pose_3d_in_range']]['score'].groupby('pose_id_b').idxmin().dropna()
+    best_b_score_for_a = df.loc[df['score_in_range'] & df['pose_3d_in_range']]['score'].groupby('pose_id_a').idxmin().dropna()
     best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
     return best_score_indices
