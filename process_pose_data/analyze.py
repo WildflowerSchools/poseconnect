@@ -3,7 +3,9 @@ import cv_utils
 import cv2 as cv
 import pandas as pd
 import numpy as np
+import networkx as nx
 import tqdm
+from uuid import uuid4
 import logging
 import time
 import itertools
@@ -558,3 +560,30 @@ def extract_best_score_indices_in_range_timestamp_camera_pair(
     best_b_score_for_a = df.loc[df['score_in_range'] & df['pose_3d_in_range']]['score'].groupby('pose_id_a').idxmin().dropna()
     best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
     return best_score_indices
+
+def identify_match_groups(
+    df,
+    edge_threshold=2
+):
+    df_copy = df.copy()
+    pose_graph = nx.Graph()
+    for match in df_copy.loc[df_copy['match']].index.values:
+        pose_graph.add_edge(match[0], match[1])
+    df_copy['group_match'] = False
+    df_copy['match_group_label'] = pd.NA
+    df_copy['match_group_label'] = df_copy['match_group_label'].astype('Int64')
+    # df_copy['pose_3d_id'] = None
+    connected_components = nx.k_edge_components(pose_graph, edge_threshold)
+    connected_components_non_singleton = filter(lambda x: len(x) > 1, connected_components)
+    for match_group_label, connected_component in enumerate(connected_components_non_singleton):
+        # pose_3d_id = uuid4().hex
+        for edge in pose_graph.subgraph(connected_component).edges():
+            reversed_edge = tuple(reversed(edge))
+            if edge in df_copy.index:
+                pose_pair = edge
+            if reversed_edge in df_copy.index:
+                pose_pair = reversed_edge
+            df_copy.loc[pose_pair, 'group_match'] = True
+            df_copy.loc[pose_pair, 'match_group_label'] = match_group_label
+            # df_copy.loc[pose_pair, 'pose_3d_id'] = pose_3d_id
+    return df_copy
