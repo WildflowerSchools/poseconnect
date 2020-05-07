@@ -1036,6 +1036,8 @@ def draw_poses_3d_timestamp_camera(
             start=timestamp.to_pydatetime(),
             end=timestamp.to_pydatetime()
         )
+    match_group_labels = df['match_group_label'].unique()
+    color_mapping = generate_color_mapping(match_group_labels)
     for camera_id in camera_ids:
         camera_name = camera_names[camera_id]
         camera_calibration = camera_calibrations[camera_id]
@@ -1097,7 +1099,7 @@ def draw_poses_3d_timestamp_camera(
                 draw_keypoint_connectors=draw_keypoint_connectors,
                 keypoint_connectors=keypoint_connectors,
                 pose_label=row['match_group_label'],
-                pose_color=None,
+                pose_color=color_mapping[row['match_group_label']],
                 keypoint_alpha=keypoint_alpha,
                 keypoint_connector_alpha=keypoint_connector_alpha,
                 keypoint_connector_linewidth=keypoint_connector_linewidth,
@@ -1350,7 +1352,6 @@ def visualize_poses_3d_top_down_timestamp(
     room_boundaries = None,
     edge_threshold = None,
     plot_title_datetime_format='%m/%d/%Y %H:%M:%S.%f',
-    plot_color='blue',
     pose_label_background_color='red',
     pose_label_background_alpha=0.5,
     pose_label_color='white',
@@ -1391,6 +1392,7 @@ def visualize_poses_3d_top_down_timestamp(
     df_group_matches = df.loc[df['group_match']]
     match_group_labels = df['match_group_label'].dropna().unique()
     num_match_groups = len(match_group_labels)
+    color_mapping = generate_color_mapping(match_group_labels)
     fig, ax = plt.subplots()
     for match_group_label in match_group_labels:
         poses_3d = np.stack(df_group_matches.loc[
@@ -1406,7 +1408,7 @@ def visualize_poses_3d_top_down_timestamp(
                 color=pose_label_color,
                 bbox={
                     'alpha': pose_label_background_alpha,
-                    'facecolor': plot_color,
+                    'facecolor': color_mapping[match_group_label],
                     'edgecolor': 'none',
                     'boxstyle': pose_label_boxstyle
                 }
@@ -1541,3 +1543,8 @@ def pose_track_timelines(
             save_filename
         )
         fig.savefig(path)
+
+def generate_color_mapping(labels):
+    colors = sns.color_palette('husl', n_colors=len(labels))
+    color_mapping = dict(zip(sorted(labels), colors))
+    return color_mapping
