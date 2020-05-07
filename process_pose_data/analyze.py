@@ -587,3 +587,32 @@ def identify_match_groups(
             df_copy.loc[pose_pair, 'match_group_label'] = match_group_label
             df_copy.loc[pose_pair, 'pose_3d_id'] = pose_3d_id
     return df_copy
+
+def consolidate_poses_3d(
+    df
+):
+    df_group_matches = df.loc[df['group_match']]
+    pose_3d_ids = df_group_matches['pose_3d_id'].unique()
+    timestamps = df_group_matches['timestamp'].unique()
+    if len(timestamps) > 1:
+        raise ValueError('Multiple timestamps found in data')
+    timestamp = timestamps[0]
+    df_poses_3d = pd.DataFrame(
+        index = pose_3d_ids,
+        columns = ['timestamp', 'match_group_label', 'keypoint_coordinates_3d']
+    )
+    for pose_3d_id, group_df in df_group_matches.groupby('pose_3d_id'):
+        keypoint_coordinates_3d = np.nanmedian(
+            np.stack(
+                group_df['keypoint_coordinates_3d']
+            ),
+            axis=0
+        )
+        match_group_labels = group_df['match_group_label'].unique()
+        if len(match_group_labels) > 1:
+            raise ValueError('More than one match group label found for 3D pose id {}'.format(pose_3d_id))
+        match_group_label = match_group_labels[0]
+        df_poses_3d.loc[pose_3d_id, 'timestamp'] = timestamp
+        df_poses_3d.loc[pose_3d_id, 'match_group_label'] = match_group_label
+        df_poses_3d.loc[pose_3d_id, 'keypoint_coordinates_3d'] = keypoint_coordinates_3d
+    return df_poses_3d
