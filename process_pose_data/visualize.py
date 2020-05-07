@@ -1350,6 +1350,11 @@ def visualize_poses_3d_top_down_timestamp(
     room_boundaries = None,
     edge_threshold = None,
     plot_title_datetime_format='%m/%d/%Y %H:%M:%S.%f',
+    plot_color='blue',
+    pose_label_background_color='red',
+    pose_label_background_alpha=0.5,
+    pose_label_color='white',
+    pose_label_boxstyle='circle',
     show=True,
     save=False,
     save_directory='.',
@@ -1393,12 +1398,19 @@ def visualize_poses_3d_top_down_timestamp(
             'keypoint_coordinates_3d'
         ])
         centroids_3d = np.nanmedian(poses_3d, axis=1)
-        ax.plot(
-            centroids_3d[:, 0],
-            centroids_3d[:, 1],
-            '.',
-            markersize=16
-        )
+        for centroid_3d_index in range(centroids_3d.shape[0]):
+            ax.text(
+                centroids_3d[centroid_3d_index, 0],
+                centroids_3d[centroid_3d_index, 1],
+                match_group_label,
+                color=pose_label_color,
+                bbox={
+                    'alpha': pose_label_background_alpha,
+                    'facecolor': plot_color,
+                    'edgecolor': 'none',
+                    'boxstyle': pose_label_boxstyle
+                }
+            )
     if room_boundaries is not None:
         ax.set_xlim(room_boundaries[0][0], room_boundaries[0][1])
         ax.set_ylim(room_boundaries[1][0], room_boundaries[1][1])
