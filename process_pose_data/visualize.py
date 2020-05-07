@@ -1211,6 +1211,79 @@ def visualize_pose_pair(
         )
         fig.savefig(path)
 
+def visualize_poses_3d_top_down_timestamp(
+    df,
+    room_boundaries = None,
+    edge_threshold = None,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S.%f',
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_prefix='poses_3d_top_down',
+    filename_datetime_format='%Y%m%d_%H%M%S_%f',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    timestamps = df['timestamp'].unique()
+    if len(timestamps) > 1:
+        raise ValueError('Multiple timestamps found in data')
+    timestamp = timestamps[0]
+    if edge_threshold is not None:
+        ax_title = '{} (edge threshold: {})'.format(
+            timestamp.strftime(plot_title_datetime_format),
+            edge_threshold
+        )
+    else:
+        ax_title = timestamp.strftime(plot_title_datetime_format)
+    if edge_threshold is not None:
+        save_filename = '{}_{}_{}_edges.{}'.format(
+            filename_prefix,
+            timestamp.strftime(filename_datetime_format),
+            edge_threshold,
+            filename_extension
+        )
+    else:
+        save_filename = '{}_{}.{}'.format(
+            filename_prefix,
+            timestamp.strftime(filename_datetime_format),
+            filename_extension
+        )
+    df_group_matches = df.loc[df['group_match']]
+    match_group_labels = df['match_group_label'].dropna().unique()
+    num_match_groups = len(match_group_labels)
+    fig, ax = plt.subplots()
+    for match_group_label in match_group_labels:
+        poses_3d = np.stack(df_group_matches.loc[
+            df_group_matches['match_group_label'] == match_group_label,
+            'keypoint_coordinates_3d'
+        ])
+        centroids_3d = np.nanmedian(poses_3d, axis=1)
+        ax.plot(
+            centroids_3d[:, 0],
+            centroids_3d[:, 1],
+            '.',
+            markersize=16
+        )
+    if room_boundaries is not None:
+        ax.set_xlim(room_boundaries[0][0], room_boundaries[0][1])
+        ax.set_ylim(room_boundaries[1][0], room_boundaries[1][1])
+    ax.set_xlabel('$x$ (meters)')
+    ax.set_ylabel('$y$ (meters)')
+    ax.set_aspect('equal')
+    ax.set_title(ax_title)
+    fig.set_size_inches(fig_width_inches, fig_height_inches)
+    # Show plot
+    if show:
+        plt.show()
+    # Save plot
+    if save:
+        path = os.path.join(
+            save_directory,
+            save_filename
+        )
+        fig.savefig(path)
+
 def pose_track_timelines_by_camera(
     df,
     color_by_pose_quality=False,
