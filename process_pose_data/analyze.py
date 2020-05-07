@@ -572,11 +572,11 @@ def identify_match_groups(
     df_copy['group_match'] = False
     df_copy['match_group_label'] = pd.NA
     df_copy['match_group_label'] = df_copy['match_group_label'].astype('Int64')
-    # df_copy['pose_3d_id'] = None
+    df_copy['pose_3d_id'] = None
     connected_components = nx.k_edge_components(pose_graph, edge_threshold)
     connected_components_non_singleton = filter(lambda x: len(x) > 1, connected_components)
     for match_group_label, connected_component in enumerate(connected_components_non_singleton):
-        # pose_3d_id = uuid4().hex
+        pose_3d_id = uuid4().hex
         for edge in pose_graph.subgraph(connected_component).edges():
             reversed_edge = tuple(reversed(edge))
             if edge in df_copy.index:
@@ -585,5 +585,5 @@ def identify_match_groups(
                 pose_pair = reversed_edge
             df_copy.loc[pose_pair, 'group_match'] = True
             df_copy.loc[pose_pair, 'match_group_label'] = match_group_label
-            # df_copy.loc[pose_pair, 'pose_3d_id'] = pose_3d_id
+            df_copy.loc[pose_pair, 'pose_3d_id'] = pose_3d_id
     return df_copy
