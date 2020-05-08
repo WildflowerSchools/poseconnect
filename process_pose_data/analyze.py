@@ -662,23 +662,23 @@ def generate_k_edge_subgraph_list_iteratively(
     subgraph_list = list()
     for nodes in nx.k_edge_components(graph, k):
         if len(nodes) < 2:
-            print('k={}. Subgraph has only one node. Removing'.format(k))
+            # print('k={}. Subgraph has only one node. Removing'.format(k))
             continue
         subgraph = graph.subgraph(nodes)
         evaluation_score = evaluation_function(subgraph)
-        print('k={}. Subgraph has {} nodes and score of {}.'.format(
-            k,
-            subgraph.number_of_nodes(),
-            evaluation_score
-        ))
+        # print('k={}. Subgraph has {} nodes and score of {}.'.format(
+        #     k,
+        #     subgraph.number_of_nodes(),
+        #     evaluation_score
+        # ))
         if (
             (min_evaluation_score is None or evaluation_score >= min_evaluation_score) and
             (max_evaluation_score is None or evaluation_score <= max_evaluation_score)
         ):
-            print('Adding subgraph to list')
+            # print('Adding subgraph to list')
             subgraph_list.append(subgraph)
             continue
-        print('Further breaking down subgraph...')
+        # print('Further breaking down subgraph...')
         subgraph_list.extend(generate_k_edge_subgraph_list_iteratively(
             graph=subgraph,
             k=k + 1,
