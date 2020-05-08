@@ -588,6 +588,114 @@ def identify_match_groups(
             df_copy.loc[pose_pair, 'pose_3d_id'] = pose_3d_id
     return df_copy
 
+def identify_match_groups_iteratively(
+    df,
+    k,
+    evaluation_function,
+    min_evaluation_score=None,
+    max_evaluation_score=None
+):
+    df_copy = df.copy()
+    df_copy['group_match'] = False
+    df_copy['match_group_label'] = pd.NA
+    df_copy['match_group_label'] = df_copy['match_group_label'].astype('Int64')
+    df_copy['pose_3d_id'] = None
+    pose_graph = pose_pair_df_to_pose_graph(df_copy)
+    subgraph_list = generate_k_edge_subgraph_list_iteratively(
+        graph=pose_graph,
+        k=k,
+        evaluation_function=evaluation_function,
+        min_evaluation_score=min_evaluation_score,
+        max_evaluation_score=max_evaluation_score
+    )
+    for match_group_label, subgraph in enumerate(subgraph_list):
+        pose_3d_id = uuid4().hex
+        for edge in subgraph.edges():
+            reversed_edge = tuple(reversed(edge))
+            if edge in df_copy.index:
+                pose_pair = edge
+            if reversed_edge in df_copy.index:
+                pose_pair = reversed_edge
+            df_copy.loc[pose_pair, 'group_match'] = True
+            df_copy.loc[pose_pair, 'match_group_label'] = match_group_label
+            df_copy.loc[pose_pair, 'pose_3d_id'] = pose_3d_id
+    return df_copy
+
+def pose_pair_df_to_pose_graph(df):
+    pose_graph = nx.Graph()
+    for pose_ids, row in df.loc[df['match']].iterrows():
+        pose_graph.add_edge(
+            *pose_ids,
+            keypoint_coordinates_3d=row['keypoint_coordinates_3d'],
+            centroid_3d=np.nanmean(row['keypoint_coordinates_3d'], axis=0)
+        )
+    return pose_graph
+
+def separate_k_edge_subgraphs(graph, k):
+    new_graph = nx.union_all([graph.subgraph(nodes) for nodes in nx.k_edge_components(graph, k)])
+    new_graph.remove_nodes_from(list(nx.algorithms.isolate.isolates(new_graph)))
+    return new_graph
+
+def separate_k_edge_subgraphs_iteratively(
+    graph,
+    k,
+    evaluation_function,
+    min_evaluation_score=None,
+    max_evaluation_score=None
+):
+    subgraph_list = generate_k_edge_subgraph_list_iteratively(
+        graph=graph,
+        k=k,
+        evaluation_function=evaluation_function,
+        min_evaluation_score=min_evaluation_score,
+        max_evaluation_score=max_evaluation_score
+    )
+    return nx.union_all(subgraph_list)
+
+def generate_k_edge_subgraph_list_iteratively(
+    graph,
+    k,
+    evaluation_function,
+    min_evaluation_score=None,
+    max_evaluation_score=None
+):
+    subgraph_list = list()
+    for nodes in nx.k_edge_components(graph, k):
+        if len(nodes) < 2:
+            print('k={}. Subgraph has only one node. Removing'.format(k))
+            continue
+        subgraph = graph.subgraph(nodes)
+        evaluation_score = evaluation_function(subgraph)
+        print('k={}. Subgraph has {} nodes and score of {}.'.format(
+            k,
+            subgraph.number_of_nodes(),
+            evaluation_score
+        ))
+        if (
+            (min_evaluation_score is None or evaluation_score >= min_evaluation_score) and
+            (max_evaluation_score is None or evaluation_score <= max_evaluation_score)
+        ):
+            print('Adding subgraph to list')
+            subgraph_list.append(subgraph)
+            continue
+        print('Further breaking down subgraph...')
+        subgraph_list.extend(generate_k_edge_subgraph_list_iteratively(
+            graph=subgraph,
+            k=k + 1,
+            evaluation_function=evaluation_function,
+            min_evaluation_score=min_evaluation_score,
+            max_evaluation_score=max_evaluation_score
+        ))
+    return subgraph_list
+
+def pose_3d_dispersion(pose_graph):
+    return np.linalg.norm(
+        np.std(
+            np.stack([centroid_3d for u, v, centroid_3d in pose_graph.edges(data='centroid_3d')]),
+            axis=0
+        )
+    )
+
 def consolidate_poses_3d(
     df
 ):
