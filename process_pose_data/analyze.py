@@ -9,6 +9,7 @@ from uuid import uuid4
 import logging
 import time
 import itertools
+from functools import partial
 
 logger = logging.getLogger(__name__)
 
@@ -347,6 +348,27 @@ def probability_distance(image_point_differences, pixel_distance_scale):
             )
         )
     )
+
+def analyze_scores_and_identify_matches(
+    df,
+    min_score=None,
+    max_score=None,
+    pose_3d_range=None
+):
+    df_copy = df.copy()
+    analyze_scores_and_identify_matches_timestamp_partial = partial(
+        analyze_scores_and_identify_matches_timestamp,
+        min_score=min_score,
+        max_score=max_score,
+        pose_3d_range=pose_3d_range
+    )
+    df_copy = df_copy.groupby('timestamp').apply(analyze_scores_and_identify_matches_timestamp_partial)
+    df_copy.reset_index(
+        level='timestamp',
+        drop=True,
+        inplace=True
+    )
+    return df_copy
 
 def analyze_scores_and_identify_matches_timestamp(
     df,

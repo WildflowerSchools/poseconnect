@@ -186,7 +186,7 @@ def select_poses(
         pose_id_filter = (df.index == pose_id)
         filter_list.append(pose_id_filter)
     if timestamp is not None:
-        timestamp_pandas = pd.to_datetime(timestamp)
+        timestamp_pandas = pd.to_datetime(timestamp, utc=True)
         timestamp_filter = (df['timestamp'] == timestamp_pandas)
         filter_list.append(timestamp_filter)
     if camera_id is not None:
@@ -268,7 +268,7 @@ def select_pose_pairs(
         pose_id_b_filter = (df.index.get_level_values('pose_id_b') == pose_id_b)
         filter_list.append(pose_id_b_filter)
     if timestamp is not None:
-        timestamp_pandas = pd.to_datetime(timestamp)
+        timestamp_pandas = pd.to_datetime(timestamp, utc=True)
         timestamp_filter = (df['timestamp'] == timestamp_pandas)
         filter_list.append(timestamp_filter)
     if camera_id_a is not None:
