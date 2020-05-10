@@ -15,12 +15,13 @@ def draw_poses_2d_timestamp_camera_pair_opencv(
     camera_names={'a': None, 'b': None},
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
-    keypoint_alpha=0.3,
-    keypoint_connector_alpha=0.3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
     keypoint_connector_linewidth=3,
     pose_label_color='white',
-    pose_label_background_alpha=0.5,
+    pose_label_background_alpha=0.6,
     pose_label_font_scale=2.0,
+    pose_label_line_width=2,
     show=True,
     fig_width_inches=10.5,
     fig_height_inches=8
@@ -94,12 +95,13 @@ def draw_poses_2d_timestamp_camera_opencv(
     keypoint_connectors=None,
     pose_label_map=None,
     pose_color_map=None,
-    keypoint_alpha=0.3,
-    keypoint_connector_alpha=0.3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
     keypoint_connector_linewidth=3,
     pose_label_color='white',
-    pose_label_background_alpha=0.5,
+    pose_label_background_alpha=0.6,
     pose_label_font_scale=2.0,
+    pose_label_line_width=2,
     show=True,
     fig_width_inches=10.5,
     fig_height_inches=8
@@ -153,7 +155,8 @@ def draw_poses_2d_timestamp_camera_opencv(
             keypoint_connector_linewidth=keypoint_connector_linewidth,
             pose_label_color=pose_label_color,
             pose_label_background_alpha=pose_label_background_alpha,
-            pose_label_font_scale=pose_label_font_scale
+            pose_label_font_scale=pose_label_font_scale,
+            pose_label_line_width=pose_label_line_width
         )
     # Show plot
     if show:
@@ -171,11 +174,11 @@ def draw_pose_2d_opencv(
     pose_label=None,
     pose_color='green',
     keypoint_radius=3,
-    keypoint_alpha=0.3,
-    keypoint_connector_alpha=0.3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
     keypoint_connector_linewidth=3,
     pose_label_color='white',
-    pose_label_background_alpha=0.5,
+    pose_label_background_alpha=0.6,
     pose_label_font_scale=2.0,
     pose_label_line_width=2
 ):
