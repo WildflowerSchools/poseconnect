@@ -185,6 +185,8 @@ def draw_pose_2d_opencv(
     pose_color = matplotlib.colors.to_hex(pose_color, keep_alpha=False)
     pose_label_color = matplotlib.colors.to_hex(pose_label_color, keep_alpha=False)
     keypoint_coordinates = np.asarray(keypoint_coordinates).reshape((-1, 2))
+    if not np.any(np.all(np.isfinite(keypoint_coordinates), axis=1), axis=0):
+        return image
     valid_keypoints = np.all(np.isfinite(keypoint_coordinates), axis=1)
     plottable_points = keypoint_coordinates[valid_keypoints]
     new_image = image
@@ -250,3 +252,89 @@ def draw_pose_2d_opencv(
             color=pose_label_color
         )
     return new_image
+
+def draw_poses_3d_timestamp_camera_opencv(
+    df,
+    camera_ids,
+    pose_model_id=None,
+    camera_names=None,
+    camera_calibrations=None,
+    keypoint_connectors=None,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.6,
+    show=True,
+    fig_width_inches=10.5,
+    fig_height_inches=8
+):
+    timestamps = df['timestamp'].unique()
+    if len(timestamps) > 1:
+        raise ValueError('More than one timestamp in data frame')
+    timestamp = timestamps[0]
+    if pose_model_id is not None:
+        pose_model = process_pose_data.fetch.fetch_pose_model_by_pose_model_id(
+            pose_model_id
+        )
+        if keypoint_connectors is None:
+            keypoint_connectors = pose_model.get('keypoint_connectors')
+    if camera_names is None:
+        camera_names = process_pose_data.fetch.fetch_camera_names(
+            camera_ids
+        )
+    if camera_calibrations is None:
+        camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+            camera_ids,
+            start=timestamp.to_pydatetime(),
+            end=timestamp.to_pydatetime()
+        )
+    match_group_labels = df['match_group_label'].unique()
+    color_mapping = process_pose_data.visualize.generate_color_mapping(match_group_labels)
+    for camera_id in camera_ids:
+        camera_name = camera_names[camera_id]
+        camera_calibration = camera_calibrations[camera_id]
+        if keypoint_connectors is not None:
+            draw_keypoint_connectors = True
+        else:
+            draw_keypoint_connectors = False
+        image_metadata = video_io.fetch_images(
+            image_timestamps = [timestamp.to_pydatetime()],
+            camera_device_ids=[camera_id]
+        )
+        image_local_path = image_metadata[0]['image_local_path']
+        background_image = cv_utils.fetch_image_from_local_drive(image_local_path)
+        new_image = background_image
+        for pose_3d_id, row in df.iterrows():
+            keypoint_coordinates_2d = cv_utils.project_points(
+                object_points=row['keypoint_coordinates_3d'],
+                rotation_vector=camera_calibration['rotation_vector'],
+                translation_vector=camera_calibration['translation_vector'],
+                camera_matrix=camera_calibration['camera_matrix'],
+                distortion_coefficients=camera_calibration['distortion_coefficients'],
+                remove_behind_camera=True,
+                remove_outside_frame=True,
+                image_corners=[
+                    [0,0],
+                    [camera_calibration['image_width'], camera_calibration['image_height']]
+                ]
+            )
+            new_image=draw_pose_2d_opencv(
+                image=new_image,
+                keypoint_coordinates=keypoint_coordinates_2d,
+                draw_keypoint_connectors=draw_keypoint_connectors,
+                keypoint_connectors=keypoint_connectors,
+                pose_label=row['match_group_label'],
+                pose_color=color_mapping[row['match_group_label']],
+                keypoint_alpha=keypoint_alpha,
+                keypoint_connector_alpha=keypoint_connector_alpha,
+                keypoint_connector_linewidth=keypoint_connector_linewidth,
+                pose_label_color=pose_label_color,
+                pose_label_background_alpha=pose_label_background_alpha
+            )
+            # Show plot
+        if show:
+            fig, ax = plt.subplots()
+            ax.imshow(cv.cvtColor(new_image, cv.COLOR_BGR2RGB))
+            ax.axis('off')
+            fig.set_size_inches(fig_width_inches, fig_height_inches)
