@@ -508,6 +508,54 @@ def extract_best_score_indices_in_range_timestamp_camera_pair(
     best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
     return best_score_indices
 
+def pose_3d_dispersion(pose_graph):
+    return np.linalg.norm(
+        np.std(
+            np.stack([centroid_3d for u, v, centroid_3d in pose_graph.edges(data='centroid_3d')]),
+            axis=0
+        )
+    )
+
+def extract_3d_poses(
+    df,
+    evaluation_function=pose_3d_dispersion,
+    initial_edge_threshold=2,
+    min_evaluation_score=None,
+    max_evaluation_score=0.4
+):
+    extract_3d_poses_timestamp_partial = partial(
+        extract_3d_poses_timestamp,
+        evaluation_function=evaluation_function,
+        initial_edge_threshold=initial_edge_threshold,
+        min_evaluation_score=min_evaluation_score,
+        max_evaluation_score=max_evaluation_score
+    )
+    poses_3d_df = df.groupby('timestamp').apply(extract_3d_poses_timestamp_partial)
+    poses_3d_df.reset_index(
+        level='timestamp',
+        drop=True,
+        inplace=True
+    )
+    return poses_3d_df
+
+def extract_3d_poses_timestamp(
+    df,
+    evaluation_function=pose_3d_dispersion,
+    initial_edge_threshold=2,
+    min_evaluation_score=None,
+    max_evaluation_score=0.4
+):
+    df_copy = df.copy()
+    df_copy = identify_match_groups_iteratively(
+        df=df_copy,
+        evaluation_function=evaluation_function,
+        initial_edge_threshold=initial_edge_threshold,
+        min_evaluation_score=min_evaluation_score,
+        max_evaluation_score=max_evaluation_score
+    )
+    poses_3d_timestamp = consolidate_poses_3d(df=df_copy)
+    return poses_3d_timestamp
+
 def identify_match_groups(
     df,
     edge_threshold=2
@@ -537,10 +585,10 @@ def identify_match_groups(
 
 def identify_match_groups_iteratively(
     df,
-    k,
-    evaluation_function,
+    evaluation_function=pose_3d_dispersion,
+    initial_edge_threshold=2,
     min_evaluation_score=None,
-    max_evaluation_score=None
+    max_evaluation_score=0.4
 ):
     df_copy = df.copy()
     df_copy['group_match'] = False
@@ -550,7 +598,7 @@ def identify_match_groups_iteratively(
     pose_graph = pose_pair_df_to_pose_graph(df_copy)
     subgraph_list = generate_k_edge_subgraph_list_iteratively(
         graph=pose_graph,
-        k=k,
+        initial_edge_threshold=initial_edge_threshold,
         evaluation_function=evaluation_function,
         min_evaluation_score=min_evaluation_score,
         max_evaluation_score=max_evaluation_score
@@ -578,22 +626,22 @@ def pose_pair_df_to_pose_graph(df):
         )
     return pose_graph
 
-def separate_k_edge_subgraphs(graph, k):
-    new_graph = nx.union_all([graph.subgraph(nodes) for nodes in nx.k_edge_components(graph, k)])
+def separate_k_edge_subgraphs(graph, edge_threshold):
+    new_graph = nx.union_all([graph.subgraph(nodes) for nodes in nx.k_edge_components(graph, edge_threshold)])
     new_graph.remove_nodes_from(list(nx.algorithms.isolate.isolates(new_graph)))
     return new_graph
 
 def separate_k_edge_subgraphs_iteratively(
     graph,
-    k,
-    evaluation_function,
+    evaluation_function=pose_3d_dispersion,
+    initial_edge_threshold=2,
     min_evaluation_score=None,
-    max_evaluation_score=None
+    max_evaluation_score=0.4
 ):
     subgraph_list = generate_k_edge_subgraph_list_iteratively(
         graph=graph,
-        k=k,
         evaluation_function=evaluation_function,
+        initial_edge_threshold=initial_edge_threshold,
         min_evaluation_score=min_evaluation_score,
         max_evaluation_score=max_evaluation_score
     )
@@ -601,47 +649,31 @@ def separate_k_edge_subgraphs_iteratively(
 
 def generate_k_edge_subgraph_list_iteratively(
     graph,
-    k,
-    evaluation_function,
+    evaluation_function=pose_3d_dispersion,
+    initial_edge_threshold=2,
     min_evaluation_score=None,
-    max_evaluation_score=None
+    max_evaluation_score=0.4
 ):
     subgraph_list = list()
-    for nodes in nx.k_edge_components(graph, k):
+    for nodes in nx.k_edge_components(graph, initial_edge_threshold):
         if len(nodes) < 2:
-            # print('k={}. Subgraph has only one node. Removing'.format(k))
             continue
         subgraph = graph.subgraph(nodes)
         evaluation_score = evaluation_function(subgraph)
-        # print('k={}. Subgraph has {} nodes and score of {}.'.format(
-        #     k,
-        #     subgraph.number_of_nodes(),
-        #     evaluation_score
-        # ))
         if (
             (min_evaluation_score is None or evaluation_score >= min_evaluation_score) and
             (max_evaluation_score is None or evaluation_score <= max_evaluation_score)
         ):
-            # print('Adding subgraph to list')
             subgraph_list.append(subgraph)
             continue
-        # print('Further breaking down subgraph...')
         subgraph_list.extend(generate_k_edge_subgraph_list_iteratively(
             graph=subgraph,
-            k=k + 1,
+            initial_edge_threshold=initial_edge_threshold + 1,
             evaluation_function=evaluation_function,
             min_evaluation_score=min_evaluation_score,
             max_evaluation_score=max_evaluation_score
         ))
     return subgraph_list
-
-def pose_3d_dispersion(pose_graph):
-    return np.linalg.norm(
-        np.std(
-            np.stack([centroid_3d for u, v, centroid_3d in pose_graph.edges(data='centroid_3d')]),
-            axis=0
-        )
-    )
 
 def consolidate_poses_3d(
     df
