@@ -596,6 +596,8 @@ def identify_match_groups_iteratively(
     df_copy['match_group_label'] = df_copy['match_group_label'].astype('Int64')
     df_copy['pose_3d_id'] = None
     pose_graph = pose_pair_df_to_pose_graph(df_copy)
+    if pose_graph.number_of_edges() == 0:
+        return df_copy
     subgraph_list = generate_k_edge_subgraph_list_iteratively(
         graph=pose_graph,
         initial_edge_threshold=initial_edge_threshold,
@@ -659,6 +661,8 @@ def generate_k_edge_subgraph_list_iteratively(
         if len(nodes) < 2:
             continue
         subgraph = graph.subgraph(nodes)
+        if subgraph.number_of_edges() ==0:
+            continue
         evaluation_score = evaluation_function(subgraph)
         if (
             (min_evaluation_score is None or evaluation_score >= min_evaluation_score) and
