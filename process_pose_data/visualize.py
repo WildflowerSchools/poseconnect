@@ -1292,12 +1292,12 @@ def visualize_pose_pair(
                 }
             )
         else:
-            plt.plot(
+            axes[axis_index].plot(
                 centroid[0],
                 centroid[1],
                 '.',
                 color=centroid_color,
-                markersize=centroid_marker_size,
+                markersize=centroid_markersize,
                 alpha=centroid_alpha
             )
         axes[axis_index].plot(
