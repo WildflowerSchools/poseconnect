@@ -4,6 +4,10 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Make `fetch` functions handle empty return data more gracefully
+* Make visualization functions handle missing fields (e.g., `pose_quality`) more gracefully
+* Make analysis functions handle empty poses (all keypoints `NaN`) more gracefully (e.g., `score_pose_pairs()`)
+* Make production version of filtering steps in analysis pipeline where poses/pose pairs are dropped rather than marked (for faster processing)
 * Incorporate `tqdm.auto` to get rid of all of the `if` statements for notebook mode
 * Implement `tqdm` progress bars for `groupby(...).apply(...)` loops
 * Add progress bars to all pipeline functions
