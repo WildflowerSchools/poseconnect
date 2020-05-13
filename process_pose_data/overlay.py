@@ -78,8 +78,8 @@ def overlay_video_poses_3d(
             output_directory,
             '{}_{}_{}.{}'.format(
                 output_filename_prefix,
-                slugify.slugify(camera_name),
                 video_start.strftime(output_filename_datetime_format),
+                slugify.slugify(camera_name),
                 output_filename_extension
             )
         )
