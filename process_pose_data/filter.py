@@ -43,6 +43,16 @@ def filter_keypoints_by_quality(
     df_filtered['keypoint_quality'] = np.split(keypoint_quality, num_keypoint_quality_arrays)
     return df_filtered
 
+def remove_empty_poses(
+    df
+):
+    df_filtered = df.copy()
+    non_empty = df['keypoint_coordinates'].apply(
+        lambda x: np.any(np.all(np.isfinite(x), axis=1))
+    )
+    df_filtered = df_filtered.loc[non_empty].copy()
+    return df_filtered
+
 def filter_poses_by_num_valid_keypoints(
     df,
     min_num_keypoints=None,

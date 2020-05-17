@@ -54,6 +54,13 @@ def reconstruct_poses_3d_timestamp(
             df=poses_2d_df_timestamp_copy,
             min_keypoint_quality=min_keypoint_quality
         )
+    logger.info('Removing poses with no valid keypoints')
+    poses_2d_df_timestamp_copy = process_pose_data.filter.remove_empty_poses(
+        df=poses_2d_df_timestamp_copy
+    )
+    logger.info('{} poses remain after removing poses with no valid keypoints'.format(
+        len(poses_2d_df_timestamp_copy)
+    ))
     if min_num_keypoints is not None:
         logger.info('Filtering poses based on number of valid keypoints')
         poses_2d_df_timestamp_copy = process_pose_data.filter.filter_poses_by_num_valid_keypoints(
