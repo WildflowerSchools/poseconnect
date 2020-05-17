@@ -169,6 +169,11 @@ def reconstruct_poses_3d_timestamp(
         len(pose_pairs_2d_df_timestamp['pose_3d_id'].dropna().unique()),
         pose_pairs_2d_df_timestamp['group_match'].sum()
     ))
+    logger.info('Removing pose pairs that are not part of a match group')
+    pose_pairs_2d_df_timestamp =  pose_pairs_2d_df_timestamp.loc[pose_pairs_2d_df_timestamp['group_match']].copy()
+    logger.info('{} pose pairs remain after removing pose pairs that are not part of a match group'.format(
+        len(pose_pairs_2d_df_timestamp)
+    ))
     logger.info('Consolidating 3D poses across each 3D pose match groups')
     poses_3d_df_timestamp = consolidate_poses_3d(
         df=pose_pairs_2d_df_timestamp
