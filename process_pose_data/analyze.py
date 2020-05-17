@@ -166,7 +166,7 @@ def reconstruct_poses_3d_timestamp(
         max_evaluation_score=pose_3d_graph_max_evaluation_score
     )
     logger.info('Identified {} 3D pose match groups spanning {} pose pairs'.format(
-        len(pose_pairs_2d_df_timestamp['pose_3d_id'].unique()),
+        len(pose_pairs_2d_df_timestamp['pose_3d_id'].dropna().unique()),
         pose_pairs_2d_df_timestamp['group_match'].sum()
     ))
     logger.info('Consolidating 3D poses across each 3D pose match groups')
