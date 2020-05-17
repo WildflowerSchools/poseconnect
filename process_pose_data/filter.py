@@ -8,14 +8,9 @@ logger = logging.getLogger(__name__)
 def filter_keypoints_by_quality(
     df,
     min_keypoint_quality=None,
-    max_keypoint_quality=None,
-    inplace=False
+    max_keypoint_quality=None
 ):
-    # Make copy of input dataframe if operation is not in place
-    if inplace:
-        df_filtered = df
-    else:
-        df_filtered = df.copy()
+    df_filtered = df.copy()
     keypoint_coordinate_arrays = df_filtered['keypoint_coordinates'].values
     num_keypoint_coordinate_arrays = len(keypoint_coordinate_arrays)
     keypoint_coordinates = np.concatenate(keypoint_coordinate_arrays, axis = 0)
@@ -46,20 +41,14 @@ def filter_keypoints_by_quality(
         keypoint_quality[mask] = np.nan
     df_filtered['keypoint_coordinates'] = np.split(keypoint_coordinates, num_keypoint_coordinate_arrays)
     df_filtered['keypoint_quality'] = np.split(keypoint_quality, num_keypoint_quality_arrays)
-    if not inplace:
-        return df_filtered
+    return df_filtered
 
 def filter_poses_by_num_valid_keypoints(
     df,
     min_num_keypoints=None,
-    max_num_keypoints=None,
-    inplace=False
+    max_num_keypoints=None
 ):
-    # Make copy of input dataframe if operation is not in place
-    if inplace:
-        df_filtered = df
-    else:
-        df_filtered = df.copy()
+    df_filtered = df.copy()
     num_keypoints = df['keypoint_quality'].apply(
         lambda x: np.count_nonzero(~np.isnan(x))
     )
@@ -67,44 +56,31 @@ def filter_poses_by_num_valid_keypoints(
         df_filtered = df_filtered.loc[num_keypoints >= min_num_keypoints]
     if max_num_keypoints is not None:
         df_filtered = df_filtered.loc[num_keypoints <= max_num_keypoints]
-    if not inplace:
-        return df_filtered
+    return df_filtered
 
 def filter_poses_by_quality(
     df,
     min_pose_quality=None,
-    max_pose_quality=None,
-    inplace=False
+    max_pose_quality=None
 ):
-    # Make copy of input dataframe if operation is not in place
-    if inplace:
-        df_filtered = df
-    else:
-        df_filtered = df.copy()
+    df_filtered = df.copy()
     if min_pose_quality is not None:
         df_filtered = df_filtered.loc[df_filtered['pose_quality'] >= min_pose_quality]
     if max_pose_quality is not None:
         df_filtered = df_filtered.loc[df_filtered['pose_quality'] <= max_pose_quality]
-    if not inplace:
-        return df_filtered
+    return df_filtered
 
 def filter_pose_pairs_by_score(
     df,
     min_score=None,
-    max_score=None,
-    inplace=False
+    max_score=None
 ):
-    # Make copy of input dataframe if operation is not in place
-    if inplace:
-        df_filtered = df
-    else:
-        df_filtered = df.copy()
+    df_filtered = df.copy()
     if min_score is not None:
         df_filtered = df_filtered.loc[df_filtered['score'] >= min_score]
     if max_score is not None:
         df_filtered = df_filtered.loc[df_filtered['score'] <= max_score]
-    if not inplace:
-        return df_filtered
+    return df_filtered
 
 def select_random_pose(
     df

@@ -50,27 +50,24 @@ def reconstruct_poses_3d_timestamp(
     ))
     if min_keypoint_quality is not None:
         logger.info('Filtering keypoints based on keypoint quality')
-        process_pose_data.filter.filter_keypoints_by_quality(
+        poses_2d_df_timestamp_copy = process_pose_data.filter.filter_keypoints_by_quality(
             df=poses_2d_df_timestamp_copy,
-            min_keypoint_quality=min_keypoint_quality,
-            inplace=True
+            min_keypoint_quality=min_keypoint_quality
         )
     if min_num_keypoints is not None:
         logger.info('Filtering poses based on number of valid keypoints')
-        process_pose_data.filter.filter_poses_by_num_valid_keypoints(
+        poses_2d_df_timestamp_copy = process_pose_data.filter.filter_poses_by_num_valid_keypoints(
             df=poses_2d_df_timestamp_copy,
-            min_num_keypoints=min_num_keypoints,
-            inplace=True
+            min_num_keypoints=min_num_keypoints
         )
         logger.info('{} poses remain after filtering on number of valid keypoints'.format(
             len(poses_2d_df_timestamp_copy)
         ))
     if min_pose_quality is not None:
         logger.info('Filtering poses based on pose_quality')
-        process_pose_data.filter.filter_poses_by_quality(
+        poses_2d_df_timestamp_copy = process_pose_data.filter.filter_poses_by_quality(
             df=poses_2d_df_timestamp_copy,
-            min_pose_quality=min_pose_quality,
-            inplace=True
+            min_pose_quality=min_pose_quality
         )
         logger.info('{} poses remain after filtering on pose quality'.format(
             len(poses_2d_df_timestamp_copy)
