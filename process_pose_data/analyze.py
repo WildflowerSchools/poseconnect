@@ -55,7 +55,7 @@ def reconstruct_poses_3d_timestamp(
             min_keypoint_quality=min_keypoint_quality
         )
     logger.info('Removing poses with no valid keypoints')
-    poses_2d_df_timestamp_copy = process_pose_data.filter.remove_empty_poses(
+    poses_2d_df_timestamp_copy = process_pose_data.filter.remove_empty_2d_poses(
         df=poses_2d_df_timestamp_copy
     )
     logger.info('{} poses remain after removing poses with no valid keypoints'.format(
@@ -92,6 +92,13 @@ def reconstruct_poses_3d_timestamp(
         camera_calibrations=camera_calibrations
     )
     logger.info('3D poses and reprojection errors calculated for {} pose pairs'.format(
+        len(pose_pairs_2d_df_timestamp)
+    ))
+    logger.info('Removing 3D poses with no valid keypoints')
+    pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_empty_3d_poses(
+        df=pose_pairs_2d_df_timestamp
+    )
+    logger.info('{} pose pairs remain after removing 3D poses with no valid keypoints'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
     logger.info('Scoring pose pairs')

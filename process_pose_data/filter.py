@@ -43,7 +43,7 @@ def filter_keypoints_by_quality(
     df_filtered['keypoint_quality'] = np.split(keypoint_quality, num_keypoint_quality_arrays)
     return df_filtered
 
-def remove_empty_poses(
+def remove_empty_2d_poses(
     df
 ):
     df_filtered = df.copy()
@@ -90,6 +90,16 @@ def filter_pose_pairs_by_score(
         df_filtered = df_filtered.loc[df_filtered['score'] >= min_score]
     if max_score is not None:
         df_filtered = df_filtered.loc[df_filtered['score'] <= max_score]
+    return df_filtered
+
+def remove_empty_3d_poses(
+    df
+):
+    df_filtered = df.copy()
+    non_empty = df['keypoint_coordinates_3d'].apply(
+        lambda x: np.any(np.all(np.isfinite(x), axis=1))
+    )
+    df_filtered = df_filtered.loc[non_empty].copy()
     return df_filtered
 
 def select_random_pose(
