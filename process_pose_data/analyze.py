@@ -13,6 +13,141 @@ from functools import partial
 
 logger = logging.getLogger(__name__)
 
+def pose_3d_dispersion(pose_graph):
+    return np.linalg.norm(
+        np.std(
+            np.stack([centroid_3d for u, v, centroid_3d in pose_graph.edges(data='centroid_3d')]),
+            axis=0
+        )
+    )
+
+def reconstruct_poses_3d_timestamp(
+    poses_2d_df_timestamp,
+    camera_calibrations,
+    min_keypoint_quality=None,
+    min_num_keypoints=None,
+    min_pose_quality=None,
+    min_pose_pair_score=None,
+    max_pose_pair_score=25.0,
+    pose_pair_score_distance_method='pixels',
+    pose_pair_score_pixel_distance_scale=5.0,
+    pose_pair_score_summary_method='rms',
+    pose_3d_range=None,
+    pose_3d_graph_initial_edge_threshold=2,
+    pose_3d_graph_evaluation_function=pose_3d_dispersion,
+    pose_3d_graph_min_evaluation_score=None,
+    pose_3d_graph_max_evaluation_score=0.40,
+    validate_df=True
+):
+    poses_2d_df_timestamp_copy = poses_2d_df_timestamp.copy()
+    if validate_df:
+        if len(poses_2d_df_timestamp_copy['timestamp'].unique()) > 1:
+            raise ValueError('More than one timestamp found in data frame')
+    timestamp = poses_2d_df_timestamp_copy['timestamp'][0]
+    logger.info('Analyzing timestamp {}: {} poses'.format(
+        timestamp.isoformat(),
+        len(poses_2d_df_timestamp_copy)
+    ))
+    if min_keypoint_quality is not None:
+        logger.info('Filtering keypoints based on keypoint quality')
+        process_pose_data.filter.filter_keypoints_by_quality(
+            df=poses_2d_df_timestamp_copy,
+            min_keypoint_quality=min_keypoint_quality,
+            inplace=True
+        )
+    if min_num_keypoints is not None:
+        logger.info('Filtering poses based on number of valid keypoints')
+        process_pose_data.filter.filter_poses_by_num_valid_keypoints(
+            df=poses_2d_df_timestamp_copy,
+            min_num_keypoints=min_num_keypoints,
+            inplace=True
+        )
+        logger.info('{} poses remain after filtering on number of valid keypoints'.format(
+            len(poses_2d_df_timestamp_copy)
+        ))
+    if min_pose_quality is not None:
+        logger.info('Filtering poses based on pose_quality')
+        process_pose_data.filter.filter_poses_by_quality(
+            df=poses_2d_df_timestamp_copy,
+            min_pose_quality=min_pose_quality,
+            inplace=True
+        )
+        logger.info('{} poses remain after filtering on pose quality'.format(
+            len(poses_2d_df_timestamp_copy)
+        ))
+    logger.info('Generating pose_pairs')
+    pose_pairs_2d_df_timestamp = generate_pose_pairs_timestamp(
+        df=poses_2d_df_timestamp_copy
+    )
+    logger.info('{} pose pairs generated'.format(
+        len(pose_pairs_2d_df_timestamp)
+    ))
+    logger.info('Calculating 3D poses for pose pairs')
+    pose_pairs_2d_df_timestamp = calculate_3d_poses(
+        df=pose_pairs_2d_df_timestamp,
+        camera_calibrations=camera_calibrations
+    )
+    logger.info('Scoring pose pairs')
+    pose_pairs_2d_df_timestamp = score_pose_pairs(
+        df=pose_pairs_2d_df_timestamp,
+        distance_method=pose_pair_score_distance_method,
+        summary_method=pose_pair_score_summary_method,
+        pixel_distance_scale=pose_pair_score_pixel_distance_scale
+    )
+    logger.info('{} pose pairs scored'.format(
+        len(pose_pairs_2d_df_timestamp)
+    ))
+    if min_pose_pair_score is not None:
+        logger.info('Filtering pose pairs based on minimum pose pair score')
+        pose_pairs_2d_df_timestamp = pose_pairs_2d_df_timestamp.loc[
+            pose_pairs_2d_df_timestamp['score'] >= min_pose_pair_score
+        ].copy()
+        logger.info('{} pose pairs remain after filtering on minimum pose pair score'.format(
+            len(pose_pairs_2d_df_timestamp)
+        ))
+    if max_pose_pair_score is not None:
+        logger.info('Filtering pose pairs based on maximum pose pair score')
+        pose_pairs_2d_df_timestamp = pose_pairs_2d_df_timestamp.loc[
+            pose_pairs_2d_df_timestamp['score'] <= max_pose_pair_score
+        ].copy()
+        logger.info('{} pose pairs remain after filtering on maximum pose pair score'.format(
+            len(pose_pairs_2d_df_timestamp)
+        ))
+    if pose_3d_range is not None:
+        logger.info('Filtering pose pairs based on 3D pose spatial limits')
+        pose_pairs_2d_df_timestamp = pose_pairs_2d_df_timestamp.loc[
+            pose_pairs_2d_df_timestamp['keypoint_coordinates_3d'].apply(
+                lambda x: pose_3d_in_range(x, pose_3d_range)
+            )
+        ].copy()
+        logger.info('{} pose pairs remain after filtering on 3D pose spatial limits'.format(
+            len(pose_pairs_2d_df_timestamp)
+        ))
+    logger.info('Filtering pose pairs down to best matches for each camera pair')
+    pose_pairs_2d_df_timestamp.sort_index(inplace=True)
+    best_score_indices = list()
+    for group_name, group_df in pose_pairs_2d_df_timestamp.groupby(['camera_id_a', 'camera_id_b']):
+        best_score_indices.extend(extract_best_score_indices_timestamp_camera_pair(group_df))
+    pose_pairs_2d_df_timestamp = pose_pairs_2d_df_timestamp.loc[
+        best_score_indices
+    ].copy()
+    logger.info('{} pose pairs remain after filtering down to best matches for each camera pair'.format(
+        len(pose_pairs_2d_df_timestamp)
+    ))
+    logger.info('Identify 3D pose match groups across camera pairs')
+    pose_pairs_2d_df_timestamp['match'] = True
+    pose_pairs_2d_df_timestamp = identify_match_groups_iteratively(
+        df=pose_pairs_2d_df_timestamp,
+        evaluation_function=pose_3d_graph_evaluation_function,
+        initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+        min_evaluation_score=pose_3d_graph_min_evaluation_score,
+        max_evaluation_score=pose_3d_graph_max_evaluation_score
+    )
+    logger.info('Consoldating 3D poses across each 3D pose match group')
+    poses_3d_df_timestamp = consolidate_poses_3d(
+        df=pose_pairs_2d_df_timestamp
+    )
+    return poses_3d_df_timestamp
 
 # TODO: Replace this function with one that uses the other functions below
 def generate_and_score_pose_pairs(
@@ -507,14 +642,6 @@ def extract_best_score_indices_in_range_timestamp_camera_pair(
     best_b_score_for_a = df.loc[df['score_in_range'] & df['pose_3d_in_range']]['score'].groupby('pose_id_a').idxmin().dropna()
     best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
     return best_score_indices
-
-def pose_3d_dispersion(pose_graph):
-    return np.linalg.norm(
-        np.std(
-            np.stack([centroid_3d for u, v, centroid_3d in pose_graph.edges(data='centroid_3d')]),
-            axis=0
-        )
-    )
 
 def extract_3d_poses(
     df,
