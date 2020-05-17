@@ -79,11 +79,14 @@ def reconstruct_poses_3d_timestamp(
     logger.info('{} pose pairs generated'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
-    logger.info('Calculating 3D poses for pose pairs')
+    logger.info('Calculating 3D poses and reprojection errors for pose pairs')
     pose_pairs_2d_df_timestamp = calculate_3d_poses(
         df=pose_pairs_2d_df_timestamp,
         camera_calibrations=camera_calibrations
     )
+    logger.info('3D poses and reprojection errors calculated for {} pose pairs'.format(
+        len(pose_pairs_2d_df_timestamp)
+    ))
     logger.info('Scoring pose pairs')
     pose_pairs_2d_df_timestamp = score_pose_pairs(
         df=pose_pairs_2d_df_timestamp,
@@ -134,10 +137,17 @@ def reconstruct_poses_3d_timestamp(
         min_evaluation_score=pose_3d_graph_min_evaluation_score,
         max_evaluation_score=pose_3d_graph_max_evaluation_score
     )
-    logger.info('Consoldating 3D poses across each 3D pose match group')
+    logger.info('Identified {} 3D pose match groups spanning {} pose pairs'.format(
+        len(pose_pairs_2d_df_timestamp['pose_3d_id'].unique()),
+        pose_pairs_2d_df_timestamp['group_match'].sum()
+    ))
+    logger.info('Consolidating 3D poses across each 3D pose match groups')
     poses_3d_df_timestamp = consolidate_poses_3d(
         df=pose_pairs_2d_df_timestamp
     )
+    logger.info('{} 3D poses generated'.format(
+        len(poses_3d_df_timestamp)
+    ))
     return poses_3d_df_timestamp
 
 # TODO: Replace this function with one that uses the other functions below
