@@ -86,12 +86,12 @@ def reconstruct_poses_3d_timestamp(
     logger.info('{} pose pairs generated'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
-    logger.info('Calculating 3D poses and reprojection errors for pose pairs')
+    logger.info('Calculating 3D poses and reprojected 2D poses for pose pairs')
     pose_pairs_2d_df_timestamp = calculate_3d_poses(
         df=pose_pairs_2d_df_timestamp,
         camera_calibrations=camera_calibrations
     )
-    logger.info('3D poses and reprojection errors calculated for {} pose pairs'.format(
+    logger.info('3D poses and reprojected 2D poses calculated for {} pose pairs'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
     logger.info('Removing 3D poses with no valid keypoints')
