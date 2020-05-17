@@ -44,9 +44,9 @@ def reconstruct_poses_3d_timestamp(
         if len(poses_2d_df_timestamp_copy['timestamp'].unique()) > 1:
             raise ValueError('More than one timestamp found in data frame')
     timestamp = poses_2d_df_timestamp_copy['timestamp'][0]
-    logger.info('Analyzing timestamp {}: {} poses'.format(
-        timestamp.isoformat(),
-        len(poses_2d_df_timestamp_copy)
+    logger.info('Analyzing {} poses from timestamp {}'.format(
+        len(poses_2d_df_timestamp_copy),
+        timestamp.isoformat()
     ))
     if min_keypoint_quality is not None:
         logger.info('Filtering keypoints based on keypoint quality')
@@ -97,20 +97,14 @@ def reconstruct_poses_3d_timestamp(
     logger.info('{} pose pairs scored'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
-    if min_pose_pair_score is not None:
-        logger.info('Filtering pose pairs based on minimum pose pair score')
-        pose_pairs_2d_df_timestamp = pose_pairs_2d_df_timestamp.loc[
-            pose_pairs_2d_df_timestamp['score'] >= min_pose_pair_score
-        ].copy()
-        logger.info('{} pose pairs remain after filtering on minimum pose pair score'.format(
-            len(pose_pairs_2d_df_timestamp)
-        ))
-    if max_pose_pair_score is not None:
-        logger.info('Filtering pose pairs based on maximum pose pair score')
-        pose_pairs_2d_df_timestamp = pose_pairs_2d_df_timestamp.loc[
-            pose_pairs_2d_df_timestamp['score'] <= max_pose_pair_score
-        ].copy()
-        logger.info('{} pose pairs remain after filtering on maximum pose pair score'.format(
+    if min_pose_pair_score is not None or max_pose_pair_score is not None:
+        logger.info('Filtering pose pairs based on pose pair score')
+        pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_score(
+            df=pose_pairs_2d_df_timestamp,
+            min_score=min_pose_pair_score,
+            max_score=max_pose_pair_score
+        )
+        logger.info('{} pose pairs remain after filtering on pose pair score'.format(
             len(pose_pairs_2d_df_timestamp)
         ))
     if pose_3d_range is not None:
