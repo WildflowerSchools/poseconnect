@@ -101,6 +101,13 @@ def reconstruct_poses_3d_timestamp(
     logger.info('{} pose pairs remain after removing 3D poses with no valid keypoints'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
+    logger.info('Removing pose pairs with empty reprojected 2D poses')
+    pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_empty_reprojected_2d_poses(
+        df=pose_pairs_2d_df_timestamp
+    )
+    logger.info('{} pose pairs remain after removing pose pairs with empty reprojected 2D poses'.format(
+        len(pose_pairs_2d_df_timestamp)
+    ))
     logger.info('Scoring pose pairs')
     pose_pairs_2d_df_timestamp = score_pose_pairs(
         df=pose_pairs_2d_df_timestamp,
@@ -109,6 +116,13 @@ def reconstruct_poses_3d_timestamp(
         pixel_distance_scale=pose_pair_score_pixel_distance_scale
     )
     logger.info('{} pose pairs scored'.format(
+        len(pose_pairs_2d_df_timestamp)
+    ))
+    logger.info('Removing pose pairs without a valid score')
+    pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_invalid_pose_pair_scores(
+        df=pose_pairs_2d_df_timestamp
+    )
+    logger.info('{} pose pairs remain after removing pose pairs without a valid score'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
     if min_pose_pair_score is not None or max_pose_pair_score is not None:

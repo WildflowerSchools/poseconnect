@@ -102,6 +102,27 @@ def remove_empty_3d_poses(
     df_filtered = df_filtered.loc[non_empty].copy()
     return df_filtered
 
+def remove_empty_reprojected_2d_poses(
+    df
+):
+    df_filtered = df.copy()
+    non_empty_a = df['keypoint_coordinates_a_reprojected'].apply(
+        lambda x: np.any(np.all(np.isfinite(x), axis=1))
+    )
+    non_empty_b = df['keypoint_coordinates_b_reprojected'].apply(
+        lambda x: np.any(np.all(np.isfinite(x), axis=1))
+    )
+    df_filtered = df_filtered.loc[non_empty_a & non_empty_b].copy()
+    return df_filtered
+
+def remove_invalid_pose_pair_scores(
+    df
+):
+    df_filtered = df.copy()
+    valid = ~df['score'].isna()
+    df_filtered = df_filtered.loc[valid].copy()
+    return df_filtered
+
 def select_random_pose(
     df
 ):
