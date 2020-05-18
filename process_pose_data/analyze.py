@@ -163,6 +163,7 @@ def reconstruct_poses_3d_timestamp(
     logger.debug('{} 3D poses generated'.format(
         len(poses_3d_df_timestamp)
     ))
+    poses_3d_df_timestamp.set_index('pose_3d_id', inplace=True)
     return poses_3d_df_timestamp
 
 # TODO: Replace this function with one that uses the other functions below
