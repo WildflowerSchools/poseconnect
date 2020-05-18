@@ -92,6 +92,16 @@ def filter_pose_pairs_by_score(
         df_filtered = df_filtered.loc[df_filtered['score'] <= max_score]
     return df_filtered
 
+def filter_pose_pairs_by_best_match(
+    pose_pairs_2d_df_timestamp
+):
+    pose_pairs_2d_df_timestamp.sort_index(inplace=True)
+    best_score_indices = list()
+    for group_name, group_df in pose_pairs_2d_df_timestamp.groupby(['camera_id_a', 'camera_id_b']):
+        best_score_indices.extend(process_pose_data.analyze.extract_best_score_indices_timestamp_camera_pair(group_df))
+    pose_pairs_2d_df_timestamp = pose_pairs_2d_df_timestamp.loc[best_score_indices].copy()
+    return pose_pairs_2d_df_timestamp
+
 def remove_empty_3d_poses(
     df
 ):

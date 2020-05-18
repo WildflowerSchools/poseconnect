@@ -146,13 +146,9 @@ def reconstruct_poses_3d_timestamp(
             len(pose_pairs_2d_df_timestamp)
         ))
     logger.info('Filtering pose pairs down to best matches for each camera pair')
-    pose_pairs_2d_df_timestamp.sort_index(inplace=True)
-    best_score_indices = list()
-    for group_name, group_df in pose_pairs_2d_df_timestamp.groupby(['camera_id_a', 'camera_id_b']):
-        best_score_indices.extend(extract_best_score_indices_timestamp_camera_pair(group_df))
-    pose_pairs_2d_df_timestamp = pose_pairs_2d_df_timestamp.loc[
-        best_score_indices
-    ].copy()
+    pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_best_match(
+        pose_pairs_2d_df_timestamp
+    )
     logger.info('{} pose pairs remain after filtering down to best matches for each camera pair'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
