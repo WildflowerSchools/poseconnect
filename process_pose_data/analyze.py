@@ -137,11 +137,10 @@ def reconstruct_poses_3d_timestamp(
         ))
     if pose_3d_range is not None:
         logger.info('Filtering pose pairs based on 3D pose spatial limits')
-        pose_pairs_2d_df_timestamp = pose_pairs_2d_df_timestamp.loc[
-            pose_pairs_2d_df_timestamp['keypoint_coordinates_3d'].apply(
-                lambda x: pose_3d_in_range(x, pose_3d_range)
-            )
-        ].copy()
+        pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
+            pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+            pose_3d_range=pose_3d_range
+        )
         logger.info('{} pose pairs remain after filtering on 3D pose spatial limits'.format(
             len(pose_pairs_2d_df_timestamp)
         ))
