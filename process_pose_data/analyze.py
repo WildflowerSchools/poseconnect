@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 import tqdm
+import tqdm.notebook
 from uuid import uuid4
 import logging
 import time
@@ -20,6 +21,68 @@ def pose_3d_dispersion(pose_graph):
             axis=0
         )
     )
+
+def reconstruct_poses_3d(
+    poses_2d_df,
+    camera_calibrations,
+    min_keypoint_quality=None,
+    min_num_keypoints=None,
+    min_pose_quality=None,
+    min_pose_pair_score=None,
+    max_pose_pair_score=25.0,
+    pose_pair_score_distance_method='pixels',
+    pose_pair_score_pixel_distance_scale=5.0,
+    pose_pair_score_summary_method='rms',
+    pose_3d_range=None,
+    pose_3d_graph_initial_edge_threshold=2,
+    pose_3d_graph_evaluation_function=pose_3d_dispersion,
+    pose_3d_graph_min_evaluation_score=None,
+    pose_3d_graph_max_evaluation_score=0.40,
+    progress_bar=False,
+    notebook=False
+):
+    reconstruct_poses_3d_timestamp_partial = partial(
+        reconstruct_poses_3d_timestamp,
+        camera_calibrations=camera_calibrations,
+        min_keypoint_quality=min_keypoint_quality,
+        min_num_keypoints=min_num_keypoints,
+        min_pose_quality=min_pose_quality,
+        min_pose_pair_score=min_pose_pair_score,
+        max_pose_pair_score=max_pose_pair_score,
+        pose_pair_score_distance_method=pose_pair_score_distance_method,
+        pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
+        pose_pair_score_summary_method=pose_pair_score_summary_method,
+        pose_3d_range=pose_3d_range,
+        pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+        pose_3d_graph_evaluation_function=pose_3d_graph_evaluation_function,
+        pose_3d_graph_min_evaluation_score=pose_3d_graph_min_evaluation_score,
+        pose_3d_graph_max_evaluation_score=pose_3d_graph_max_evaluation_score,
+        validate_df=False
+    )
+    num_frames = len(poses_2d_df['timestamp'].unique())
+    logger.info('Reconstruction 3D poses from {} 2D poses across {} frames ({} to {})'.format(
+        len(poses_2d_df),
+        num_frames,
+        poses_2d_df['timestamp'].min().isoformat(),
+        poses_2d_df['timestamp'].max().isoformat()
+    ))
+    start_time = time.time()
+    if progress_bar:
+        if notebook:
+            tqdm.notebook.tqdm.pandas()
+        else:
+            tqdm.pandas()
+        poses_3d_df = poses_2d_df.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial)
+    else:
+        poses_3d_df = poses_2d_df.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial)
+    elapsed_time = time.time() - start_time
+    logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
+        len(poses_3d_df),
+        elapsed_time,
+        1000*elapsed_time/num_frames
+    ))
+    poses_3d_df.reset_index('timestamp', drop=True, inplace=True)
+    return poses_3d_df
 
 def reconstruct_poses_3d_timestamp(
     poses_2d_df_timestamp,
