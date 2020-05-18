@@ -156,28 +156,37 @@ def reconstruct_poses_3d_timestamp(
     logger.info('{} pose pairs remain after filtering down to best matches for each camera pair'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
-    logger.info('Identify 3D pose match groups across camera pairs')
-    pose_pairs_2d_df_timestamp['match'] = True
-    pose_pairs_2d_df_timestamp = identify_match_groups_iteratively(
-        df=pose_pairs_2d_df_timestamp,
+    logger.info('Generating 3D poses')
+    poses_3d_df_timestamp = generate_3d_poses_timestamp(
+        pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
         evaluation_function=pose_3d_graph_evaluation_function,
         initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         min_evaluation_score=pose_3d_graph_min_evaluation_score,
-        max_evaluation_score=pose_3d_graph_max_evaluation_score
+        max_evaluation_score=pose_3d_graph_max_evaluation_score,
+        validate_df=validate_df
     )
-    logger.info('Identified {} 3D pose match groups spanning {} pose pairs'.format(
-        len(pose_pairs_2d_df_timestamp['pose_3d_id'].dropna().unique()),
-        pose_pairs_2d_df_timestamp['group_match'].sum()
-    ))
-    logger.info('Removing pose pairs that are not part of a match group')
-    pose_pairs_2d_df_timestamp =  pose_pairs_2d_df_timestamp.loc[pose_pairs_2d_df_timestamp['group_match']].copy()
-    logger.info('{} pose pairs remain after removing pose pairs that are not part of a match group'.format(
-        len(pose_pairs_2d_df_timestamp)
-    ))
-    logger.info('Consolidating 3D poses across each 3D pose match groups')
-    poses_3d_df_timestamp = consolidate_poses_3d(
-        df=pose_pairs_2d_df_timestamp
-    )
+    # logger.info('Identify 3D pose match groups across camera pairs')
+    # pose_pairs_2d_df_timestamp['match'] = True
+    # pose_pairs_2d_df_timestamp = identify_match_groups_iteratively(
+    #     df=pose_pairs_2d_df_timestamp,
+    #     evaluation_function=pose_3d_graph_evaluation_function,
+    #     initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+    #     min_evaluation_score=pose_3d_graph_min_evaluation_score,
+    #     max_evaluation_score=pose_3d_graph_max_evaluation_score
+    # )
+    # logger.info('Identified {} 3D pose match groups spanning {} pose pairs'.format(
+    #     len(pose_pairs_2d_df_timestamp['pose_3d_id'].dropna().unique()),
+    #     pose_pairs_2d_df_timestamp['group_match'].sum()
+    # ))
+    # logger.info('Removing pose pairs that are not part of a match group')
+    # pose_pairs_2d_df_timestamp =  pose_pairs_2d_df_timestamp.loc[pose_pairs_2d_df_timestamp['group_match']].copy()
+    # logger.info('{} pose pairs remain after removing pose pairs that are not part of a match group'.format(
+    #     len(pose_pairs_2d_df_timestamp)
+    # ))
+    # logger.info('Consolidating 3D poses across each 3D pose match groups')
+    # poses_3d_df_timestamp = consolidate_poses_3d(
+    #     df=pose_pairs_2d_df_timestamp
+    # )
     logger.info('{} 3D poses generated'.format(
         len(poses_3d_df_timestamp)
     ))
@@ -676,6 +685,53 @@ def extract_best_score_indices_in_range_timestamp_camera_pair(
     best_b_score_for_a = df.loc[df['score_in_range'] & df['pose_3d_in_range']]['score'].groupby('pose_id_a').idxmin().dropna()
     best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
     return best_score_indices
+
+def generate_3d_poses_timestamp(
+    pose_pairs_2d_df_timestamp,
+    evaluation_function=pose_3d_dispersion,
+    initial_edge_threshold=2,
+    min_evaluation_score=None,
+    max_evaluation_score=0.4,
+    validate_df=True
+):
+    timestamps = pose_pairs_2d_df_timestamp['timestamp'].unique()
+    if validate_df:
+        if len(timestamps) > 1:
+            raise ValueError('More than one timestamp found in data frame')
+    timestamp = timestamps[0]
+    pose_graph = generate_pose_graph(pose_pairs_2d_df_timestamp)
+    subgraph_list = generate_k_edge_subgraph_list_iteratively(
+        graph=pose_graph,
+        initial_edge_threshold=initial_edge_threshold,
+        evaluation_function=evaluation_function,
+        min_evaluation_score=min_evaluation_score,
+        max_evaluation_score=max_evaluation_score
+    )
+    pose_3d_ids = list()
+    keypoint_coordinates_3d = list()
+    for subgraph in subgraph_list:
+        pose_3d_ids.append(uuid4().hex)
+        keypoint_coordinates_3d_list = list()
+        for pose_id_1, pose_id_2, keypoint_coordinates_3d_edge in subgraph.edges(data='keypoint_coordinates_3d'):
+            keypoint_coordinates_3d_list.append(keypoint_coordinates_3d_edge)
+        keypoint_coordinates_3d.append(np.nanmedian(np.stack(keypoint_coordinates_3d_list), axis=0))
+    pose_pairs_3d_df_timestamp = pd.DataFrame({
+        'pose_3d_id': pose_3d_ids,
+        'timestamp': timestamp,
+        'match_group_label': list(range(len(pose_3d_ids))),
+        'keypoint_coordinates_3d': keypoint_coordinates_3d
+    })
+    return pose_pairs_3d_df_timestamp
+
+def generate_pose_graph(pose_pairs_2d_df):
+    pose_graph = nx.Graph()
+    for pose_ids, row in pose_pairs_2d_df.iterrows():
+        pose_graph.add_edge(
+            *pose_ids,
+            keypoint_coordinates_3d=row['keypoint_coordinates_3d'],
+            centroid_3d=np.nanmean(row['keypoint_coordinates_3d'], axis=0)
+        )
+    return pose_graph
 
 def extract_3d_poses(
     df,
