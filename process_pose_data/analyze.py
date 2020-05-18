@@ -156,7 +156,7 @@ def reconstruct_poses_3d_timestamp(
     logger.info('{} pose pairs remain after filtering down to best matches for each camera pair'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
-    logger.info('Generating 3D poses')
+    logger.info('Generating 3D poses across camera pairs')
     poses_3d_df_timestamp = generate_3d_poses_timestamp(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
         evaluation_function=pose_3d_graph_evaluation_function,
@@ -165,28 +165,6 @@ def reconstruct_poses_3d_timestamp(
         max_evaluation_score=pose_3d_graph_max_evaluation_score,
         validate_df=validate_df
     )
-    # logger.info('Identify 3D pose match groups across camera pairs')
-    # pose_pairs_2d_df_timestamp['match'] = True
-    # pose_pairs_2d_df_timestamp = identify_match_groups_iteratively(
-    #     df=pose_pairs_2d_df_timestamp,
-    #     evaluation_function=pose_3d_graph_evaluation_function,
-    #     initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
-    #     min_evaluation_score=pose_3d_graph_min_evaluation_score,
-    #     max_evaluation_score=pose_3d_graph_max_evaluation_score
-    # )
-    # logger.info('Identified {} 3D pose match groups spanning {} pose pairs'.format(
-    #     len(pose_pairs_2d_df_timestamp['pose_3d_id'].dropna().unique()),
-    #     pose_pairs_2d_df_timestamp['group_match'].sum()
-    # ))
-    # logger.info('Removing pose pairs that are not part of a match group')
-    # pose_pairs_2d_df_timestamp =  pose_pairs_2d_df_timestamp.loc[pose_pairs_2d_df_timestamp['group_match']].copy()
-    # logger.info('{} pose pairs remain after removing pose pairs that are not part of a match group'.format(
-    #     len(pose_pairs_2d_df_timestamp)
-    # ))
-    # logger.info('Consolidating 3D poses across each 3D pose match groups')
-    # poses_3d_df_timestamp = consolidate_poses_3d(
-    #     df=pose_pairs_2d_df_timestamp
-    # )
     logger.info('{} 3D poses generated'.format(
         len(poses_3d_df_timestamp)
     ))
