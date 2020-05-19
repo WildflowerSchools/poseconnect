@@ -14,6 +14,48 @@ from functools import partial
 
 logger = logging.getLogger(__name__)
 
+KEYPOINT_CATEGORIES_BY_POSE_MODEL = {
+    'COCO-17': ['head', 'head', 'head', 'head', 'head', 'shoulder', 'shoulder', 'elbow', 'elbow', 'hand', 'hand', 'hip', 'hip', 'knee', 'knee', 'foot', 'foot'],
+    'COCO-18': ['head', 'neck', 'shoulder', 'elbow', 'hand', 'shoulder', 'elbow', 'hand', 'hip', 'knee', 'foot', 'hip', 'knee', 'foot', 'head', 'head', 'head', 'head'],
+    'MPII-15': ['head', 'neck', 'shoulder', 'elbow', 'hand', 'shoulder', 'elbow', 'hand', 'hip', 'knee', 'foot', 'hip', 'knee', 'foot', 'thorax'],
+    'MPII-16': ['foot', 'knee', 'hip', 'hip', 'knee', 'foot', 'hip', 'thorax', 'neck', 'head', 'hand', 'elbow', 'shoulder', 'shoulder', 'elbow', 'hand'],
+    'BODY_25': ['head', 'neck', 'shoulder', 'elbow', 'hand', 'shoulder', 'elbow', 'hand', 'hip', 'hip', 'knee', 'foot', 'hip', 'knee', 'foot', 'head', 'head', 'head', 'head', 'foot', 'foot', 'foot', 'foot', 'foot', 'foot'],
+}
+
+def pose_3d_limits_by_pose_model(
+    room_x_limits,
+    room_y_limits,
+    pose_model_name,
+    floor_z=0.0,
+    foot_z_limits=(0.0, 1.0),
+    knee_z_limits=(0.0, 1.0),
+    hip_z_limits=(0.0, 1.5),
+    thorax_z_limits=(0.0, 1.7),
+    shoulder_z_limits=(0.0, 1.9),
+    elbow_z_limits=(0.0, 2.0),
+    hand_z_limits=(0.0, 3.0),
+    neck_z_limits=(0.0, 1.9),
+    head_z_limits=(0.0,2.0),
+    tolerance=0.2
+):
+    keypoint_categories = KEYPOINT_CATEGORIES_BY_POSE_MODEL[pose_model_name]
+    return pose_3d_limits(
+        room_x_limits=room_x_limits,
+        room_y_limits=room_y_limits,
+        keypoint_categories=keypoint_categories,
+        floor_z=floor_z,
+        foot_z_limits=foot_z_limits,
+        knee_z_limits=knee_z_limits,
+        hip_z_limits=hip_z_limits,
+        thorax_z_limits=thorax_z_limits,
+        shoulder_z_limits=shoulder_z_limits,
+        elbow_z_limits=elbow_z_limits,
+        hand_z_limits=hand_z_limits,
+        neck_z_limits=neck_z_limits,
+        head_z_limits=head_z_limits,
+        tolerance=tolerance
+    )
+
 def pose_3d_limits(
     room_x_limits,
     room_y_limits,
@@ -27,9 +69,7 @@ def pose_3d_limits(
     elbow_z_limits=(0.0, 2.0),
     hand_z_limits=(0.0, 3.0),
     neck_z_limits=(0.0, 1.9),
-    nose_z_limits=(0.0, 2.0),
-    eye_z_limits=(0.0, 2.0),
-    ear_z_limits=(0.0, 2.0),
+    head_z_limits=(0.0,2.0),
     tolerance=0.2
 ):
     z_limits_dict = {
@@ -41,9 +81,7 @@ def pose_3d_limits(
         'elbow': elbow_z_limits,
         'hand': hand_z_limits,
         'neck': neck_z_limits,
-        'nose': nose_z_limits,
-        'eye': eye_z_limits,
-        'ear': ear_z_limits
+        'head': head_z_limits
     }
     pose_3d_limits_min = list()
     pose_3d_limits_max = list()
