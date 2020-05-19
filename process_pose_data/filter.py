@@ -94,10 +94,10 @@ def filter_pose_pairs_by_score(
 
 def filter_pose_pairs_by_3d_pose_spatial_limits(
     pose_pairs_2d_df,
-    pose_3d_range
+    pose_3d_limits
 ):
     valid_3d_poses = pose_pairs_2d_df['keypoint_coordinates_3d'].apply(
-        lambda x: process_pose_data.analyze.pose_3d_in_range(x, pose_3d_range)
+        lambda x: process_pose_data.analyze.pose_3d_in_range(x, pose_3d_limits)
     )
     pose_pairs_2d_df = pose_pairs_2d_df.loc[valid_3d_poses].copy()
     return pose_pairs_2d_df

@@ -14,6 +14,52 @@ from functools import partial
 
 logger = logging.getLogger(__name__)
 
+def pose_3d_limits(
+    room_x_limits,
+    room_y_limits,
+    keypoint_categories,
+    floor_z=0.0,
+    foot_z_limits=(0.0, 1.0),
+    knee_z_limits=(0.0, 1.0),
+    hip_z_limits=(0.0, 1.5),
+    thorax_z_limits=(0.0, 1.7),
+    shoulder_z_limits=(0.0, 1.9),
+    elbow_z_limits=(0.0, 2.0),
+    hand_z_limits=(0.0, 3.0),
+    neck_z_limits=(0.0, 1.9),
+    nose_z_limits=(0.0, 2.0),
+    eye_z_limits=(0.0, 2.0),
+    ear_z_limits=(0.0, 2.0),
+    tolerance=0.2
+):
+    z_limits_dict = {
+        'foot': foot_z_limits,
+        'knee': knee_z_limits,
+        'hip': hip_z_limits,
+        'thorax': thorax_z_limits,
+        'shoulder': shoulder_z_limits,
+        'elbow': elbow_z_limits,
+        'hand': hand_z_limits,
+        'neck': neck_z_limits,
+        'nose': nose_z_limits,
+        'eye': eye_z_limits,
+        'ear': ear_z_limits
+    }
+    pose_3d_limits_min = list()
+    pose_3d_limits_max = list()
+    for keypoint_category in keypoint_categories:
+        pose_3d_limits_min.append([
+            room_x_limits[0],
+            room_y_limits[0],
+            floor_z + z_limits_dict[keypoint_category][0]
+        ])
+        pose_3d_limits_max.append([
+            room_x_limits[1],
+            room_y_limits[1],
+            floor_z + z_limits_dict[keypoint_category][1]
+        ])
+    return np.array([pose_3d_limits_min, pose_3d_limits_max]) + + np.array([[[-tolerance]], [[tolerance]]])
+
 def pose_3d_dispersion(pose_graph):
     return np.linalg.norm(
         np.std(
@@ -33,7 +79,7 @@ def reconstruct_poses_3d(
     pose_pair_score_distance_method='pixels',
     pose_pair_score_pixel_distance_scale=5.0,
     pose_pair_score_summary_method='rms',
-    pose_3d_range=None,
+    pose_3d_limits=None,
     pose_3d_graph_initial_edge_threshold=2,
     pose_3d_graph_evaluation_function=pose_3d_dispersion,
     pose_3d_graph_min_evaluation_score=None,
@@ -52,7 +98,7 @@ def reconstruct_poses_3d(
         pose_pair_score_distance_method=pose_pair_score_distance_method,
         pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
         pose_pair_score_summary_method=pose_pair_score_summary_method,
-        pose_3d_range=pose_3d_range,
+        pose_3d_limits=pose_3d_limits,
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         pose_3d_graph_evaluation_function=pose_3d_graph_evaluation_function,
         pose_3d_graph_min_evaluation_score=pose_3d_graph_min_evaluation_score,
@@ -95,7 +141,7 @@ def reconstruct_poses_3d_timestamp(
     pose_pair_score_distance_method='pixels',
     pose_pair_score_pixel_distance_scale=5.0,
     pose_pair_score_summary_method='rms',
-    pose_3d_range=None,
+    pose_3d_limits=None,
     pose_3d_graph_initial_edge_threshold=2,
     pose_3d_graph_evaluation_function=pose_3d_dispersion,
     pose_3d_graph_min_evaluation_score=None,
@@ -198,11 +244,11 @@ def reconstruct_poses_3d_timestamp(
         logger.debug('{} pose pairs remain after filtering on pose pair score'.format(
             len(pose_pairs_2d_df_timestamp)
         ))
-    if pose_3d_range is not None:
+    if pose_3d_limits is not None:
         logger.debug('Filtering pose pairs based on 3D pose spatial limits')
         pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
             pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
-            pose_3d_range=pose_3d_range
+            pose_3d_limits=pose_3d_limits
         )
         logger.debug('{} pose pairs remain after filtering on 3D pose spatial limits'.format(
             len(pose_pairs_2d_df_timestamp)
@@ -568,14 +614,14 @@ def analyze_scores_and_identify_matches(
     df,
     min_score=None,
     max_score=None,
-    pose_3d_range=None
+    pose_3d_limits=None
 ):
     df_copy = df.copy()
     analyze_scores_and_identify_matches_timestamp_partial = partial(
         analyze_scores_and_identify_matches_timestamp,
         min_score=min_score,
         max_score=max_score,
-        pose_3d_range=pose_3d_range
+        pose_3d_limits=pose_3d_limits
     )
     df_copy = df_copy.groupby('timestamp').apply(analyze_scores_and_identify_matches_timestamp_partial)
     df_copy.reset_index(
@@ -589,7 +635,7 @@ def analyze_scores_and_identify_matches_timestamp(
     df,
     min_score=None,
     max_score=None,
-    pose_3d_range=None
+    pose_3d_limits=None
 ):
     df_copy = df.copy()
     df_copy = identify_scores_in_range(
@@ -599,7 +645,7 @@ def analyze_scores_and_identify_matches_timestamp(
     )
     df_copy = identify_poses_3d_in_range(
         df_copy,
-        pose_3d_range=pose_3d_range
+        pose_3d_limits=pose_3d_limits
     )
     df_copy = identify_best_scores_timestamp(df_copy)
     df_copy = identify_best_scores_in_range_timestamp(df_copy)
@@ -634,30 +680,30 @@ def identify_scores_in_range(
 
 def identify_poses_3d_in_range(
     df,
-    pose_3d_range=None
+    pose_3d_limits=None
 ):
     df_copy = df.copy()
     df_copy['pose_3d_in_range'] = True
-    if pose_3d_range is not None:
-        df_copy['pose_3d_in_range'] = df_copy['keypoint_coordinates_3d'].apply(lambda x: pose_3d_in_range(x, pose_3d_range))
+    if pose_3d_limits is not None:
+        df_copy['pose_3d_in_range'] = df_copy['keypoint_coordinates_3d'].apply(lambda x: pose_3d_in_range(x, pose_3d_limits))
     return df_copy
 
 def pose_3d_in_range(
     pose_3d,
-    pose_3d_range
+    pose_3d_limits
 ):
     return np.logical_and(
         np.all(np.greater_equal(
             pose_3d,
-            pose_3d_range[0],
+            pose_3d_limits[0],
             out=np.full_like(pose_3d, True),
-            where=(np.isfinite(pose_3d) & np.isfinite(pose_3d_range[0]))
+            where=(np.isfinite(pose_3d) & np.isfinite(pose_3d_limits[0]))
         )),
         np.all(np.less_equal(
             pose_3d,
-            pose_3d_range[1],
+            pose_3d_limits[1],
             out=np.full_like(pose_3d, True),
-            where=(np.isfinite(pose_3d) & np.isfinite(pose_3d_range[1]))
+            where=(np.isfinite(pose_3d) & np.isfinite(pose_3d_limits[1]))
         ))
     )
 
