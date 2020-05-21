@@ -193,6 +193,105 @@ def reconstruct_poses_3d(
     else:
         return poses_3d_df
 
+def reconstruct_poses_3d_alt(
+    poses_2d_df,
+    camera_calibrations,
+    min_keypoint_quality=None,
+    min_num_keypoints=None,
+    min_pose_quality=None,
+    min_pose_pair_score=None,
+    max_pose_pair_score=25.0,
+    pose_pair_score_distance_method='pixels',
+    pose_pair_score_pixel_distance_scale=5.0,
+    pose_pair_score_summary_method='rms',
+    pose_3d_limits=None,
+    pose_3d_graph_initial_edge_threshold=2,
+    pose_3d_graph_evaluation_function=pose_3d_dispersion,
+    pose_3d_graph_min_evaluation_score=None,
+    pose_3d_graph_max_evaluation_score=0.40,
+    progress_bar=False,
+    notebook=False,
+    profile=False
+):
+    num_frames = len(poses_2d_df['timestamp'].unique())
+    logger.info('Reconstruction 3D poses from {} 2D poses across {} frames ({} to {})'.format(
+        len(poses_2d_df),
+        num_frames,
+        poses_2d_df['timestamp'].min().isoformat(),
+        poses_2d_df['timestamp'].max().isoformat()
+    ))
+    start_time = time.time()
+    poses_2d_df_copy = poses_2d_df.copy()
+    if min_keypoint_quality is not None:
+        poses_2d_df_copy = process_pose_data.filter.filter_keypoints_by_quality(
+            df=poses_2d_df_copy,
+            min_keypoint_quality=min_keypoint_quality
+        )
+    poses_2d_df_copy = process_pose_data.filter.remove_empty_2d_poses(
+        df=poses_2d_df_copy
+    )
+    if min_num_keypoints is not None:
+        poses_2d_df_copy = process_pose_data.filter.filter_poses_by_num_valid_keypoints(
+            df=poses_2d_df_copy,
+            min_num_keypoints=min_num_keypoints
+        )
+    if min_pose_quality is not None:
+        poses_2d_df_copy = process_pose_data.filter.filter_poses_by_quality(
+            df=poses_2d_df_copy,
+            min_pose_quality=min_pose_quality
+        )
+    pose_pairs_2d_df = generate_pose_pairs(
+        df=poses_2d_df_copy
+    )
+    pose_pairs_2d_df = calculate_3d_poses(
+        df=pose_pairs_2d_df,
+        camera_calibrations=camera_calibrations
+    )
+    pose_pairs_2d_df =  process_pose_data.filter.remove_empty_3d_poses(
+        df=pose_pairs_2d_df
+    )
+    pose_pairs_2d_df =  process_pose_data.filter.remove_empty_reprojected_2d_poses(
+        df=pose_pairs_2d_df
+    )
+    pose_pairs_2d_df = score_pose_pairs(
+        df=pose_pairs_2d_df,
+        distance_method=pose_pair_score_distance_method,
+        summary_method=pose_pair_score_summary_method,
+        pixel_distance_scale=pose_pair_score_pixel_distance_scale
+    )
+    pose_pairs_2d_df =  process_pose_data.filter.remove_invalid_pose_pair_scores(
+        df=pose_pairs_2d_df
+    )
+    if min_pose_pair_score is not None or max_pose_pair_score is not None:
+        pose_pairs_2d_df = process_pose_data.filter.filter_pose_pairs_by_score(
+            df=pose_pairs_2d_df,
+            min_score=min_pose_pair_score,
+            max_score=max_pose_pair_score
+        )
+    if pose_3d_limits is not None:
+        pose_pairs_2d_df = process_pose_data.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
+            pose_pairs_2d_df=pose_pairs_2d_df,
+            pose_3d_limits=pose_3d_limits
+        )
+    filter_by_best_match_and_generate_3d_poses_timestamp_partial = partial(
+        filter_by_best_match_and_generate_3d_poses_timestamp,
+        pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+        pose_3d_graph_evaluation_function=pose_3d_graph_evaluation_function,
+        pose_3d_graph_min_evaluation_score=pose_3d_graph_min_evaluation_score,
+        pose_3d_graph_max_evaluation_score=pose_3d_graph_max_evaluation_score
+    )
+    poses_3d_df = pose_pairs_2d_df.groupby('timestamp').apply(
+        filter_by_best_match_and_generate_3d_poses_timestamp_partial
+    )
+    elapsed_time = time.time() - start_time
+    logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
+        len(poses_3d_df),
+        elapsed_time,
+        1000*elapsed_time/num_frames
+    ))
+    poses_3d_df.reset_index('timestamp', drop=True, inplace=True)
+    return poses_3d_df
+
 def reconstruct_poses_3d_timestamp(
     poses_2d_df_timestamp,
     camera_calibrations,
@@ -393,6 +492,26 @@ def reconstruct_poses_3d_timestamp(
         len(poses_3d_df_timestamp)
     ))
     poses_3d_df_timestamp.set_index('pose_3d_id', inplace=True)
+    return poses_3d_df_timestamp
+
+def filter_by_best_match_and_generate_3d_poses_timestamp(
+    pose_pairs_2d_df_timestamp,
+    pose_3d_graph_initial_edge_threshold=2,
+    pose_3d_graph_evaluation_function=pose_3d_dispersion,
+    pose_3d_graph_min_evaluation_score=None,
+    pose_3d_graph_max_evaluation_score=0.40,
+):
+    pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_best_match(
+        pose_pairs_2d_df_timestamp
+    )
+    poses_3d_df_timestamp = generate_3d_poses_timestamp(
+        pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        evaluation_function=pose_3d_graph_evaluation_function,
+        initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+        min_evaluation_score=pose_3d_graph_min_evaluation_score,
+        max_evaluation_score=pose_3d_graph_max_evaluation_score,
+        validate_df=False
+    )
     return poses_3d_df_timestamp
 
 # TODO: Replace this function with one that uses the other functions below
