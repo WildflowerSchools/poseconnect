@@ -4,21 +4,18 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Make 3D pose consolidation function pick a single pose (rather than keypoints across multiple poses)
-* Make `fetch` functions handle empty return data more gracefully
+* Try executing non-timestamp-bound functions (e.g., `calculate_3d_poses()`) across all timestamps to see if it speeds up pipeline
+* Add logic to `reconstruct_poses_3d()` to fetch camera calibrations if they are not supplied
+* Generally make functions more robust to missing calibration data (e.g., issue warning and drop poses rather than stopping)
 * Make visualization functions handle missing fields (e.g., `pose_quality`) more gracefully
 * Make functions handle empty poses (all keypoints `NaN`) more gracefully (e.g., `score_pose_pairs()`, `draw_pose_2d()`)
-* Make production version of filtering steps in analysis pipeline where poses/pose pairs are dropped rather than marked (for faster processing)
 * Incorporate `tqdm.auto` to get rid of all of the `if` statements for notebook mode
-* Implement `tqdm` progress bars for `groupby(...).apply(...)` loops
 * Add progress bars to all pipeline functions
 * Restructure `process_poses_by_timestamp` to use `groupby(...).apply(...)` pattern
 * Figure out inconsistent behavior of `groupby(...).apply(...)` (under what conditions does it add grouping variables to index?)
 * For functions that act on dataframes, make it optional to check dataframe structure (e.g., only one timestamp and camera pair)
 * For functions than iterate over previous functions, making naming and approach consistent (e.g., always use apply?)
-* For functions that act on dataframes, be consistent about `inplace` option
-* Create combined pipeline function that goes from 2D poses to 3D poses
-* Create function which creates `pose_3d_range` based on room boundaries, height limits
+* Add `keypoint_categories` info to pose models in Honeycomb?
 * Add ability to upload 3D poses to Honeycomb
 * Clean out unused code
 * Be consistent about whether to convert track labels to integers (where possible)
