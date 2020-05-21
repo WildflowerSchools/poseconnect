@@ -122,6 +122,7 @@ def reconstruct_poses_3d(
     pose_3d_graph_evaluation_function=pose_3d_dispersion,
     pose_3d_graph_min_evaluation_score=None,
     pose_3d_graph_max_evaluation_score=0.40,
+    include_track_labels=False,
     progress_bar=False,
     notebook=False,
     profile=False
@@ -142,6 +143,7 @@ def reconstruct_poses_3d(
         pose_3d_graph_evaluation_function=pose_3d_graph_evaluation_function,
         pose_3d_graph_min_evaluation_score=pose_3d_graph_min_evaluation_score,
         pose_3d_graph_max_evaluation_score=pose_3d_graph_max_evaluation_score,
+        include_track_labels=include_track_labels,
         validate_df=False
     )
     num_frames = len(poses_2d_df['timestamp'].unique())
@@ -209,6 +211,7 @@ def reconstruct_poses_3d_alt(
     pose_3d_graph_evaluation_function=pose_3d_dispersion,
     pose_3d_graph_min_evaluation_score=None,
     pose_3d_graph_max_evaluation_score=0.40,
+    include_track_labels=False,
     progress_bar=False,
     notebook=False,
     profile=False
@@ -278,7 +281,8 @@ def reconstruct_poses_3d_alt(
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         pose_3d_graph_evaluation_function=pose_3d_graph_evaluation_function,
         pose_3d_graph_min_evaluation_score=pose_3d_graph_min_evaluation_score,
-        pose_3d_graph_max_evaluation_score=pose_3d_graph_max_evaluation_score
+        pose_3d_graph_max_evaluation_score=pose_3d_graph_max_evaluation_score,
+        include_track_labels=include_track_labels
     )
     poses_3d_df = pose_pairs_2d_df.groupby('timestamp').apply(
         filter_by_best_match_and_generate_3d_poses_timestamp_partial
@@ -308,6 +312,7 @@ def reconstruct_poses_3d_timestamp(
     pose_3d_graph_evaluation_function=pose_3d_dispersion,
     pose_3d_graph_min_evaluation_score=None,
     pose_3d_graph_max_evaluation_score=0.40,
+    include_track_labels=False,
     validate_df=True,
     profile_data=None
 ):
@@ -484,6 +489,7 @@ def reconstruct_poses_3d_timestamp(
         initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         min_evaluation_score=pose_3d_graph_min_evaluation_score,
         max_evaluation_score=pose_3d_graph_max_evaluation_score,
+        include_track_labels=include_track_labels,
         validate_df=validate_df
     )
     if profile_data is not None:
@@ -500,6 +506,7 @@ def filter_by_best_match_and_generate_3d_poses_timestamp(
     pose_3d_graph_evaluation_function=pose_3d_dispersion,
     pose_3d_graph_min_evaluation_score=None,
     pose_3d_graph_max_evaluation_score=0.40,
+    include_track_labels=False
 ):
     pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_best_match(
         pose_pairs_2d_df_timestamp
@@ -510,6 +517,7 @@ def filter_by_best_match_and_generate_3d_poses_timestamp(
         initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         min_evaluation_score=pose_3d_graph_min_evaluation_score,
         max_evaluation_score=pose_3d_graph_max_evaluation_score,
+        include_track_labels=include_track_labels,
         validate_df=False
     )
     return poses_3d_df_timestamp
@@ -1014,6 +1022,7 @@ def generate_3d_poses_timestamp(
     initial_edge_threshold=2,
     min_evaluation_score=None,
     max_evaluation_score=0.4,
+    include_track_labels=False,
     validate_df=True
 ):
     timestamps = pose_pairs_2d_df_timestamp['timestamp'].unique()
@@ -1021,7 +1030,10 @@ def generate_3d_poses_timestamp(
         if len(timestamps) > 1:
             raise ValueError('More than one timestamp found in data frame')
     timestamp = timestamps[0]
-    pose_graph = generate_pose_graph(pose_pairs_2d_df_timestamp)
+    pose_graph = generate_pose_graph(
+        pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+        include_track_labels=include_track_labels
+    )
     subgraph_list = generate_k_edge_subgraph_list_iteratively(
         graph=pose_graph,
         initial_edge_threshold=initial_edge_threshold,
@@ -1031,23 +1043,60 @@ def generate_3d_poses_timestamp(
     )
     pose_3d_ids = list()
     keypoint_coordinates_3d = list()
+    if include_track_labels:
+        track_labels = list()
     for subgraph in subgraph_list:
         pose_3d_ids.append(uuid4().hex)
         keypoint_coordinates_3d_list = list()
+        track_label_list = list()
         for pose_id_1, pose_id_2, keypoint_coordinates_3d_edge in subgraph.edges(data='keypoint_coordinates_3d'):
+            if include_track_labels:
+                track_label_list.append((
+                    subgraph.nodes[pose_id_1]['camera_id'],
+                    subgraph.nodes[pose_id_1]['track_label']
+                ))
+                track_label_list.append((
+                    subgraph.nodes[pose_id_2]['camera_id'],
+                    subgraph.nodes[pose_id_2]['track_label']
+                ))
             keypoint_coordinates_3d_list.append(keypoint_coordinates_3d_edge)
         keypoint_coordinates_3d.append(np.nanmedian(np.stack(keypoint_coordinates_3d_list), axis=0))
-    pose_pairs_3d_df_timestamp = pd.DataFrame({
-        'pose_3d_id': pose_3d_ids,
-        'timestamp': timestamp,
-        'match_group_label': list(range(len(pose_3d_ids))),
-        'keypoint_coordinates_3d': keypoint_coordinates_3d
-    })
+        if include_track_labels:
+            track_labels.append(track_label_list)
+    if include_track_labels:
+        pose_pairs_3d_df_timestamp = pd.DataFrame({
+            'pose_3d_id': pose_3d_ids,
+            'timestamp': timestamp,
+            'match_group_label': list(range(len(pose_3d_ids))),
+            'keypoint_coordinates_3d': keypoint_coordinates_3d,
+            'track_labels': track_labels
+        })
+    else:
+        pose_pairs_3d_df_timestamp = pd.DataFrame({
+            'pose_3d_id': pose_3d_ids,
+            'timestamp': timestamp,
+            'match_group_label': list(range(len(pose_3d_ids))),
+            'keypoint_coordinates_3d': keypoint_coordinates_3d
+        })
     return pose_pairs_3d_df_timestamp
 
-def generate_pose_graph(pose_pairs_2d_df):
+def generate_pose_graph(
+    pose_pairs_2d_df,
+    include_track_labels=False
+):
     pose_graph = nx.Graph()
     for pose_ids, row in pose_pairs_2d_df.iterrows():
+        if include_track_labels:
+            pose_graph.add_node(
+                pose_ids[0],
+                track_label=row['track_label_a'],
+                camera_id = row['camera_id_a']
+            )
+            pose_graph.add_node(
+                pose_ids[1],
+                track_label=row['track_label_b'],
+                camera_id = row['camera_id_b']
+            )
         pose_graph.add_edge(
             *pose_ids,
             keypoint_coordinates_3d=row['keypoint_coordinates_3d'],
