@@ -949,3 +949,8 @@ def generate_color_mapping(labels):
     colors = sns.color_palette('husl', n_colors=len(labels))
     color_mapping = dict(zip(sorted(labels), colors))
     return color_mapping
+
+def generate_color_mapping_no_sort(labels):
+    colors = sns.color_palette('husl', n_colors=len(labels))
+    color_mapping = dict(zip(labels, colors))
+    return color_mapping

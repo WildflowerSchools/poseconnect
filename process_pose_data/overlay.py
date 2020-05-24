@@ -974,6 +974,129 @@ def draw_poses_3d_timestamp_camera(
             )
             fig.savefig(path)
 
+def draw_poses_3d_consecutive_timestamps(
+    poses_3d_df,
+    timestamp,
+    camera_ids,
+    pose_label_column='match_group_label',
+    pose_model_id=None,
+    camera_names=None,
+    camera_calibrations=None,
+    keypoint_connectors=None,
+    keypoint_alpha=0.3,
+    keypoint_connector_alpha=0.3,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.5,
+    pose_label_boxstyle='circle',
+    background_image_alpha=0.4,
+    plot_title_datetime_format='%m/%d/%Y %H:%M:%S.%f',
+    show=True,
+    save=False,
+    save_directory='.',
+    filename_prefix='draw_poses_3d_consecutive_timestamps',
+    filename_datetime_format='%Y%m%d_%H%M%S_%f',
+    filename_extension='png',
+    fig_width_inches=10.5,
+    fig_height_inches=16
+):
+    timestamp_previous = timestamp - pd.Timedelta(100, 'ms')
+    if pose_model_id is not None:
+        pose_model = process_pose_data.fetch.fetch_pose_model_by_pose_model_id(
+            pose_model_id
+        )
+        if keypoint_connectors is None:
+            keypoint_connectors = pose_model.get('keypoint_connectors')
+    if camera_names is None:
+        camera_names = process_pose_data.fetch.fetch_camera_names(
+            camera_ids
+        )
+    if camera_calibrations is None:
+        camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+            camera_ids,
+            start=timestamp.to_pydatetime(),
+            end=timestamp.to_pydatetime()
+        )
+    pose_labels = poses_3d_df.loc[poses_3d_df['timestamp'].isin([timestamp, timestamp_previous]), pose_label_column].fillna('NA').unique()
+    color_mapping = process_pose_data.visualize.generate_color_mapping_no_sort(pose_labels)
+    for camera_id in camera_ids:
+        camera_name = camera_names[camera_id]
+        camera_calibration = camera_calibrations[camera_id]
+        if keypoint_connectors is not None:
+            draw_keypoint_connectors = True
+        else:
+            draw_keypoint_connectors = False
+        fig, axes = plt.subplots(2, 1)
+        for axis_index, selected_timestamp in enumerate([timestamp_previous, timestamp]):
+            image_metadata = video_io.fetch_images(
+                image_timestamps = [selected_timestamp.to_pydatetime()],
+                camera_device_ids=[camera_id]
+            )
+            image_local_path = image_metadata[0]['image_local_path']
+            background_image = cv_utils.fetch_image_from_local_drive(image_local_path)
+            axes[axis_index].imshow(
+                cv.cvtColor(background_image, cv.COLOR_BGR2RGB),
+                alpha=background_image_alpha
+            )
+            for pose_3d_id, row in poses_3d_df[poses_3d_df['timestamp'] == selected_timestamp].iterrows():
+                keypoint_coordinates_2d = cv_utils.project_points(
+                    object_points=row['keypoint_coordinates_3d'],
+                    rotation_vector=camera_calibration['rotation_vector'],
+                    translation_vector=camera_calibration['translation_vector'],
+                    camera_matrix=camera_calibration['camera_matrix'],
+                    distortion_coefficients=camera_calibration['distortion_coefficients'],
+                    remove_behind_camera=True,
+                    remove_outside_frame=True,
+                    image_corners=[
+                        [0,0],
+                        [camera_calibration['image_width'], camera_calibration['image_height']]
+                    ]
+                )
+                plt.sca(axes[axis_index])
+                if pd.notnull(row[pose_label_column]):
+                    pose_color = color_mapping[row[pose_label_column]]
+                else:
+                    pose_color = color_mapping['NA']
+                draw_pose_2d(
+                    keypoint_coordinates=keypoint_coordinates_2d,
+                    draw_keypoint_connectors=draw_keypoint_connectors,
+                    keypoint_connectors=keypoint_connectors,
+                    pose_label=row[pose_label_column],
+                    pose_color=pose_color,
+                    keypoint_alpha=keypoint_alpha,
+                    keypoint_connector_alpha=keypoint_connector_alpha,
+                    keypoint_connector_linewidth=keypoint_connector_linewidth,
+                    pose_label_color=pose_label_color,
+                    pose_label_background_alpha=pose_label_background_alpha,
+                    pose_label_boxstyle=pose_label_boxstyle
+                )
+            axes[axis_index].axis(
+                xmin=0,
+                xmax=camera_calibrations[camera_id]['image_width'],
+                ymin=camera_calibrations[camera_id]['image_height'],
+                ymax=0
+            )
+            axes[axis_index].axis('off')
+            axes[axis_index].set_title(selected_timestamp.strftime(plot_title_datetime_format))
+        fig.set_size_inches(fig_width_inches, fig_height_inches)
+        fig.suptitle(camera_names[camera_id])
+        # Show plot
+        if show:
+            plt.show()
+        # Save plot
+        if save:
+            save_filename = '{}_{}_{}.{}'.format(
+                filename_prefix,
+                slugify.slugify(camera_name),
+                timestamp.strftime(filename_datetime_format),
+                filename_extension
+            )
+            path = os.path.join(
+                save_directory,
+                save_filename
+            )
+            fig.savefig(path)
+
 def draw_pose_2d(
     keypoint_coordinates,
     draw_keypoint_connectors=True,
