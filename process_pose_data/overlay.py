@@ -157,7 +157,7 @@ def overlay_video_poses_3d(
     camera_calibrations=None,
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
-    pose_label=None,
+    pose_label_column=None,
     pose_color='green',
     keypoint_radius=3,
     keypoint_alpha=0.6,
@@ -273,9 +273,14 @@ def overlay_video_poses_3d(
                         [camera_calibration['image_width'], camera_calibration['image_height']]
                     ]
                 )
+                if pose_label_column is not None:
+                    pose_label = row[pose_label_column]
+                else:
+                    pose_label = None
                 frame=draw_pose_2d_opencv(
                     image=frame,
                     keypoint_coordinates=keypoint_coordinates_2d,
+                    pose_label=pose_label,
                     draw_keypoint_connectors=draw_keypoint_connectors,
                     keypoint_connectors=keypoint_connectors,
                     keypoint_alpha=keypoint_alpha,
