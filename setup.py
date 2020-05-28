@@ -7,6 +7,7 @@ VERSION = open(os.path.join(BASEDIR, 'VERSION')).read().strip()
 # Dependencies (format is 'PYPI_PACKAGE_NAME[>=]=VERSION_NUMBER')
 BASE_DEPENDENCIES = [
     'wf-pose-tracking-3d>=0.1.0',
+    'wf-smc-kalman>-0.1.0',
     'wf-cv-utils>=0.5.1',
     'wf-video-io>=0.1.0',
     'wf-minimal-honeycomb-python>=0.5.0',
