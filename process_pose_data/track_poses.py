@@ -102,6 +102,7 @@ class PoseTrack3D:
         self.pose_track_3d_id = pose_track_3d_id = uuid4().hex
         self.initial_timestamp = timestamp
         self.latest_timestamp = timestamp
+        centroid_position = np.squeeze(np.array(centroid_position))
         self.centroid_distribution = smc_kalman.GaussianDistribution(
             mean=np.concatenate((centroid_position.reshape((3,)), np.repeat(0.0, 3))),
             covariance=np.diag(np.concatenate((
@@ -112,6 +113,7 @@ class PoseTrack3D:
         self.iterations_since_last_match = 0
         self.centroid_distribution_trajectory = {
             'timestamp': [self.latest_timestamp],
+            'observed_centroid': [centroid_position],
             'mean': [self.centroid_distribution.mean],
             'covariance': [self.centroid_distribution.covariance]
         }
@@ -127,6 +129,7 @@ class PoseTrack3D:
         )
         self.latest_timestamp=timestamp
         self.centroid_distribution_trajectory['timestamp'].append(self.latest_timestamp)
+        self.centroid_distribution_trajectory['observed_centroid'].append(np.array([np.nan, np.nan, np.nan]))
         self.centroid_distribution_trajectory['mean'].append(self.centroid_distribution.mean)
         self.centroid_distribution_trajectory['covariance'].append(self.centroid_distribution.covariance)
 
@@ -135,17 +138,20 @@ class PoseTrack3D:
         centroid_position,
         pose_track_2d_ids
     ):
+        centroid_position = np.squeeze(np.array(centroid_position))
         self.centroid_distribution = self.centroid_distribution.incorporate_observation(
             linear_gaussian_model=constant_velocity_model(delta_t_seconds=None),
             observation_vector=centroid_position
         )
         self.pose_track_2d_ids = self.pose_track_2d_ids.union(pose_track_2d_ids)
+        self.centroid_distribution_trajectory['observed_centroid'][-1] = centroid_position
         self.centroid_distribution_trajectory['mean'][-1] = self.centroid_distribution.mean
         self.centroid_distribution_trajectory['covariance'][-1] = self.centroid_distribution.covariance
 
     def centroid_distribution_trajectory_df(self):
         df = pd.DataFrame({
             'timestamp': self.centroid_distribution_trajectory['timestamp'],
+            'observed_centroid': self.centroid_distribution_trajectory['observed_centroid'],
             'position': [mean[:3] for mean in self.centroid_distribution_trajectory['mean']],
             'velocity': [mean[3:] for mean in self.centroid_distribution_trajectory['mean']],
             'covariance': self.centroid_distribution_trajectory['covariance']
