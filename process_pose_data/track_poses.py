@@ -18,7 +18,12 @@ logger = logging.getLogger(__name__)
 def generate_pose_tracks(
     poses_3d_df,
     max_match_distance=1.0,
-    max_iterations_since_last_match=20
+    max_iterations_since_last_match=20,
+    centroid_position_initial_sd=1.0,
+    centroid_velocity_initial_sd=1.0,
+    reference_delta_t_seconds=1.0,
+    reference_velocity_drift=1.0,
+    position_observation_sd=0.5
 ):
     poses_3d_df_copy = poses_3d_df.copy()
     poses_3d_df_copy['centroid'] = poses_3d_df_copy['keypoint_coordinates_3d'].apply(
@@ -32,7 +37,12 @@ def generate_pose_tracks(
         pose_track_3d = PoseTrack3D(
             timestamp=timestamps[0],
             centroid_position=row['centroid'],
-            pose_track_2d_ids=row['track_labels']
+            pose_track_2d_ids=row['track_labels'],
+            centroid_position_initial_sd=centroid_position_initial_sd,
+            centroid_velocity_initial_sd=centroid_velocity_initial_sd,
+            reference_delta_t_seconds=reference_delta_t_seconds,
+            reference_velocity_drift=reference_velocity_drift,
+            position_observation_sd=position_observation_sd
         )
         poses_3d_df_copy.loc[pose_3d_id, 'pose_track_3d_id'] = pose_track_3d.pose_track_3d_id
         active_tracks[pose_track_3d.pose_track_3d_id] = pose_track_3d
@@ -96,8 +106,11 @@ class PoseTrack3D:
         timestamp,
         centroid_position,
         pose_track_2d_ids,
-        centroid_position_sd = 1.0,
-        centroid_velocity_sd = 1.0
+        centroid_position_initial_sd=1.0,
+        centroid_velocity_initial_sd=1.0,
+        reference_delta_t_seconds=1.0,
+        reference_velocity_drift=1.0,
+        position_observation_sd=0.5
     ):
         self.pose_track_3d_id = pose_track_3d_id = uuid4().hex
         self.initial_timestamp = timestamp
@@ -106,10 +119,13 @@ class PoseTrack3D:
         self.centroid_distribution = smc_kalman.GaussianDistribution(
             mean=np.concatenate((centroid_position.reshape((3,)), np.repeat(0.0, 3))),
             covariance=np.diag(np.concatenate((
-                np.repeat(centroid_position_sd**2, 3),
-                np.repeat(centroid_velocity_sd**2, 3)
+                np.repeat(centroid_position_initial_sd**2, 3),
+                np.repeat(centroid_velocity_initial_sd**2, 3)
             )))
         )
+        self.reference_delta_t_seconds = reference_delta_t_seconds
+        self.reference_velocity_drift = reference_velocity_drift
+        self.position_observation_sd = position_observation_sd
         self.iterations_since_last_match = 0
         self.centroid_distribution_trajectory = {
             'timestamp': [self.latest_timestamp],
@@ -125,7 +141,12 @@ class PoseTrack3D:
     ):
         delta_t_seconds = (timestamp - self.latest_timestamp).total_seconds()
         self.centroid_distribution = self.centroid_distribution.predict(
-            linear_gaussian_model=constant_velocity_model(delta_t_seconds=delta_t_seconds)
+            linear_gaussian_model=constant_velocity_model(
+                delta_t_seconds=delta_t_seconds,
+                reference_delta_t_seconds=self.reference_delta_t_seconds,
+                reference_velocity_drift=self.reference_velocity_drift,
+                position_observation_sd=self.position_observation_sd
+            )
         )
         self.latest_timestamp=timestamp
         self.centroid_distribution_trajectory['timestamp'].append(self.latest_timestamp)
@@ -140,7 +161,12 @@ class PoseTrack3D:
     ):
         centroid_position = np.squeeze(np.array(centroid_position))
         self.centroid_distribution = self.centroid_distribution.incorporate_observation(
-            linear_gaussian_model=constant_velocity_model(delta_t_seconds=None),
+            linear_gaussian_model=constant_velocity_model(
+                delta_t_seconds=None,
+                reference_delta_t_seconds=self.reference_delta_t_seconds,
+                reference_velocity_drift=self.reference_velocity_drift,
+                position_observation_sd=self.position_observation_sd
+            ),
             observation_vector=centroid_position
         )
         self.pose_track_2d_ids = self.pose_track_2d_ids.union(pose_track_2d_ids)
@@ -161,9 +187,9 @@ class PoseTrack3D:
 
 def constant_velocity_model(
     delta_t_seconds,
-    reference_delta_t_seconds = 1.0,
-    reference_velocity_drift = 1.0,
-    position_observation_sd = 0.5
+    reference_delta_t_seconds=1.0,
+    reference_velocity_drift=1.0,
+    position_observation_sd=0.5
 ):
     if delta_t_seconds is not None:
         velocity_drift = reference_velocity_drift*np.sqrt(delta_t_seconds/reference_delta_t_seconds)
