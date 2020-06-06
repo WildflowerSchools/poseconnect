@@ -81,6 +81,7 @@ def generate_pose_tracks(
         unmatched_poses = set(pose_3d_ids) - matched_poses
         for pose_track_3d_id, pose_3d_id in matches.items():
             poses_3d_df_copy.loc[pose_3d_id, 'pose_track_3d_id'] = pose_track_3d_id
+            active_tracks[pose_track_3d_id].iterations_since_last_match = 0
             active_tracks[pose_track_3d_id].incorporate_observation(
                 centroid_position=poses_3d_df_copy.loc[pose_3d_id, 'centroid'],
                 pose_track_2d_ids=poses_3d_df_copy.loc[pose_3d_id, 'track_labels']
@@ -159,6 +160,7 @@ class PoseTrack3D:
         centroid_position,
         pose_track_2d_ids
     ):
+
         centroid_position = np.squeeze(np.array(centroid_position))
         self.centroid_distribution = self.centroid_distribution.incorporate_observation(
             linear_gaussian_model=constant_velocity_model(
