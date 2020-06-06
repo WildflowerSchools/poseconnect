@@ -47,6 +47,7 @@ def generate_pose_tracks(
         poses_3d_df_copy.loc[pose_3d_id, 'pose_track_3d_id'] = pose_track_3d.pose_track_3d_id
         active_tracks[pose_track_3d.pose_track_3d_id] = pose_track_3d
     previous_timestamp = timestamps[0]
+    distances_dfs = dict()
     for current_timestamp in timestamps[1:]:
         for pose_track_3d in active_tracks.values():
             pose_track_3d.predict(current_timestamp)
@@ -69,6 +70,7 @@ def generate_pose_tracks(
             )
             if distance < max_match_distance:
                 distances_df.loc[pose_track_3d_id, pose_3d_id] = distance
+        distances_dfs[current_timestamp] = distances_df
         best_track_for_each_pose = distances_df.idxmin(axis=0)
         best_pose_for_each_track = distances_df.idxmin(axis=1)
         matches = dict(
@@ -99,7 +101,7 @@ def generate_pose_tracks(
             poses_3d_df_copy.loc[unmatched_pose_id, 'pose_track_3d_id'] = new_pose_track_3d.pose_track_3d_id
             active_tracks[new_pose_track_3d.pose_track_3d_id] = new_pose_track_3d
         previous_timestamp = current_timestamp
-    return poses_3d_df_copy, active_tracks, inactive_tracks
+    return poses_3d_df_copy, active_tracks, inactive_tracks, distances_dfs
 
 class PoseTrack3D:
     def __init__(
