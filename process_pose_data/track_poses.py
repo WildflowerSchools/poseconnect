@@ -1,6 +1,7 @@
 import smc_kalman
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from uuid import uuid4
 import logging
 import time
@@ -265,6 +266,56 @@ class PoseTrack3D:
         })
         df.set_index('timestamp', inplace=True)
         return df
+
+    def plot_trajectory(
+        self,
+        track_label_lookup=None,
+        fig_width_inches=8.0,
+        fig_height_inches=10.5,
+        show=True
+    ):
+        if track_label_lookup is None:
+            track_label_lookup = {self.pose_track_3d_id: self.pose_track_3d_id[:2]}
+        df = self.centroid_distribution_trajectory_df()
+        fig, axes = plt.subplots(3, 1, sharex=True)
+        for axis_index, axis_name in enumerate(['x', 'y', 'z']):
+            self.draw_trajectory(
+                axis_index=axis_index,
+                axis_name=axis_name,
+                axis_object=axes[axis_index],
+                track_label_lookup=track_label_lookup
+            )
+        axes[0].legend(loc='upper left', bbox_to_anchor=(1.0, 1.0))
+        axes[2].set_xlabel('Time')
+        fig.autofmt_xdate()
+        fig.set_size_inches(fig_width_inches, fig_height_inches)
+        if show:
+            plt.show()
+
+    def draw_trajectory(
+        self,
+        axis_index,
+        axis_name,
+        axis_object,
+        track_label_lookup=None
+    ):
+        if track_label_lookup is None:
+            track_label_lookup = {self.pose_track_3d_id: self.pose_track_3d_id[:2]}
+        df = self.centroid_distribution_trajectory_df()
+        axis_object.fill_between(
+            df.index,
+            np.stack(df['position'])[:, axis_index] - np.sqrt(np.stack(df['covariance'])[:, axis_index, axis_index]),
+            np.stack(df['position'])[:, axis_index] + np.sqrt(np.stack(df['covariance'])[:, axis_index, axis_index]),
+            alpha = 0.4,
+            label='Track {} confidence interval'.format(track_label_lookup[self.pose_track_3d_id])
+        )
+        axis_object.plot(
+            df.index,
+            np.stack(df['observed_centroid'])[:, axis_index],
+            '.',
+            label='Track {} observation'.format(track_label_lookup[self.pose_track_3d_id])
+        )
+        axis_object.set_ylabel('${}$ position (meters)'.format(axis_name))
 
 def constant_velocity_model(
     delta_t_seconds,
