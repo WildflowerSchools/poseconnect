@@ -1,4 +1,4 @@
-import process_pose_data.fetch
+import process_pose_data.honeycomb_io
 import cv_utils
 import cv2 as cv
 import video_io
@@ -36,7 +36,7 @@ def keypoint_quality_histogram_by_camera(
     if display_camera_name:
         if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.honeycomb_io.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
@@ -140,7 +140,7 @@ def num_valid_keypoints_histogram_by_camera(
     if display_camera_name:
         if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.honeycomb_io.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
@@ -246,7 +246,7 @@ def pose_quality_histogram_by_camera(
     if display_camera_name:
         if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.honeycomb_io.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
@@ -350,7 +350,7 @@ def mean_keypoint_quality_histogram_by_camera(
     if display_camera_name:
         if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.honeycomb_io.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
@@ -453,7 +453,7 @@ def mean_keypoint_quality_pose_quality_scatter_by_camera(
     if display_camera_name:
         if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.honeycomb_io.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
@@ -637,7 +637,7 @@ def pose_pair_score_heatmap_timestamp_camera_pair(
     if display_camera_names:
         if camera_names is None:
             camera_ids = [camera_id_a, camera_id_b]
-            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.honeycomb_io.fetch_camera_names(camera_ids)
     if plot_title is not None:
         ax_title = '{} ({})'.format(
             plot_title,
@@ -851,7 +851,7 @@ def pose_track_timelines_by_camera(
     if display_camera_name:
         if camera_names is None:
             camera_ids = df['camera_id'].unique().tolist()
-            camera_names = process_pose_data.fetch.fetch_camera_names(camera_ids)
+            camera_names = process_pose_data.honeycomb_io.fetch_camera_names(camera_ids)
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)

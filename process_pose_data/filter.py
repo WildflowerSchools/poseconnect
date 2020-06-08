@@ -1,4 +1,4 @@
-import process_pose_data.fetch
+import process_pose_data.honeycomb_io
 import pandas as pd
 import numpy as np
 import logging
@@ -231,7 +231,7 @@ def select_poses(
         filter_list.append(camera_id_filter)
     if camera_name is not None:
         if camera_names is None:
-            camera_names = process_pose_data.fetch.fetch_camera_names(
+            camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
                 camera_ids = df['camera_id'].unique().tolist()
             )
         camera_ids = list()
@@ -316,7 +316,7 @@ def select_pose_pairs(
         filter_list.append(camera_id_b_filter)
     if camera_name_a is not None or camera_name_b is not None:
         if camera_names is None:
-            camera_names = process_pose_data.fetch.fetch_camera_names(
+            camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
                 camera_ids = np.union1d(
                     df['camera_id_a'].unique(),
                     df['camera_id_b'].unique()

@@ -1,4 +1,4 @@
-from process_pose_data.fetch import *
+from process_pose_data.honeycomb_io import *
 from process_pose_data.filter import *
 from process_pose_data.analyze import *
 from process_pose_data.visualize import *

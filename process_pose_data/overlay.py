@@ -1,5 +1,5 @@
 import process_pose_data.visualize
-import process_pose_data.fetch
+import process_pose_data.honeycomb_io
 import video_io
 import pandas as pd
 import numpy as np
@@ -44,17 +44,17 @@ def overlay_video_poses_2d(
 ):
     camera_ids = poses_2d_df['camera_id'].unique()
     if pose_model_id is not None:
-        pose_model = process_pose_data.fetch.fetch_pose_model_by_pose_model_id(
+        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
             pose_model_id
         )
         if keypoint_connectors is None:
             keypoint_connectors = pose_model.get('keypoint_connectors')
     if camera_names is None:
-        camera_names = process_pose_data.fetch.fetch_camera_names(
+        camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
             camera_ids
         )
     if camera_calibrations is None:
-        camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
             camera_ids,
             start=timestamp.to_pydatetime(),
             end=timestamp.to_pydatetime()
@@ -175,17 +175,17 @@ def overlay_video_poses_3d(
     notebook=False
 ):
     if pose_model_id is not None:
-        pose_model = process_pose_data.fetch.fetch_pose_model_by_pose_model_id(
+        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
             pose_model_id
         )
         if keypoint_connectors is None:
             keypoint_connectors = pose_model.get('keypoint_connectors')
     if camera_names is None:
-        camera_names = process_pose_data.fetch.fetch_camera_names(
+        camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
             camera_ids
         )
     if camera_calibrations is None:
-        camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
             camera_ids,
             start=timestamp.to_pydatetime(),
             end=timestamp.to_pydatetime()
@@ -415,7 +415,7 @@ def draw_poses_2d_timestamp_camera_opencv(
         pose_color_map = dict(zip(pose_ids, pose_colors))
     if draw_keypoint_connectors:
         if keypoint_connectors is None:
-            pose_model = process_pose_data.fetch.fetch_pose_model(
+            pose_model = process_pose_data.honeycomb_io.fetch_pose_model(
                 pose_id=pose_ids[0]
             )
             keypoint_connectors = pose_model.get('keypoint_connectors')
@@ -559,17 +559,17 @@ def draw_poses_3d_timestamp_camera_opencv(
         raise ValueError('More than one timestamp in data frame')
     timestamp = timestamps[0]
     if pose_model_id is not None:
-        pose_model = process_pose_data.fetch.fetch_pose_model_by_pose_model_id(
+        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
             pose_model_id
         )
         if keypoint_connectors is None:
             keypoint_connectors = pose_model.get('keypoint_connectors')
     if camera_names is None:
-        camera_names = process_pose_data.fetch.fetch_camera_names(
+        camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
             camera_ids
         )
     if camera_calibrations is None:
-        camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
             camera_ids,
             start=timestamp.to_pydatetime(),
             end=timestamp.to_pydatetime()
@@ -768,7 +768,7 @@ def draw_poses_2d_timestamp_camera(
     camera_identifier = camera_id
     if display_camera_name:
         if camera_name is None:
-            camera_name = process_pose_data.fetch.fetch_camera_names([camera_id])[camera_id]
+            camera_name = process_pose_data.honeycomb_io.fetch_camera_names([camera_id])[camera_id]
         camera_identifier = camera_name
     fig_suptitle = '{} ({})'.format(
         camera_identifier,
@@ -795,7 +795,7 @@ def draw_poses_2d_timestamp_camera(
         pose_color_map = dict(zip(pose_ids, pose_colors))
     if draw_keypoint_connectors:
         if keypoint_connectors is None:
-            pose_model = process_pose_data.fetch.fetch_pose_model(
+            pose_model = process_pose_data.honeycomb_io.fetch_pose_model(
                 pose_id=pose_ids[0]
             )
             keypoint_connectors = pose_model.get('keypoint_connectors')
@@ -873,17 +873,17 @@ def draw_poses_3d_timestamp_camera(
         raise ValueError('More than one timestamp in data frame')
     timestamp = timestamps[0]
     if pose_model_id is not None:
-        pose_model = process_pose_data.fetch.fetch_pose_model_by_pose_model_id(
+        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
             pose_model_id
         )
         if keypoint_connectors is None:
             keypoint_connectors = pose_model.get('keypoint_connectors')
     if camera_names is None:
-        camera_names = process_pose_data.fetch.fetch_camera_names(
+        camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
             camera_ids
         )
     if camera_calibrations is None:
-        camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
             camera_ids,
             start=timestamp.to_pydatetime(),
             end=timestamp.to_pydatetime()
@@ -1007,17 +1007,17 @@ def draw_poses_3d_consecutive_timestamps(
 ):
     timestamp_previous = timestamp - pd.Timedelta(100, 'ms')
     if pose_model_id is not None:
-        pose_model = process_pose_data.fetch.fetch_pose_model_by_pose_model_id(
+        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
             pose_model_id
         )
         if keypoint_connectors is None:
             keypoint_connectors = pose_model.get('keypoint_connectors')
     if camera_names is None:
-        camera_names = process_pose_data.fetch.fetch_camera_names(
+        camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
             camera_ids
         )
     if camera_calibrations is None:
-        camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
             camera_ids,
             start=timestamp.to_pydatetime(),
             end=timestamp.to_pydatetime()

@@ -1,4 +1,4 @@
-import process_pose_data.fetch
+import process_pose_data.honeycomb_io
 import cv_utils
 import cv2 as cv
 import pandas as pd
@@ -542,7 +542,7 @@ def generate_and_score_pose_pairs(
     logger.info('Fetching camera calibration data for {} cameras'.format(
         num_cameras
     ))
-    camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+    camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
         camera_ids=camera_ids,
         start=start,
         end=end
@@ -654,7 +654,7 @@ def calculate_3d_poses(
         ).tolist()
         start = df['timestamp'].min().to_pydatetime()
         end = df['timestamp'].max().to_pydatetime()
-        camera_calibrations = process_pose_data.fetch.fetch_camera_calibrations(
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
             camera_ids=camera_ids,
             start=start,
             end=end
