@@ -881,3 +881,27 @@ def fetch_2d_pose_data_from_local_json(
         raise ValueError('Returned poses are associated with multiple pose models')
     df.set_index('pose_id', inplace=True)
     return df
+
+def write_3d_pose_data(
+    poses_3d_df,
+    coordinate_space_id=None,
+    pose_model_id=None,
+    source_id=None,
+    chunk_size=100,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if coordinate_space_id is None:
+        # Check if there is a coordinate space ID field in the dataframe
+        # If not, raise an exception
+        pass
+    if pose_model_id is None:
+        # Check if there is a pose model ID field in the dataframe
+        # If not, raise an exception
+        pass
+    if source_id is None:
+        # Raise an exception (we don't have enough info here to create an inference run or whatever)
+        pass
