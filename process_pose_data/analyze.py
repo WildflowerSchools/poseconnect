@@ -1043,13 +1043,16 @@ def generate_3d_poses_timestamp(
     )
     pose_3d_ids = list()
     keypoint_coordinates_3d = list()
+    poses_2d = list()
     if include_track_labels:
         track_labels = list()
     for subgraph in subgraph_list:
         pose_3d_ids.append(uuid4().hex)
         keypoint_coordinates_3d_list = list()
         track_label_list = list()
+        poses_2d_list = list()
         for pose_id_1, pose_id_2, keypoint_coordinates_3d_edge in subgraph.edges(data='keypoint_coordinates_3d'):
+            poses_2d_list.extend([pose_id_1, pose_id_2])
             if include_track_labels:
                 track_label_list.append((
                     subgraph.nodes[pose_id_1]['camera_id'],
@@ -1061,6 +1064,7 @@ def generate_3d_poses_timestamp(
                 ))
             keypoint_coordinates_3d_list.append(keypoint_coordinates_3d_edge)
         keypoint_coordinates_3d.append(np.nanmedian(np.stack(keypoint_coordinates_3d_list), axis=0))
+        poses_2d.append(poses_2d_list)
         if include_track_labels:
             track_labels.append(track_label_list)
     if include_track_labels:
@@ -1069,6 +1073,7 @@ def generate_3d_poses_timestamp(
             'timestamp': timestamp,
             'match_group_label': list(range(len(pose_3d_ids))),
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
+            'poses_2d': poses_2d,
             'track_labels': track_labels
         })
     else:
@@ -1076,7 +1081,8 @@ def generate_3d_poses_timestamp(
             'pose_3d_id': pose_3d_ids,
             'timestamp': timestamp,
             'match_group_label': list(range(len(pose_3d_ids))),
-            'keypoint_coordinates_3d': keypoint_coordinates_3d
+            'keypoint_coordinates_3d': keypoint_coordinates_3d,
+            'poses_2d': poses_2d
         })
     return pose_pairs_3d_df_timestamp
 
