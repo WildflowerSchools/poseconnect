@@ -1256,3 +1256,113 @@ def write_3d_pose_tracks(
     except:
         raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
     return pose_track_ids
+
+def fetch_3d_pose_track_data(
+    inference_ids=None,
+    inference_names=None,
+    inference_models=None,
+    inference_versions=None,
+    return_track_label=False,
+    return_inference_id=False,
+    chunk_size=100,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    inference_ids = fetch_inference_ids(
+        inference_ids=inference_ids,
+        inference_names=inference_names,
+        inference_models=inference_models,
+        inference_versions=inference_versions,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Building query list for 3D pose track search')
+    query_list = list()
+    if inference_ids is not None:
+        query_list.append({
+            'field': 'source',
+            'operator': 'IN',
+            'values': inference_ids
+        })
+    return_data = [
+        'pose_track_id',
+        'poses_3d',
+        'track_label',
+        {'source': [
+            {'... on InferenceExecution': [
+                'inference_id'
+            ]}
+        ]}
+    ]
+    result = search_3d_pose_tracks(
+        query_list=query_list,
+        return_data=return_data,
+        chunk_size=chunk_size,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    data = list()
+    logger.info('Parsing {} returned pose tracks'.format(len(result)))
+    for datum in result:
+        data.append({
+            'pose_track_3d_id': datum.get('pose_track_id'),
+            'pose_3d_ids': datum.get('poses_3d'),
+            'track_label_3d': datum.get('track_label'),
+            'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id')
+        })
+    df = pd.DataFrame(data)
+    df.set_index('pose_track_3d_id', inplace=True)
+    return_columns = [
+        'pose_3d_ids'
+    ]
+    if return_track_label:
+        return_columns.append('track_label_3d')
+    if return_inference_id:
+        return_columns.append('inference_id')
+    df = df.reindex(columns=return_columns)
+    return df
+
+def search_3d_pose_tracks(
+    query_list,
+    return_data,
+    chunk_size=100,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = minimal_honeycomb.MinimalHoneycombClient(
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Searching for 3D pose tracks that match the specified parameters')
+    result = client.bulk_query(
+        request_name='searchPoseTracks3D',
+        arguments={
+            'query': {
+                'type': 'QueryExpression!',
+                'value': {
+                    'operator': 'AND',
+                    'children': query_list
+                }
+            }
+        },
+        return_data=return_data,
+        id_field_name = 'pose_track_id',
+        chunk_size=chunk_size
+    )
+    logger.info('Fetched {} pose tracks'.format(len(result)))
+    return result
