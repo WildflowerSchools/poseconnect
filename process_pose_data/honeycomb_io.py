@@ -1206,3 +1206,53 @@ def search_3d_poses(
     )
     logger.info('Fetched {} poses'.format(len(result)))
     return result
+
+def write_3d_pose_tracks(
+    poses_3d_df,
+    source_id,
+    source_type,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None,
+    chunk_size=100
+):
+    poses_3d_df_copy = poses_3d_df.copy()
+    current_index_name = poses_3d_df_copy.index.name
+    poses_3d_df_copy = poses_3d_df_copy.reset_index().rename(columns={current_index_name: 'pose_3d_id'})
+    pose_tracks_3d_df = poses_3d_df_copy.groupby('pose_track_3d_id').agg(
+        poses_3d = pd.NamedAgg(
+            column='pose_3d_id',
+            aggfunc = lambda x: x.tolist()
+        )
+    )
+    pose_tracks_3d_df['source'] = source_id
+    pose_tracks_3d_df['source_type'] = source_type
+    pose_tracks_3d_list = pose_tracks_3d_df.to_dict(orient='records')
+    client = minimal_honeycomb.MinimalHoneycombClient(
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Writing 3D pose tracks')
+    result = client.bulk_mutation(
+        request_name='createPoseTrack3D',
+        arguments={
+            'poseTrack3D': {
+                'type': 'PoseTrack3DInput',
+                'value': pose_tracks_3d_list
+            }
+        },
+        return_object=[
+            'pose_track_id'
+        ],
+        chunk_size=chunk_size
+    )
+    try:
+        pose_track_ids = [datum['pose_track_id'] for datum in result]
+    except:
+        raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
+    return pose_track_ids
