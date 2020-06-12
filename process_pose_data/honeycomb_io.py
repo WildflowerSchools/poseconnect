@@ -887,6 +887,7 @@ def write_3d_pose_data(
     coordinate_space_id=None,
     pose_model_id=None,
     source_id=None,
+    source_type=None,
     chunk_size=100,
     uri=None,
     token_uri=None,
@@ -894,14 +895,79 @@ def write_3d_pose_data(
     client_id=None,
     client_secret=None
 ):
+    poses_3d_df_honeycomb = poses_3d_df.copy()
     if coordinate_space_id is None:
-        # Check if there is a coordinate space ID field in the dataframe
-        # If not, raise an exception
-        pass
+        if 'coordinate_space_id' not in poses_3d_df_honeycomb.columns:
+            raise ValueError('Coordinate space ID must either be included in data frame or specified')
+    else:
+        poses_3d_df_honeycomb['coordinate_space_id'] = coordinate_space_id
     if pose_model_id is None:
-        # Check if there is a pose model ID field in the dataframe
-        # If not, raise an exception
-        pass
+        if 'pose_model_id' not in poses_3d_df_honeycomb.columns:
+            raise ValueError('Pose model ID must either be included in data frame or specified')
+    else:
+        poses_3d_df_honeycomb['pose_model_id'] = pose_model_id
     if source_id is None:
-        # Raise an exception (we don't have enough info here to create an inference run or whatever)
-        pass
+        if 'source_id' not in poses_3d_df_honeycomb.columns:
+            raise ValueError('Source ID must either be included in data frame or specified')
+    else:
+        poses_3d_df_honeycomb['source_id'] = source_id
+    if source_type is None:
+        if 'source_type' not in poses_3d_df_honeycomb.columns:
+            raise ValueError('Source type must either be included in data frame or specified')
+    else:
+        poses_3d_df_honeycomb['source_type'] = source_type
+    poses_3d_df_honeycomb['timestamp'] = poses_3d_df_honeycomb['timestamp'].apply(
+        lambda x: minimal_honeycomb.to_honeycomb_datetime(x.to_pydatetime())
+    )
+    poses_3d_df_honeycomb['keypoint_coordinates_3d'] = poses_3d_df_honeycomb['keypoint_coordinates_3d'].apply(
+        lambda x: np.where(np.isnan(x), None, x)
+    )
+    poses_3d_df_honeycomb['keypoint_coordinates_3d'] = poses_3d_df_honeycomb['keypoint_coordinates_3d'].apply(
+        lambda x: [{'coordinates': x[i, :].tolist()} for i in range(x.shape[0])]
+    )
+    poses_3d_df_honeycomb = poses_3d_df_honeycomb.reindex(columns=[
+        'timestamp',
+        'coordinate_space_id',
+        'pose_model_id',
+        'keypoint_coordinates_3d',
+        'pose_2d_ids',
+        'source_id',
+        'source_type'
+    ])
+    poses_3d_df_honeycomb.rename(
+        columns={
+            'coordinate_space_id': 'coordinate_space',
+            'pose_model_id': 'pose_model',
+            'keypoint_coordinates_3d': 'keypoints',
+            'pose_2d_ids': 'poses_2d',
+            'source_id': 'source'
+        },
+        inplace=True
+    )
+    poses_3d_list_honeycomb = poses_3d_df_honeycomb.to_dict(orient='records')
+    client = minimal_honeycomb.MinimalHoneycombClient(
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Writing 3D pose data')
+    result = client.bulk_mutation(
+        request_name='createPose3D',
+        arguments={
+            'pose3D': {
+                'type': 'Pose3DInput',
+                'value': poses_3d_list_honeycomb
+            }
+        },
+        return_object=[
+            'pose_id'
+        ],
+        chunk_size=chunk_size
+    )
+    try:
+        pose_ids = [datum['pose_id'] for datum in result]
+    except:
+        raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
+    return pose_ids
