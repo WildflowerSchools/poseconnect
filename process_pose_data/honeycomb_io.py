@@ -882,6 +882,59 @@ def fetch_2d_pose_data_from_local_json(
     df.set_index('pose_id', inplace=True)
     return df
 
+def create_inference_execution(
+    execution_start=None,
+    name=None,
+    notes=None,
+    model=None,
+    version=None,
+    data_sources=None,
+    data_results=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if execution_start is None:
+        execution_start = minimal_honeycomb.to_honeycomb_datetime(datetime.datetime.now(tz=datetime.timezone.utc))
+    else:
+        execution_start = minimal_honeycomb.to_honeycomb_datetime(execution_start)
+    client = minimal_honeycomb.MinimalHoneycombClient(
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Creating inference execution')
+    result = client.request(
+        request_type='mutation',
+        request_name='createInferenceExecution',
+        arguments={
+            'inferenceExecution': {
+                'type': 'InferenceExecutionInput',
+                'value': {
+                    'execution_start': execution_start,
+                    'name': name,
+                    'notes': notes,
+                    'model': model,
+                    'version': version,
+                    'data_sources': data_sources,
+                    'data_results': data_results
+                }
+            }
+        },
+        return_object=[
+            'inference_id'
+        ]
+    )
+    try:
+        inference_id = result['inference_id']
+    except:
+        raise ValueError('Received unexpected response from Honeycomb: {}'.format(result))
+    return inference_id
+
 def write_3d_pose_data(
     poses_3d_df,
     coordinate_space_id=None,
