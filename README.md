@@ -4,12 +4,9 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Finish augmenting `PoseTrack3D` object so it captures Kalman filter trajectory
-* Add method(s) to visualize Kalman filter trajectory
-* Use visualizations to tune default parameters of 3D pose tracking
-* Apply 3D pose tracking to newer 3D pose data (AlphaPose, new camera setup) to check performance
-* Create `PoseTracks3D` (or `PoseTrack3DCollection`) to hold collection of active and inactive tracks
-* Write functions to write 3D poses back to Honeycomb (put pose track label in label field for now)
+* Add logic to fetch functions to convert `None` values in float arrays to `np.nan`
+* Consolidate `search_[object]s` functions into one function that takes mutation name and id field name as argument
+* Write new end-to-end script which tests all of the various IO and processing functions
 * Comment out all functions and methods that are unused and run entire pipeline in different configurations to verify
 * Remove unused functions and methods
 * Add logic to `reconstruct_poses_3d()` to fetch camera calibrations if they are not supplied
