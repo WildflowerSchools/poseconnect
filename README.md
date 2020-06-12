@@ -4,9 +4,17 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Consistently add `_2d` or `_3d` to variable names and field names which could be either
+* Consistent add `_local` to IDs that only exist locally (not on Honeycomb)
+* Add logic to convert coordinates equal to 0.0 to `np.nan`?
+* Consistently set default algorithm parameters to values that seem to have been working the best
+* Fetch pose model name from pose model ID rather than making user specify (for 3D pose generation)
+* Fetch coordinate space ID rather than making user specify (for writing 3D poses)
+* Remove `match_group_label` from 3D pose generation output?
+* Add progress bar option to `generate_pose_tracks()`
 * Add logic to fetch functions to convert `None` values in float arrays to `np.nan`
 * Consolidate `search_[object]s` functions into one function that takes mutation name and id field name as argument
-* Write new end-to-end script which tests all of the various IO and processing functions
+* Reorder functions in `honeycomb_io`
 * Comment out all functions and methods that are unused and run entire pipeline in different configurations to verify
 * Remove unused functions and methods
 * Add logic to `reconstruct_poses_3d()` to fetch camera calibrations if they are not supplied
