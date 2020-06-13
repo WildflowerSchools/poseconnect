@@ -4,6 +4,7 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Remove profiling logic in `analyze.py`
 * Consistently add `_2d` or `_3d` to variable names and field names which could be either
 * Consistent add `_local` to IDs that only exist locally (not on Honeycomb)
 * Add logic to convert coordinates equal to 0.0 to `np.nan`?
