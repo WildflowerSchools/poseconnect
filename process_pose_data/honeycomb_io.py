@@ -168,11 +168,12 @@ def fetch_2d_pose_data(
             'person_id': (datum.get('person') if datum.get('person') is not None else {}).get('person_id'),
             'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id'),
             'pose_model_id': (datum.get('pose_model') if datum.get('pose_model') is not None else {}).get('pose_model_id'),
-            'keypoint_coordinates': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')]),
-            'keypoint_quality': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')]),
+            'keypoint_coordinates': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')], dtype=np.float),
+            'keypoint_quality': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')], dtype=np.float),
             'pose_quality': datum.get('quality')
         })
     df = pd.DataFrame(data)
+    df['keypoint_coordinates'] = df['keypoint_coordinates'].apply(lambda x: np.where(x == 0.0, np.nan, x))
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     if df['pose_model_id'].nunique() > 1:
         raise ValueError('Returned poses are associated with multiple pose models')
@@ -1140,8 +1141,8 @@ def fetch_3d_pose_data(
             'person_id': (datum.get('person') if datum.get('person') is not None else {}).get('person_id'),
             'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id'),
             'pose_model_id': (datum.get('pose_model') if datum.get('pose_model') is not None else {}).get('pose_model_id'),
-            'keypoint_coordinates_3d': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')]),
-            'keypoint_quality_3d': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')]),
+            'keypoint_coordinates_3d': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')], dtype=np.float),
+            'keypoint_quality_3d': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')], dtype=np.float),
             'pose_quality_3d': datum.get('quality')
         })
     df = pd.DataFrame(data)
