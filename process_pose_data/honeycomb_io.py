@@ -697,13 +697,15 @@ def fetch_camera_calibrations(
     camera_calibrations = dict()
     for camera_id in camera_ids:
         if camera_id not in intrinsic_calibrations.keys():
-            raise ValueError('No intrinsic calibration found for camera ID {}'.format(
+            logger.warning('No intrinsic calibration found for camera ID {}'.format(
                 camera_id
             ))
+            continue
         if camera_id not in extrinsic_calibrations.keys():
-            raise ValueError('No extrinsic calibration found for camera ID {}'.format(
+            logger.warning('No extrinsic calibration found for camera ID {}'.format(
                 camera_id
             ))
+            continue
         camera_calibrations[camera_id] = {**intrinsic_calibrations[camera_id], **extrinsic_calibrations[camera_id]}
     return camera_calibrations
 

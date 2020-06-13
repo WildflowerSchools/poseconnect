@@ -108,7 +108,7 @@ def pose_3d_dispersion(pose_graph):
 
 def reconstruct_poses_3d(
     poses_2d_df,
-    camera_calibrations,
+    camera_calibrations=None,
     min_keypoint_quality=None,
     min_num_keypoints=None,
     min_pose_quality=None,
@@ -127,6 +127,31 @@ def reconstruct_poses_3d(
     notebook=False
     # profile=False
 ):
+    camera_ids = poses_2d_df['camera_id'].unique().tolist()
+    if camera_calibrations is None:
+        start = poses_2d_df['timestamp'].min().to_pydatetime()
+        end = poses_2d_df['timestamp'].max().to_pydatetime()
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+            camera_ids=camera_ids,
+            start=start,
+            end=end
+        )
+    missing_cameras = list()
+    for camera_id in camera_ids:
+        for calibration_parameter in [
+            'camera_matrix',
+            'distortion_coefficients',
+            'rotation_vector',
+            'translation_vector'
+        ]:
+            if camera_calibrations.get(camera_id, {}).get(calibration_parameter) is None:
+                logger.warning('Camera {} in data is missing calibration information. Excluding these poses.'.format(
+                    camera_id
+                ))
+                missing_cameras.append(camera_id)
+                break
+    if len(missing_cameras) > 0:
+        poses_2d_df = poses_2d_df.loc[~poses_2d_df['camera_id'].isin(missing_cameras)]
     reconstruct_poses_3d_timestamp_partial = partial(
         reconstruct_poses_3d_timestamp,
         camera_calibrations=camera_calibrations,

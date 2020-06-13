@@ -16,8 +16,6 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 * Consolidate `search_[object]s` functions into one function that takes mutation name and id field name as argument
 * Reorder functions in `honeycomb_io`
 * Remove unused functions and methods
-* Add logic to `reconstruct_poses_3d()` to fetch camera calibrations if they are not supplied
-* Generally make functions more robust to missing calibration data (e.g., issue warning and drop poses rather than stopping)
 * Make functions handle empty poses (all keypoints `NaN`) more gracefully (e.g., `score_pose_pairs()`, `draw_pose_2d()`)
 * Fix up `fetch` module to match design of `wf-video-io`
   - Allow user to supply Honeycomb client
