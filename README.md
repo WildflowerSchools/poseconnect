@@ -4,7 +4,6 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Remove profiling logic in `analyze.py`
 * Consistently add `_2d` or `_3d` to variable names and field names which could be either
 * Consistent add `_local` to IDs that only exist locally (not on Honeycomb)
 * Add logic to convert coordinates equal to 0.0 to `np.nan`?
@@ -16,7 +15,6 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 * Add logic to fetch functions to convert `None` values in float arrays to `np.nan`
 * Consolidate `search_[object]s` functions into one function that takes mutation name and id field name as argument
 * Reorder functions in `honeycomb_io`
-* Comment out all functions and methods that are unused and run entire pipeline in different configurations to verify
 * Remove unused functions and methods
 * Add logic to `reconstruct_poses_3d()` to fetch camera calibrations if they are not supplied
 * Generally make functions more robust to missing calibration data (e.g., issue warning and drop poses rather than stopping)

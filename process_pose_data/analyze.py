@@ -124,8 +124,8 @@ def reconstruct_poses_3d(
     pose_3d_graph_max_evaluation_score=0.40,
     include_track_labels=False,
     progress_bar=False,
-    notebook=False,
-    profile=False
+    notebook=False
+    # profile=False
 ):
     reconstruct_poses_3d_timestamp_partial = partial(
         reconstruct_poses_3d_timestamp,
@@ -153,47 +153,50 @@ def reconstruct_poses_3d(
         poses_2d_df['timestamp'].min().isoformat(),
         poses_2d_df['timestamp'].max().isoformat()
     ))
-    if profile:
-        profile_data = {
-            'filter_keypoints_by_quality': 0.0,
-            'remove_empty_2d_poses': 0.0,
-            'filter_poses_by_num_valid_keypoints': 0.0,
-            'filter_poses_by_quality': 0.0,
-            'generate_pose_pairs_timestamp': 0.0,
-            'calculate_3d_poses': 0.0,
-            'remove_empty_3d_poses': 0.0,
-            'remove_empty_reprojected_2d_poses': 0.0,
-            'score_pose_pairs': 0.0,
-            'remove_invalid_pose_pair_scores': 0.0,
-            'filter_pose_pairs_by_score': 0.0,
-            'filter_pose_pairs_by_3d_pose_spatial_limits': 0.0,
-            'filter_pose_pairs_by_best_match': 0.0,
-            'generate_3d_poses_timestamp': 0.0
-        }
-    else:
-        profile_data = None
+    # if profile:
+    #     profile_data = {
+    #         'filter_keypoints_by_quality': 0.0,
+    #         'remove_empty_2d_poses': 0.0,
+    #         'filter_poses_by_num_valid_keypoints': 0.0,
+    #         'filter_poses_by_quality': 0.0,
+    #         'generate_pose_pairs_timestamp': 0.0,
+    #         'calculate_3d_poses': 0.0,
+    #         'remove_empty_3d_poses': 0.0,
+    #         'remove_empty_reprojected_2d_poses': 0.0,
+    #         'score_pose_pairs': 0.0,
+    #         'remove_invalid_pose_pair_scores': 0.0,
+    #         'filter_pose_pairs_by_score': 0.0,
+    #         'filter_pose_pairs_by_3d_pose_spatial_limits': 0.0,
+    #         'filter_pose_pairs_by_best_match': 0.0,
+    #         'generate_3d_poses_timestamp': 0.0
+    #     }
+    # else:
+    #     profile_data = None
     start_time = time.time()
     if progress_bar:
         if notebook:
             tqdm.notebook.tqdm.pandas()
         else:
             tqdm.pandas()
-        poses_3d_df = poses_2d_df.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial, profile_data=profile_data)
+        # poses_3d_df = poses_2d_df.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial, profile_data=profile_data)
+        poses_3d_df = poses_2d_df.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial)
     else:
-        poses_3d_df = poses_2d_df.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial, profile_data=profile_data)
+        # poses_3d_df = poses_2d_df.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial, profile_data=profile_data)
+        poses_3d_df = poses_2d_df.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial)
     elapsed_time = time.time() - start_time
-    if profile:
-        profile_data['total_time'] = elapsed_time
+    # if profile:
+    #     profile_data['total_time'] = elapsed_time
     logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
         len(poses_3d_df),
         elapsed_time,
         1000*elapsed_time/num_frames
     ))
     poses_3d_df.reset_index('timestamp', drop=True, inplace=True)
-    if profile:
-        return poses_3d_df, profile_data
-    else:
-        return poses_3d_df
+    # if profile:
+    #     return poses_3d_df, profile_data
+    # else:
+    #     return poses_3d_df
+    return poses_3d_df
 
 # def reconstruct_poses_3d_alt(
 #     poses_2d_df,
@@ -313,8 +316,8 @@ def reconstruct_poses_3d_timestamp(
     pose_3d_graph_min_evaluation_score=None,
     pose_3d_graph_max_evaluation_score=0.40,
     include_track_labels=False,
-    validate_df=True,
-    profile_data=None
+    validate_df=True
+    # profile_data=None
 ):
     poses_2d_df_timestamp_copy = poses_2d_df_timestamp.copy()
     if validate_df:
@@ -322,167 +325,167 @@ def reconstruct_poses_3d_timestamp(
             raise ValueError('More than one timestamp found in data frame')
     timestamp = poses_2d_df_timestamp_copy['timestamp'][0]
     logger.debug('Analyzing {} poses from timestamp {}'.format(
-        len(poses_2d_df_timestamp_copy),
-        timestamp.isoformat()
-    ))
+    #     len(poses_2d_df_timestamp_copy),
+    #     timestamp.isoformat()
+    # ))
     if min_keypoint_quality is not None:
         logger.debug('Filtering keypoints based on keypoint quality')
-        if profile_data is not None:
-            start_time=time.time()
+        # if profile_data is not None:
+        #     start_time=time.time()
         poses_2d_df_timestamp_copy = process_pose_data.filter.filter_keypoints_by_quality(
             df=poses_2d_df_timestamp_copy,
             min_keypoint_quality=min_keypoint_quality
         )
-        if profile_data is not None:
-            profile_data['filter_keypoints_by_quality'] += time.time() - start_time
+        # if profile_data is not None:
+        #     profile_data['filter_keypoints_by_quality'] += time.time() - start_time
     logger.debug('Removing poses with no valid keypoints')
-    if profile_data is not None:
-        start_time=time.time()
+    # if profile_data is not None:
+    #     start_time=time.time()
     poses_2d_df_timestamp_copy = process_pose_data.filter.remove_empty_2d_poses(
         df=poses_2d_df_timestamp_copy
     )
-    if profile_data is not None:
-        profile_data['remove_empty_2d_poses'] += time.time() - start_time
+    # if profile_data is not None:
+    #     profile_data['remove_empty_2d_poses'] += time.time() - start_time
     logger.debug('{} poses remain after removing poses with no valid keypoints'.format(
         len(poses_2d_df_timestamp_copy)
     ))
     if min_num_keypoints is not None:
         logger.debug('Filtering poses based on number of valid keypoints')
-        if profile_data is not None:
-            start_time=time.time()
+        # if profile_data is not None:
+        #     start_time=time.time()
         poses_2d_df_timestamp_copy = process_pose_data.filter.filter_poses_by_num_valid_keypoints(
             df=poses_2d_df_timestamp_copy,
             min_num_keypoints=min_num_keypoints
         )
-        if profile_data is not None:
-            profile_data['filter_poses_by_num_valid_keypoints'] += time.time() - start_time
+        # if profile_data is not None:
+        #     profile_data['filter_poses_by_num_valid_keypoints'] += time.time() - start_time
         logger.debug('{} poses remain after filtering on number of valid keypoints'.format(
             len(poses_2d_df_timestamp_copy)
         ))
     if min_pose_quality is not None:
         logger.debug('Filtering poses based on pose_quality')
-        if profile_data is not None:
-            start_time=time.time()
+        # if profile_data is not None:
+        #     start_time=time.time()
         poses_2d_df_timestamp_copy = process_pose_data.filter.filter_poses_by_quality(
             df=poses_2d_df_timestamp_copy,
             min_pose_quality=min_pose_quality
         )
-        if profile_data is not None:
-            profile_data['filter_poses_by_quality'] += time.time() - start_time
+        # if profile_data is not None:
+        #     profile_data['filter_poses_by_quality'] += time.time() - start_time
         logger.debug('{} poses remain after filtering on pose quality'.format(
             len(poses_2d_df_timestamp_copy)
         ))
     logger.debug('Generating pose_pairs')
-    if profile_data is not None:
-        start_time=time.time()
+    # if profile_data is not None:
+    #     start_time=time.time()
     pose_pairs_2d_df_timestamp = generate_pose_pairs_timestamp(
         df=poses_2d_df_timestamp_copy
     )
-    if profile_data is not None:
-        profile_data['generate_pose_pairs_timestamp'] += time.time() - start_time
+    # if profile_data is not None:
+    #     profile_data['generate_pose_pairs_timestamp'] += time.time() - start_time
     logger.debug('{} pose pairs generated'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
     logger.debug('Calculating 3D poses and reprojected 2D poses for pose pairs')
-    if profile_data is not None:
-        start_time=time.time()
+    # if profile_data is not None:
+    #     start_time=time.time()
     pose_pairs_2d_df_timestamp = calculate_3d_poses(
         df=pose_pairs_2d_df_timestamp,
         camera_calibrations=camera_calibrations
     )
-    if profile_data is not None:
-        profile_data['calculate_3d_poses'] += time.time() - start_time
+    # if profile_data is not None:
+    #     profile_data['calculate_3d_poses'] += time.time() - start_time
     logger.debug('3D poses and reprojected 2D poses calculated for {} pose pairs'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
     logger.debug('Removing 3D poses with no valid keypoints')
-    if profile_data is not None:
-        start_time=time.time()
+    # if profile_data is not None:
+    #     start_time=time.time()
     pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_empty_3d_poses(
         df=pose_pairs_2d_df_timestamp
     )
-    if profile_data is not None:
-        profile_data['remove_empty_3d_poses'] += time.time() - start_time
+    # if profile_data is not None:
+    #     profile_data['remove_empty_3d_poses'] += time.time() - start_time
     logger.debug('{} pose pairs remain after removing 3D poses with no valid keypoints'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
     logger.debug('Removing pose pairs with empty reprojected 2D poses')
-    if profile_data is not None:
-        start_time=time.time()
+    # if profile_data is not None:
+    #     start_time=time.time()
     pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_empty_reprojected_2d_poses(
         df=pose_pairs_2d_df_timestamp
     )
-    if profile_data is not None:
-        profile_data['remove_empty_reprojected_2d_poses'] += time.time() - start_time
+    # if profile_data is not None:
+    #     profile_data['remove_empty_reprojected_2d_poses'] += time.time() - start_time
     logger.debug('{} pose pairs remain after removing pose pairs with empty reprojected 2D poses'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
     logger.debug('Scoring pose pairs')
-    if profile_data is not None:
-        start_time=time.time()
+    # if profile_data is not None:
+    #     start_time=time.time()
     pose_pairs_2d_df_timestamp = score_pose_pairs(
         df=pose_pairs_2d_df_timestamp,
         distance_method=pose_pair_score_distance_method,
         summary_method=pose_pair_score_summary_method,
         pixel_distance_scale=pose_pair_score_pixel_distance_scale
     )
-    if profile_data is not None:
-        profile_data['score_pose_pairs'] += time.time() - start_time
+    # if profile_data is not None:
+    #     profile_data['score_pose_pairs'] += time.time() - start_time
     logger.debug('{} pose pairs scored'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
     logger.debug('Removing pose pairs without a valid score')
-    if profile_data is not None:
-        start_time=time.time()
+    # if profile_data is not None:
+    #     start_time=time.time()
     pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_invalid_pose_pair_scores(
         df=pose_pairs_2d_df_timestamp
     )
-    if profile_data is not None:
-        profile_data['remove_invalid_pose_pair_scores'] += time.time() - start_time
+    # if profile_data is not None:
+    #     profile_data['remove_invalid_pose_pair_scores'] += time.time() - start_time
     logger.debug('{} pose pairs remain after removing pose pairs without a valid score'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
     if min_pose_pair_score is not None or max_pose_pair_score is not None:
         logger.debug('Filtering pose pairs based on pose pair score')
-        if profile_data is not None:
-            start_time=time.time()
+        # if profile_data is not None:
+        #     start_time=time.time()
         pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_score(
             df=pose_pairs_2d_df_timestamp,
             min_score=min_pose_pair_score,
             max_score=max_pose_pair_score
         )
-        if profile_data is not None:
-            profile_data['filter_pose_pairs_by_score'] += time.time() - start_time
+        # if profile_data is not None:
+        #     profile_data['filter_pose_pairs_by_score'] += time.time() - start_time
         logger.debug('{} pose pairs remain after filtering on pose pair score'.format(
             len(pose_pairs_2d_df_timestamp)
         ))
     if pose_3d_limits is not None:
         logger.debug('Filtering pose pairs based on 3D pose spatial limits')
-        if profile_data is not None:
-            start_time=time.time()
+        # if profile_data is not None:
+        #     start_time=time.time()
         pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
             pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
             pose_3d_limits=pose_3d_limits
         )
-        if profile_data is not None:
-            profile_data['filter_pose_pairs_by_3d_pose_spatial_limits'] += time.time() - start_time
+        # if profile_data is not None:
+        #     profile_data['filter_pose_pairs_by_3d_pose_spatial_limits'] += time.time() - start_time
         logger.debug('{} pose pairs remain after filtering on 3D pose spatial limits'.format(
             len(pose_pairs_2d_df_timestamp)
         ))
     logger.debug('Filtering pose pairs down to best matches for each camera pair')
-    if profile_data is not None:
-        start_time=time.time()
+    # if profile_data is not None:
+    #     start_time=time.time()
     pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_best_match(
         pose_pairs_2d_df_timestamp
     )
-    if profile_data is not None:
-        profile_data['filter_pose_pairs_by_best_match'] += time.time() - start_time
+    # if profile_data is not None:
+    #     profile_data['filter_pose_pairs_by_best_match'] += time.time() - start_time
     logger.debug('{} pose pairs remain after filtering down to best matches for each camera pair'.format(
         len(pose_pairs_2d_df_timestamp)
     ))
     logger.debug('Generating 3D poses across camera pairs')
-    if profile_data is not None:
-        start_time=time.time()
+    # if profile_data is not None:
+    #     start_time=time.time()
     poses_3d_df_timestamp = generate_3d_poses_timestamp(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
         evaluation_function=pose_3d_graph_evaluation_function,
@@ -492,8 +495,8 @@ def reconstruct_poses_3d_timestamp(
         include_track_labels=include_track_labels,
         validate_df=validate_df
     )
-    if profile_data is not None:
-        profile_data['generate_3d_poses_timestamp'] += time.time() - start_time
+    # if profile_data is not None:
+    #     profile_data['generate_3d_poses_timestamp'] += time.time() - start_time
     logger.debug('{} 3D poses generated'.format(
         len(poses_3d_df_timestamp)
     ))
