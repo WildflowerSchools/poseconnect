@@ -128,11 +128,11 @@ def overlay_video_poses_2d(
             frame = video_input.get_frame()
             if frame is None:
                 raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
-            for pose_2d_id, row in poses_2d_df.loc[
+            for pose_id_2d, row in poses_2d_df.loc[
                 (poses_2d_df['timestamp'] == timestamp_pandas) &
                 (poses_2d_df['camera_id'] == camera_id)
             ].iterrows():
-                keypoint_coordinates_2d = row['keypoint_coordinates']
+                keypoint_coordinates_2d = row['keypoint_coordinates_2d']
                 frame=draw_pose_2d_opencv(
                     image=frame,
                     keypoint_coordinates=keypoint_coordinates_2d,
@@ -259,7 +259,7 @@ def overlay_video_poses_3d(
             frame = video_input.get_frame()
             if frame is None:
                 raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
-            for pose_3d_id, row in poses_3d_df.loc[poses_3d_df['timestamp'] == timestamp_pandas].iterrows():
+            for pose_id_3d, row in poses_3d_df.loc[poses_3d_df['timestamp'] == timestamp_pandas].iterrows():
                 keypoint_coordinates_2d = cv_utils.project_points(
                     object_points=row['keypoint_coordinates_3d'],
                     rotation_vector=camera_calibration['rotation_vector'],
@@ -326,8 +326,8 @@ def draw_poses_2d_timestamp_camera_pair_opencv(
             pose_ids = dfs_single_camera[camera_letter].index.values.tolist()
             pose_label_maps[camera_letter] = {pose_id: '' for pose_id in pose_ids}
             if not generate_match_aliases:
-                if 'track_label' in dfs_single_camera[camera_letter].columns:
-                    pose_labels = dfs_single_camera[camera_letter]['track_label'].values.tolist()
+                if 'track_label_2d' in dfs_single_camera[camera_letter].columns:
+                    pose_labels = dfs_single_camera[camera_letter]['track_label_2d'].values.tolist()
                 elif len(pose_ids) <= 26:
                     pose_labels = string.ascii_uppercase[:len(pose_ids)]
                 else:
@@ -403,8 +403,8 @@ def draw_poses_2d_timestamp_camera_opencv(
     df = df.sort_index()
     pose_ids = df.index.tolist()
     if pose_label_map is None:
-        if 'track_label' in df.columns:
-            pose_labels = df['track_label'].values.tolist()
+        if 'track_label_2d' in df.columns:
+            pose_labels = df['track_label_2d'].values.tolist()
         elif len(pose_ids) <= 26:
             pose_labels = string.ascii_uppercase[:len(pose_ids)]
         else:
@@ -430,7 +430,7 @@ def draw_poses_2d_timestamp_camera_opencv(
     for pose_id, row in df.iterrows():
         new_image = process_pose_data.draw_pose_2d_opencv(
             image=new_image,
-            keypoint_coordinates=row['keypoint_coordinates'],
+            keypoint_coordinates=row['keypoint_coordinates_2d'],
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
             pose_label=pose_label_map[pose_id],
@@ -590,7 +590,7 @@ def draw_poses_3d_timestamp_camera_opencv(
         image_local_path = image_metadata[0]['image_local_path']
         background_image = cv_utils.fetch_image_from_local_drive(image_local_path)
         new_image = background_image
-        for pose_3d_id, row in df.iterrows():
+        for pose_id_3d, row in df.iterrows():
             keypoint_coordinates_2d = cv_utils.project_points(
                 object_points=row['keypoint_coordinates_3d'],
                 rotation_vector=camera_calibration['rotation_vector'],
@@ -668,8 +668,8 @@ def draw_poses_2d_timestamp_camera_pair(
             pose_ids = dfs_single_camera[camera_letter].index.values.tolist()
             pose_label_maps[camera_letter] = {pose_id: '' for pose_id in pose_ids}
             if not generate_match_aliases:
-                if 'track_label' in dfs_single_camera[camera_letter].columns:
-                    pose_labels = dfs_single_camera[camera_letter]['track_label'].values.tolist()
+                if 'track_label_2d' in dfs_single_camera[camera_letter].columns:
+                    pose_labels = dfs_single_camera[camera_letter]['track_label_2d'].values.tolist()
                 elif len(pose_ids) <= 26:
                     pose_labels = string.ascii_uppercase[:len(pose_ids)]
                 else:
@@ -783,8 +783,8 @@ def draw_poses_2d_timestamp_camera(
     df = df.sort_index()
     pose_ids = df.index.tolist()
     if pose_label_map is None:
-        if 'track_label' in df.columns:
-            pose_labels = df['track_label'].values.tolist()
+        if 'track_label_2d' in df.columns:
+            pose_labels = df['track_label_2d'].values.tolist()
         elif len(pose_ids) <= 26:
             pose_labels = string.ascii_uppercase[:len(pose_ids)]
         else:
@@ -801,7 +801,7 @@ def draw_poses_2d_timestamp_camera(
             keypoint_connectors = pose_model.get('keypoint_connectors')
     for pose_id, row in df.iterrows():
         process_pose_data.draw_pose_2d(
-            row['keypoint_coordinates'],
+            row['keypoint_coordinates_2d'],
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
             pose_label=pose_label_map[pose_id],
@@ -932,7 +932,7 @@ def draw_poses_3d_timestamp_camera(
             cv.cvtColor(background_image, cv.COLOR_BGR2RGB),
             alpha=background_image_alpha
         )
-        for pose_3d_id, row in df.iterrows():
+        for pose_id_3d, row in df.iterrows():
             keypoint_coordinates_2d = cv_utils.project_points(
                 object_points=row['keypoint_coordinates_3d'],
                 rotation_vector=camera_calibration['rotation_vector'],
@@ -1043,7 +1043,7 @@ def draw_poses_3d_consecutive_timestamps(
                 cv.cvtColor(background_image, cv.COLOR_BGR2RGB),
                 alpha=background_image_alpha
             )
-            for pose_3d_id, row in poses_3d_df[poses_3d_df['timestamp'] == selected_timestamp].iterrows():
+            for pose_id_3d, row in poses_3d_df[poses_3d_df['timestamp'] == selected_timestamp].iterrows():
                 keypoint_coordinates_2d = cv_utils.project_points(
                     object_points=row['keypoint_coordinates_3d'],
                     rotation_vector=camera_calibration['rotation_vector'],
@@ -1253,11 +1253,11 @@ def visualize_pose_pair(
             cv.cvtColor(background_image, cv.COLOR_BGR2RGB),
             alpha=background_image_alpha
         )
-        if pose_pair.get('track_label_' + suffix) is not None:
+        if pose_pair.get('track_label_2d_' + suffix) is not None:
             axes[axis_index].text(
                 centroid[0],
                 centroid[1],
-                pose_pair.get('track_label_' + suffix),
+                pose_pair.get('track_label_2d_' + suffix),
                 color=pose_label_color,
                 bbox={
                     'alpha': pose_label_background_alpha,

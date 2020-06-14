@@ -102,7 +102,7 @@ def keypoint_quality_histogram(
             filename_extension
         )
     sns_plot = sns.distplot(
-        np.concatenate(df['keypoint_quality'].values),
+        np.concatenate(df['keypoint_quality_2d'].values),
         bins=bins,
         kde=False
     )
@@ -205,7 +205,7 @@ def num_valid_keypoints_histogram(
             df['timestamp'].max().strftime(filename_datetime_format),
             filename_extension
         )
-    num_valid_keypoints_series = df['keypoint_quality'].apply(lambda x: np.count_nonzero(~np.isnan(x)))
+    num_valid_keypoints_series = df['keypoint_quality_2d'].apply(lambda x: np.count_nonzero(~np.isnan(x)))
     max_num_valid_keypoints = num_valid_keypoints_series.max()
     sns_plot = sns.countplot(
         x = num_valid_keypoints_series,
@@ -312,7 +312,7 @@ def pose_quality_histogram(
             filename_extension
         )
     sns_plot = sns.distplot(
-        df['pose_quality'],
+        df['pose_quality_2d'],
         bins=bins,
         kde=False
     )
@@ -416,7 +416,7 @@ def mean_keypoint_quality_histogram(
             filename_extension
         )
     sns_plot = sns.distplot(
-        df['keypoint_quality'].apply(lambda x: np.nanmean(x)),
+        df['keypoint_quality_2d'].apply(lambda x: np.nanmean(x)),
         bins=bins,
         kde=False
     )
@@ -517,8 +517,8 @@ def mean_keypoint_quality_pose_quality_scatter(
             filename_extension
         )
     sns_plot = sns.scatterplot(
-        x=df['keypoint_quality'].apply(lambda x: np.nanmean(x)),
-        y=df['pose_quality']
+        x=df['keypoint_quality_2d'].apply(lambda x: np.nanmean(x)),
+        y=df['pose_quality_2d']
     )
     plt.xlabel('Mean keypoint quality')
     plt.ylabel('Pose quality')
@@ -669,11 +669,11 @@ def pose_pair_score_heatmap_timestamp_camera_pair(
         logger.warn('No pose pairs meet score criteria')
         return
     df = df.sort_index()
-    pose_ids_a = df.index.get_level_values('pose_id_a').unique().sort_values().tolist()
-    pose_ids_b = df.index.get_level_values('pose_id_b').unique().sort_values().tolist()
+    pose_ids_a = df.index.get_level_values('pose_id_2d_a').unique().sort_values().tolist()
+    pose_ids_b = df.index.get_level_values('pose_id_2d_b').unique().sort_values().tolist()
     if pose_label_map_a is None:
         if 'track_label_a' in df.columns:
-            track_labels_a = df['track_label_a'].reset_index(level='pose_id_b', drop=True).drop_duplicates()
+            track_labels_a = df['track_label_a'].reset_index(level='pose_id_2d_b', drop=True).drop_duplicates()
             pose_labels_a = [track_labels_a.loc[pose_id] for pose_id in pose_ids_a]
         elif len(pose_ids_a) <= 26:
             pose_labels_a = string.ascii_uppercase[:len(pose_ids_a)]
@@ -682,19 +682,19 @@ def pose_pair_score_heatmap_timestamp_camera_pair(
         pose_label_map_a = dict(zip(pose_ids_a, pose_labels_a))
     if pose_label_map_b is None:
         if 'track_label_b' in df.columns:
-            track_labels_b = df['track_label_b'].reset_index(level='pose_id_a', drop=True).drop_duplicates()
+            track_labels_b = df['track_label_b'].reset_index(level='pose_id_2d_a', drop=True).drop_duplicates()
             pose_labels_b = [track_labels_b.loc[pose_id] for pose_id in pose_ids_b]
         elif len(pose_ids_b) <= 26:
             pose_labels_b = string.ascii_uppercase[:len(pose_ids_b)]
         else:
             pose_labels_b = range(len(pose_ids_b))
         pose_label_map_b = dict(zip(pose_ids_b, pose_labels_b))
-    scores_df=df.reset_index().pivot(index='pose_id_a', columns='pose_id_b', values='score')
+    scores_df=df.reset_index().pivot(index='pose_id_2d_a', columns='pose_id_2d_b', values='score')
     scores_df.rename(index=pose_label_map_a, inplace=True)
     scores_df.rename(columns=pose_label_map_b, inplace=True)
     scores_df.sort_index(axis=0, inplace=True)
     scores_df.sort_index(axis=1, inplace=True)
-    matches_df=df.reset_index().pivot(index='pose_id_a', columns='pose_id_b', values='match')
+    matches_df=df.reset_index().pivot(index='pose_id_2d_a', columns='pose_id_2d_b', values='match')
     matches_df.rename(index=pose_label_map_a, inplace=True)
     matches_df.rename(columns=pose_label_map_b, inplace=True)
     matches_df.sort_index(axis=0, inplace=True)
@@ -917,7 +917,7 @@ def pose_track_timelines(
             filename_extension
         )
     if color_by_pose_quality:
-        hue=df['pose_quality']
+        hue=df['pose_quality_2d']
     else:
         hue=None
     sns_plot = sns.scatterplot(

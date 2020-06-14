@@ -4,8 +4,6 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Consistently add `_2d` or `_3d` to variable names and field names which could be either
-* Consistent add `_local` to IDs that only exist locally (not on Honeycomb)
 * Consolidate `search_[object]s` functions into one function that takes mutation name and id field name as argument
 * Add progress bar option to `generate_pose_tracks()`
 * Consistently set default algorithm parameters to values that seem to have been working the best

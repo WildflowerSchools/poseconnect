@@ -161,31 +161,31 @@ def fetch_2d_pose_data(
     logger.info('Parsing {} returned poses'.format(len(result)))
     for datum in result:
         data.append({
-            'pose_id': datum.get('pose_id'),
+            'pose_id_2d': datum.get('pose_id'),
             'timestamp': datum.get('timestamp'),
             'camera_id': (datum.get('camera') if datum.get('camera') is not None else {}).get('device_id'),
-            'track_label': datum.get('track_label'),
+            'track_label_2d': datum.get('track_label'),
             'person_id': (datum.get('person') if datum.get('person') is not None else {}).get('person_id'),
             'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id'),
             'pose_model_id': (datum.get('pose_model') if datum.get('pose_model') is not None else {}).get('pose_model_id'),
-            'keypoint_coordinates': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')], dtype=np.float),
-            'keypoint_quality': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')], dtype=np.float),
-            'pose_quality': datum.get('quality')
+            'keypoint_coordinates_2d': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')], dtype=np.float),
+            'keypoint_quality_2d': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')], dtype=np.float),
+            'pose_quality_2d': datum.get('quality')
         })
     poses_2d_df = pd.DataFrame(data)
-    poses_2d_df['keypoint_coordinates'] = poses_2d_df['keypoint_coordinates'].apply(lambda x: np.where(x == 0.0, np.nan, x))
+    poses_2d_df['keypoint_coordinates_2d'] = poses_2d_df['keypoint_coordinates_2d'].apply(lambda x: np.where(x == 0.0, np.nan, x))
     poses_2d_df['timestamp'] = pd.to_datetime(poses_2d_df['timestamp'])
     if poses_2d_df['pose_model_id'].nunique() > 1:
         raise ValueError('Returned poses are associated with multiple pose models')
     if (poses_2d_df.groupby(['timestamp', 'camera_id'])['inference_id'].nunique() > 1).any():
         raise ValueError('Returned poses have multiple inference IDs for some camera IDs at some timestamps')
-    poses_2d_df.set_index('pose_id', inplace=True)
+    poses_2d_df.set_index('pose_id_2d', inplace=True)
     return_columns = [
         'timestamp',
         'camera_id'
     ]
     if return_track_label:
-        return_columns.append('track_label')
+        return_columns.append('track_label_2d')
     if return_person_id:
         return_columns.append('person_id')
     if return_inference_id:
@@ -193,11 +193,11 @@ def fetch_2d_pose_data(
     if return_pose_model_id:
         return_columns.append('pose_model_id')
     return_columns.extend([
-        'keypoint_coordinates',
-        'keypoint_quality'
+        'keypoint_coordinates_2d',
+        'keypoint_quality_2d'
     ])
     if return_pose_quality:
-        return_columns.append('pose_quality')
+        return_columns.append('pose_quality_2d')
     poses_2d_df = poses_2d_df.reindex(columns=return_columns)
     return poses_2d_df
 
@@ -447,7 +447,7 @@ def fetch_pose_model_id(
     return None
 
 def fetch_pose_model(
-    pose_id,
+    pose_id_2d,
     uri=None,
     token_uri=None,
     audience=None,
@@ -468,7 +468,7 @@ def fetch_pose_model(
         arguments={
             'pose_id': {
                 'type': 'ID!',
-                'value': pose_id
+                'value': pose_id_2d
             }
         },
         return_object=[
@@ -869,20 +869,20 @@ def fetch_2d_pose_data_from_local_json(
     parsed_data = list()
     for datum in data:
         parsed_data.append({
-            'pose_id': uuid4().hex,
+            'pose_id_2d': uuid4().hex,
             'timestamp': datum.get('timestamp'),
             'camera_id': datum.get('camera'),
-            'track_label': datum.get('track_label'),
+            'track_label_2d': datum.get('track_label'),
             'pose_model_id': datum.get('pose_model'),
-            'keypoint_coordinates': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')]),
-            'keypoint_quality': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')]),
-            'pose_quality': datum.get('quality')
+            'keypoint_coordinates_2d': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')]),
+            'keypoint_quality_2d': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')]),
+            'pose_quality_2d': datum.get('quality')
         })
     poses_2d_df = pd.DataFrame(parsed_data)
     poses_2d_df['timestamp'] = pd.to_datetime(poses_2d_df['timestamp'])
     if poses_2d_df['pose_model_id'].nunique() > 1:
         raise ValueError('Returned poses are associated with multiple pose models')
-    poses_2d_df.set_index('pose_id', inplace=True)
+    poses_2d_df.set_index('pose_id_2d', inplace=True)
     return poses_2d_df
 
 def create_inference_execution(
@@ -986,7 +986,7 @@ def write_3d_pose_data(
         'coordinate_space_id',
         'pose_model_id',
         'keypoint_coordinates_3d',
-        'pose_2d_ids',
+        'pose_ids_2d',
         'source_id',
         'source_type'
     ])
@@ -995,7 +995,7 @@ def write_3d_pose_data(
             'coordinate_space_id': 'coordinate_space',
             'pose_model_id': 'pose_model',
             'keypoint_coordinates_3d': 'keypoints',
-            'pose_2d_ids': 'poses_2d',
+            'pose_ids_2d': 'poses_2d',
             'source_id': 'source'
         },
         inplace=True
@@ -1023,10 +1023,10 @@ def write_3d_pose_data(
         chunk_size=chunk_size
     )
     try:
-        pose_ids = [datum['pose_id'] for datum in result]
+        pose_ids_3d = [datum['pose_id'] for datum in result]
     except:
         raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
-    return pose_ids
+    return pose_ids_3d
 
 def fetch_3d_pose_data(
     start=None,
@@ -1142,7 +1142,7 @@ def fetch_3d_pose_data(
             'pose_id_3d': datum.get('pose_id'),
             'timestamp': datum.get('timestamp'),
             'track_label_3d': datum.get('track_label'),
-            'poses_2d': datum.get('poses_2d'),
+            'pose_ids_2d': datum.get('poses_2d'),
             'person_id': (datum.get('person') if datum.get('person') is not None else {}).get('person_id'),
             'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id'),
             'pose_model_id': (datum.get('pose_model') if datum.get('pose_model') is not None else {}).get('pose_model_id'),
@@ -1164,7 +1164,7 @@ def fetch_3d_pose_data(
     if return_track_label:
         return_columns.append('track_label_3d')
     if return_poses_2d:
-        return_columns.append('poses_2d')
+        return_columns.append('pose_ids_2d')
     if return_person_id:
         return_columns.append('person_id')
     if return_inference_id:
@@ -1230,10 +1230,10 @@ def write_3d_pose_tracks(
 ):
     poses_3d_df_copy = poses_3d_df.copy()
     current_index_name = poses_3d_df_copy.index.name
-    poses_3d_df_copy = poses_3d_df_copy.reset_index().rename(columns={current_index_name: 'pose_3d_id'})
+    poses_3d_df_copy = poses_3d_df_copy.reset_index().rename(columns={current_index_name: 'pose_id_3d'})
     pose_tracks_3d_df = poses_3d_df_copy.groupby('pose_track_3d_id').agg(
         poses_3d = pd.NamedAgg(
-            column='pose_3d_id',
+            column='pose_id_3d',
             aggfunc = lambda x: x.tolist()
         )
     )
@@ -1325,14 +1325,14 @@ def fetch_3d_pose_track_data(
     for datum in result:
         data.append({
             'pose_track_3d_id': datum.get('pose_track_id'),
-            'pose_3d_ids': datum.get('poses_3d'),
+            'pose_id_3ds': datum.get('poses_3d'),
             'track_label_3d': datum.get('track_label'),
             'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id')
         })
     pose_tracks_3d_df = pd.DataFrame(data)
     pose_tracks_3d_df.set_index('pose_track_3d_id', inplace=True)
     return_columns = [
-        'pose_3d_ids'
+        'pose_id_3ds'
     ]
     if return_track_label:
         return_columns.append('track_label_3d')

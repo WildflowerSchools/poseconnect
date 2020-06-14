@@ -11,10 +11,10 @@ def filter_keypoints_by_quality(
     max_keypoint_quality=None
 ):
     poses_2d_df_filtered = poses_2d_df.copy()
-    keypoint_coordinate_arrays = poses_2d_df_filtered['keypoint_coordinates'].values
+    keypoint_coordinate_arrays = poses_2d_df_filtered['keypoint_coordinates_2d'].values
     num_keypoint_coordinate_arrays = len(keypoint_coordinate_arrays)
     keypoint_coordinates = np.concatenate(keypoint_coordinate_arrays, axis = 0)
-    keypoint_quality_arrays = poses_2d_df_filtered['keypoint_quality'].values
+    keypoint_quality_arrays = poses_2d_df_filtered['keypoint_quality_2d'].values
     num_keypoint_quality_arrays = len(keypoint_quality_arrays)
     keypoint_quality = np.concatenate(keypoint_quality_arrays)
     if num_keypoint_coordinate_arrays != num_keypoint_quality_arrays:
@@ -39,15 +39,15 @@ def filter_keypoints_by_quality(
         )
         keypoint_coordinates[mask] = np.array(num_spatial_dimensions_per_keypoint*[np.nan])
         keypoint_quality[mask] = np.nan
-    poses_2d_df_filtered['keypoint_coordinates'] = np.split(keypoint_coordinates, num_keypoint_coordinate_arrays)
-    poses_2d_df_filtered['keypoint_quality'] = np.split(keypoint_quality, num_keypoint_quality_arrays)
+    poses_2d_df_filtered['keypoint_coordinates_2d'] = np.split(keypoint_coordinates, num_keypoint_coordinate_arrays)
+    poses_2d_df_filtered['keypoint_quality_2d'] = np.split(keypoint_quality, num_keypoint_quality_arrays)
     return poses_2d_df_filtered
 
 def remove_empty_2d_poses(
     poses_2d_df
 ):
     poses_2d_df_filtered = poses_2d_df.copy()
-    non_empty = poses_2d_df['keypoint_coordinates'].apply(
+    non_empty = poses_2d_df['keypoint_coordinates_2d'].apply(
         lambda x: np.any(np.all(np.isfinite(x), axis=1))
     )
     poses_2d_df_filtered = poses_2d_df_filtered.loc[non_empty].copy()
@@ -59,7 +59,7 @@ def filter_poses_by_num_valid_keypoints(
     max_num_keypoints=None
 ):
     poses_2d_df_filtered = poses_2d_df.copy()
-    num_keypoints = poses_2d_df['keypoint_quality'].apply(
+    num_keypoints = poses_2d_df['keypoint_quality_2d'].apply(
         lambda x: np.count_nonzero(~np.isnan(x))
     )
     if min_num_keypoints is not None:
@@ -75,9 +75,9 @@ def filter_poses_by_quality(
 ):
     poses_2d_df_filtered = poses_2d_df.copy()
     if min_pose_quality is not None:
-        poses_2d_df_filtered = poses_2d_df_filtered.loc[poses_2d_df_filtered['pose_quality'] >= min_pose_quality]
+        poses_2d_df_filtered = poses_2d_df_filtered.loc[poses_2d_df_filtered['pose_quality_2d'] >= min_pose_quality]
     if max_pose_quality is not None:
-        poses_2d_df_filtered = poses_2d_df_filtered.loc[poses_2d_df_filtered['pose_quality'] <= max_pose_quality]
+        poses_2d_df_filtered = poses_2d_df_filtered.loc[poses_2d_df_filtered['pose_quality_2d'] <= max_pose_quality]
     return poses_2d_df_filtered
 
 def filter_pose_pairs_by_score(
@@ -126,10 +126,10 @@ def remove_empty_reprojected_2d_poses(
     pose_pairs_2d_df
 ):
     pose_pairs_2d_df_filtered = pose_pairs_2d_df.copy()
-    non_empty_a = pose_pairs_2d_df['keypoint_coordinates_a_reprojected'].apply(
+    non_empty_a = pose_pairs_2d_df['keypoint_coordinates_2d_a_reprojected'].apply(
         lambda x: np.any(np.all(np.isfinite(x), axis=1))
     )
-    non_empty_b = pose_pairs_2d_df['keypoint_coordinates_b_reprojected'].apply(
+    non_empty_b = pose_pairs_2d_df['keypoint_coordinates_2d_b_reprojected'].apply(
         lambda x: np.any(np.all(np.isfinite(x), axis=1))
     )
     pose_pairs_2d_df_filtered = pose_pairs_2d_df_filtered.loc[non_empty_a & non_empty_b].copy()
@@ -246,7 +246,7 @@ def select_poses(
         camera_id_from_camera_name_filter = (poses_2d_df['camera_id'] == camera_id_from_camera_name)
         filter_list.append(camera_id_from_camera_name_filter)
     if track_label is not None:
-        track_label_filter = (poses_2d_df['track_label'] == track_label)
+        track_label_filter = (poses_2d_df['track_label_2d'] == track_label)
         filter_list.append(track_label_filter)
     combined_filter = np.bitwise_and.reduce(filter_list)
     poses_2d_df_selected = poses_2d_df.loc[combined_filter].copy()
@@ -299,10 +299,10 @@ def select_pose_pairs(
 ):
     filter_list = list()
     if pose_id_a is not None:
-        pose_id_a_filter = (pose_pairs_2d_df.index.get_level_values('pose_id_a') == pose_id_a)
+        pose_id_a_filter = (pose_pairs_2d_df.index.get_level_values('pose_id_2d_a') == pose_id_a)
         filter_list.append(pose_id_a_filter)
     if pose_id_b is not None:
-        pose_id_b_filter = (pose_pairs_2d_df.index.get_level_values('pose_id_b') == pose_id_b)
+        pose_id_b_filter = (pose_pairs_2d_df.index.get_level_values('pose_id_2d_b') == pose_id_b)
         filter_list.append(pose_id_b_filter)
     if timestamp is not None:
         timestamp_pandas = pd.to_datetime(timestamp, utc=True)
@@ -347,10 +347,10 @@ def select_pose_pairs(
         camera_id_from_camera_name_b_filter = (pose_pairs_2d_df['camera_id_b'] == camera_id_from_camera_name_b)
         filter_list.append(camera_id_from_camera_name_b_filter)
     if track_label_a is not None:
-        track_label_a_filter = (pose_pairs_2d_df['track_label_a'] == track_label_a)
+        track_label_a_filter = (pose_pairs_2d_df['track_label_2d_a'] == track_label_a)
         filter_list.append(track_label_a_filter)
     if track_label_b is not None:
-        track_label_b_filter = (pose_pairs_2d_df['track_label_b'] == track_label_b)
+        track_label_b_filter = (pose_pairs_2d_df['track_label_2d_b'] == track_label_b)
         filter_list.append(track_label_b_filter)
     combined_filter = np.bitwise_and.reduce(filter_list)
     pose_pairs_2d_df_selected = pose_pairs_2d_df.loc[combined_filter].copy()
