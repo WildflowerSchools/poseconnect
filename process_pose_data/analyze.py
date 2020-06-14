@@ -140,24 +140,24 @@ def reconstruct_poses_3d(
         else:
             tqdm.pandas()
         # poses_3d_df = poses_2d_df.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial, profile_data=profile_data)
-        poses_3d_df = poses_2d_df.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial)
+        poses_3d_local_ids_df = poses_2d_df.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial)
     else:
         # poses_3d_df = poses_2d_df.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial, profile_data=profile_data)
-        poses_3d_df = poses_2d_df.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial)
+        poses_3d_local_ids_df = poses_2d_df.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial)
     elapsed_time = time.time() - start_time
     # if profile:
     #     profile_data['total_time'] = elapsed_time
     logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
-        len(poses_3d_df),
+        len(poses_3d_local_ids_df),
         elapsed_time,
         1000*elapsed_time/num_frames
     ))
-    poses_3d_df.reset_index('timestamp', drop=True, inplace=True)
+    poses_3d_local_ids_df.reset_index('timestamp', drop=True, inplace=True)
     # if profile:
     #     return poses_3d_df, profile_data
     # else:
     #     return poses_3d_df
-    return poses_3d_df
+    return poses_3d_local_ids_df
 
 def extract_coordinate_space_id_from_camera_calibrations(camera_calibrations):
     coordinate_space_ids = set([camera_calibration.get('space_id') for camera_calibration in camera_calibrations.values()])
@@ -528,7 +528,7 @@ def reconstruct_poses_3d_timestamp(
     # logger.debug('Generating 3D poses across camera pairs')
     # if profile_data is not None:
     #     start_time=time.time()
-    poses_3d_df_timestamp = generate_3d_poses_timestamp(
+    poses_3d_local_ids_df_timestamp = generate_3d_poses_timestamp(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
         coordinate_space_id=coordinate_space_id,
         # evaluation_function=pose_3d_graph_evaluation_function,
@@ -542,8 +542,8 @@ def reconstruct_poses_3d_timestamp(
     # logger.debug('{} 3D poses generated'.format(
     #     len(poses_3d_df_timestamp)
     # ))
-    poses_3d_df_timestamp.set_index('pose_3d_id', inplace=True)
-    return poses_3d_df_timestamp
+    poses_3d_local_ids_df_timestamp.set_index('pose_3d_local_id', inplace=True)
+    return poses_3d_local_ids_df_timestamp
 
 # def filter_by_best_match_and_generate_3d_poses_timestamp(
 #     pose_pairs_2d_df_timestamp,
@@ -1083,13 +1083,13 @@ def generate_3d_poses_timestamp(
         # evaluation_function=evaluation_function,
         max_pose_3d_dispersion=max_pose_3d_dispersion
     )
-    pose_3d_ids = list()
+    pose_3d_local_ids = list()
     keypoint_coordinates_3d = list()
     pose_2d_ids = list()
     if include_track_labels:
         track_labels = list()
     for subgraph in subgraph_list:
-        pose_3d_ids.append(uuid4().hex)
+        pose_3d_local_ids.append(uuid4().hex)
         keypoint_coordinates_3d_list = list()
         track_label_list = list()
         pose_2d_ids_list = list()
@@ -1110,8 +1110,8 @@ def generate_3d_poses_timestamp(
         if include_track_labels:
             track_labels.append(track_label_list)
     if include_track_labels:
-        pose_pairs_3d_df_timestamp = pd.DataFrame({
-            'pose_3d_id': pose_3d_ids,
+        poses_3d_local_ids_df_timestamp = pd.DataFrame({
+            'pose_3d_local_id': pose_3d_local_ids,
             'timestamp': timestamp,
             # 'match_group_label': list(range(len(pose_3d_ids))),
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
@@ -1120,15 +1120,15 @@ def generate_3d_poses_timestamp(
             'track_labels': track_labels
         })
     else:
-        pose_pairs_3d_df_timestamp = pd.DataFrame({
-            'pose_3d_id': pose_3d_ids,
+        poses_3d_local_ids_df_timestamp = pd.DataFrame({
+            'pose_3d_local_id': pose_3d_local_ids,
             'timestamp': timestamp,
             # 'match_group_label': list(range(len(pose_3d_ids))),
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
             'coordinate_space_id': coordinate_space_id,
             'pose_2d_ids': pose_2d_ids
         })
-    return pose_pairs_3d_df_timestamp
+    return poses_3d_local_ids_df_timestamp
 
 def generate_pose_graph(
     pose_pairs_2d_df_timestamp,
