@@ -108,6 +108,7 @@ def pose_3d_dispersion(pose_graph):
 
 def reconstruct_poses_3d(
     poses_2d_df,
+    pose_model_id=None,
     camera_calibrations=None,
     min_keypoint_quality=None,
     min_num_keypoints=None,
@@ -118,6 +119,8 @@ def reconstruct_poses_3d(
     pose_pair_score_pixel_distance_scale=5.0,
     pose_pair_score_summary_method='rms',
     pose_3d_limits=None,
+    room_x_limits=None,
+    room_y_limits=None,
     pose_3d_graph_initial_edge_threshold=2,
     pose_3d_graph_evaluation_function=pose_3d_dispersion,
     pose_3d_graph_min_evaluation_score=None,
@@ -152,6 +155,23 @@ def reconstruct_poses_3d(
                 break
     if len(missing_cameras) > 0:
         poses_2d_df = poses_2d_df.loc[~poses_2d_df['camera_id'].isin(missing_cameras)]
+    if pose_3d_limits is None:
+        if room_x_limits is None or room_y_limits is None:
+            raise ValueError('3D pose spatial limits no specified and room boundaries not specified')
+        if pose_model_id is None:
+            if 'pose_model_id' not in poses_2d_df.columns:
+                raise ValueError('3D pose spatial limits not specified and pose model ID not inclued in 2D pose data')
+            pose_model_ids = poses_2d_df['pose_model_id'].unique()
+            if len(pose_model_ids) > 1:
+                raise ValueError('Multiple pose model IDs found in 2D pose data')
+            pose_model_id = pose_model_ids[0]
+        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(pose_model_id)
+        pose_model_name = pose_model.get('model_name')
+        pose_3d_limits = pose_3d_limits_by_pose_model(
+            room_x_limits=room_x_limits,
+            room_y_limits=room_y_limits,
+            pose_model_name=pose_model_name
+        )
     reconstruct_poses_3d_timestamp_partial = partial(
         reconstruct_poses_3d_timestamp,
         camera_calibrations=camera_calibrations,
