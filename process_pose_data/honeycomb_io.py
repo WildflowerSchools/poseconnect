@@ -172,14 +172,14 @@ def fetch_2d_pose_data(
             'keypoint_quality': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')], dtype=np.float),
             'pose_quality': datum.get('quality')
         })
-    df = pd.DataFrame(data)
-    df['keypoint_coordinates'] = df['keypoint_coordinates'].apply(lambda x: np.where(x == 0.0, np.nan, x))
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    if df['pose_model_id'].nunique() > 1:
+    poses_2d_df = pd.DataFrame(data)
+    poses_2d_df['keypoint_coordinates'] = poses_2d_df['keypoint_coordinates'].apply(lambda x: np.where(x == 0.0, np.nan, x))
+    poses_2d_df['timestamp'] = pd.to_datetime(poses_2d_df['timestamp'])
+    if poses_2d_df['pose_model_id'].nunique() > 1:
         raise ValueError('Returned poses are associated with multiple pose models')
-    if (df.groupby(['timestamp', 'camera_id'])['inference_id'].nunique() > 1).any():
+    if (poses_2d_df.groupby(['timestamp', 'camera_id'])['inference_id'].nunique() > 1).any():
         raise ValueError('Returned poses have multiple inference IDs for some camera IDs at some timestamps')
-    df.set_index('pose_id', inplace=True)
+    poses_2d_df.set_index('pose_id', inplace=True)
     return_columns = [
         'timestamp',
         'camera_id'
@@ -198,8 +198,8 @@ def fetch_2d_pose_data(
     ])
     if return_pose_quality:
         return_columns.append('pose_quality')
-    df = df.reindex(columns=return_columns)
-    return df
+    poses_2d_df = poses_2d_df.reindex(columns=return_columns)
+    return poses_2d_df
 
 def fetch_camera_ids_from_environment(
     start=None,
@@ -878,12 +878,12 @@ def fetch_2d_pose_data_from_local_json(
             'keypoint_quality': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')]),
             'pose_quality': datum.get('quality')
         })
-    df = pd.DataFrame(parsed_data)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    if df['pose_model_id'].nunique() > 1:
+    poses_2d_df = pd.DataFrame(parsed_data)
+    poses_2d_df['timestamp'] = pd.to_datetime(poses_2d_df['timestamp'])
+    if poses_2d_df['pose_model_id'].nunique() > 1:
         raise ValueError('Returned poses are associated with multiple pose models')
-    df.set_index('pose_id', inplace=True)
-    return df
+    poses_2d_df.set_index('pose_id', inplace=True)
+    return poses_2d_df
 
 def create_inference_execution(
     execution_start=None,
@@ -1151,13 +1151,13 @@ def fetch_3d_pose_data(
             'coordinate_space_id': datum.get('coordinate_space').get('space_id'),
             'pose_quality_3d': datum.get('quality')
         })
-    df = pd.DataFrame(data)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    if df['pose_model_id'].nunique() > 1:
+    poses_3d_df = pd.DataFrame(data)
+    poses_3d_df['timestamp'] = pd.to_datetime(poses_3d_df['timestamp'])
+    if poses_3d_df['pose_model_id'].nunique() > 1:
         raise ValueError('Returned poses are associated with multiple pose models')
-    if (df.groupby('timestamp')['inference_id'].nunique() > 1).any():
+    if (poses_3d_df.groupby('timestamp')['inference_id'].nunique() > 1).any():
         raise ValueError('Returned poses have multiple inference IDs for timestamps')
-    df.set_index('pose_id_3d', inplace=True)
+    poses_3d_df.set_index('pose_id_3d', inplace=True)
     return_columns = [
         'timestamp'
     ]
@@ -1178,8 +1178,8 @@ def fetch_3d_pose_data(
         return_columns.append('pose_quality_3d')
     if return_coordinate_space_id:
         return_columns.append('coordinate_space_id')
-    df = df.reindex(columns=return_columns)
-    return df
+    poses_3d_df = poses_3d_df.reindex(columns=return_columns)
+    return poses_3d_df
 
 def search_3d_poses(
     query_list,
@@ -1329,8 +1329,8 @@ def fetch_3d_pose_track_data(
             'track_label_3d': datum.get('track_label'),
             'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id')
         })
-    df = pd.DataFrame(data)
-    df.set_index('pose_track_3d_id', inplace=True)
+    pose_tracks_3d_df = pd.DataFrame(data)
+    pose_tracks_3d_df.set_index('pose_track_3d_id', inplace=True)
     return_columns = [
         'pose_3d_ids'
     ]
@@ -1338,8 +1338,8 @@ def fetch_3d_pose_track_data(
         return_columns.append('track_label_3d')
     if return_inference_id:
         return_columns.append('inference_id')
-    df = df.reindex(columns=return_columns)
-    return df
+    pose_tracks_3d_df = pose_tracks_3d_df.reindex(columns=return_columns)
+    return pose_tracks_3d_df
 
 def search_3d_pose_tracks(
     query_list,
