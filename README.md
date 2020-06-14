@@ -4,7 +4,7 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Consolidate `search_[object]s` functions into one function that takes mutation name and id field name as argument
+* Add function to fetch pose tracks from Honeycomb
 * Add progress bar option to `generate_pose_tracks()`
 * Consistently set default algorithm parameters to values that seem to have been working the best
 * Make functions handle empty poses (all keypoints `NaN`) more gracefully (e.g., `score_pose_pairs()`, `draw_pose_2d()`)
