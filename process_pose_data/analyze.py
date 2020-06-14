@@ -155,6 +155,7 @@ def reconstruct_poses_3d(
                 break
     if len(missing_cameras) > 0:
         poses_2d_df = poses_2d_df.loc[~poses_2d_df['camera_id'].isin(missing_cameras)]
+    coordinate_space_id = extract_coordinate_space_id_from_camera_calibrations(camera_calibrations)
     if pose_3d_limits is None:
         if room_x_limits is None or room_y_limits is None:
             raise ValueError('3D pose spatial limits no specified and room boundaries not specified')
@@ -175,6 +176,7 @@ def reconstruct_poses_3d(
     reconstruct_poses_3d_timestamp_partial = partial(
         reconstruct_poses_3d_timestamp,
         camera_calibrations=camera_calibrations,
+        coordinate_space_id=coordinate_space_id,
         min_keypoint_quality=min_keypoint_quality,
         min_num_keypoints=min_num_keypoints,
         min_pose_quality=min_pose_quality,
@@ -242,6 +244,13 @@ def reconstruct_poses_3d(
     # else:
     #     return poses_3d_df
     return poses_3d_df
+
+def extract_coordinate_space_id_from_camera_calibrations(camera_calibrations):
+    coordinate_space_ids = set([camera_calibration.get('space_id') for camera_calibration in camera_calibrations.values()])
+    if len(coordinate_space_ids) > 1:
+        raise ValueError('Multiple coordinate space IDs found in camera calibration data')
+    coordinate_space_id = list(coordinate_space_ids)[0]
+    return coordinate_space_id
 
 # def reconstruct_poses_3d_alt(
 #     poses_2d_df,
@@ -347,6 +356,7 @@ def reconstruct_poses_3d(
 def reconstruct_poses_3d_timestamp(
     poses_2d_df_timestamp,
     camera_calibrations,
+    coordinate_space_id,
     min_keypoint_quality=None,
     min_num_keypoints=None,
     min_pose_quality=None,
@@ -533,6 +543,7 @@ def reconstruct_poses_3d_timestamp(
     #     start_time=time.time()
     poses_3d_df_timestamp = generate_3d_poses_timestamp(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        coordinate_space_id=coordinate_space_id,
         evaluation_function=pose_3d_graph_evaluation_function,
         initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         min_evaluation_score=pose_3d_graph_min_evaluation_score,
@@ -710,7 +721,7 @@ def calculate_3d_poses(
     df = df.groupby(['camera_id_a', 'camera_id_b']).apply(
         lambda x: calculate_3d_poses_camera_pair(
             x,
-            camera_calibrations,
+            camera_calibrations=camera_calibrations,
             inplace=False
         )
     )
@@ -1066,6 +1077,7 @@ def extract_best_score_indices_timestamp_camera_pair(
 
 def generate_3d_poses_timestamp(
     pose_pairs_2d_df_timestamp,
+    coordinate_space_id,
     evaluation_function=pose_3d_dispersion,
     initial_edge_threshold=2,
     min_evaluation_score=None,
@@ -1121,6 +1133,7 @@ def generate_3d_poses_timestamp(
             'timestamp': timestamp,
             'match_group_label': list(range(len(pose_3d_ids))),
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
+            'coordinate_space_id': coordinate_space_id,
             'pose_2d_ids': pose_2d_ids,
             'track_labels': track_labels
         })
@@ -1130,6 +1143,7 @@ def generate_3d_poses_timestamp(
             'timestamp': timestamp,
             'match_group_label': list(range(len(pose_3d_ids))),
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
+            'coordinate_space_id': coordinate_space_id,
             'pose_2d_ids': pose_2d_ids
         })
     return pose_pairs_3d_df_timestamp

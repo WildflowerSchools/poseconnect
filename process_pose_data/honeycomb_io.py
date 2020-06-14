@@ -1038,6 +1038,8 @@ def fetch_3d_pose_data(
     inference_names=None,
     inference_models=None,
     inference_versions=None,
+    return_keypoint_quality=False,
+    return_coordinate_space_id=False,
     return_track_label=False,
     return_poses_2d=False,
     return_person_id=False,
@@ -1109,6 +1111,9 @@ def fetch_3d_pose_data(
             'coordinates',
             'quality'
         ]},
+        {'coordinate_space': [
+            'space_id'
+        ]},
         'quality',
         'poses_2d',
         {'person': [
@@ -1143,6 +1148,7 @@ def fetch_3d_pose_data(
             'pose_model_id': (datum.get('pose_model') if datum.get('pose_model') is not None else {}).get('pose_model_id'),
             'keypoint_coordinates_3d': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')], dtype=np.float),
             'keypoint_quality_3d': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')], dtype=np.float),
+            'coordinate_space_id': datum.get('coordinate_space').get('space_id'),
             'pose_quality_3d': datum.get('quality')
         })
     df = pd.DataFrame(data)
@@ -1165,12 +1171,13 @@ def fetch_3d_pose_data(
         return_columns.append('inference_id')
     if return_pose_model_id:
         return_columns.append('pose_model_id')
-    return_columns.extend([
-        'keypoint_coordinates_3d',
-        'keypoint_quality_3d'
-    ])
+    return_columns.append('keypoint_coordinates_3d')
+    if return_keypoint_quality:
+        return_columns.append('keypoint_quality_3d')
     if return_pose_quality:
         return_columns.append('pose_quality_3d')
+    if return_coordinate_space_id:
+        return_columns.append('coordinate_space_id')
     df = df.reindex(columns=return_columns)
     return df
 
