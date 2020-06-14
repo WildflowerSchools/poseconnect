@@ -1131,7 +1131,7 @@ def generate_3d_poses_timestamp(
         pose_pairs_3d_df_timestamp = pd.DataFrame({
             'pose_3d_id': pose_3d_ids,
             'timestamp': timestamp,
-            'match_group_label': list(range(len(pose_3d_ids))),
+            # 'match_group_label': list(range(len(pose_3d_ids))),
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
             'coordinate_space_id': coordinate_space_id,
             'pose_2d_ids': pose_2d_ids,
@@ -1141,7 +1141,7 @@ def generate_3d_poses_timestamp(
         pose_pairs_3d_df_timestamp = pd.DataFrame({
             'pose_3d_id': pose_3d_ids,
             'timestamp': timestamp,
-            'match_group_label': list(range(len(pose_3d_ids))),
+            # 'match_group_label': list(range(len(pose_3d_ids))),
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
             'coordinate_space_id': coordinate_space_id,
             'pose_2d_ids': pose_2d_ids

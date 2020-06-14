@@ -4,20 +4,19 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Remove `match_group_label` from 3D pose generation output?
 * Consistently add `_2d` or `_3d` to variable names and field names which could be either
 * Consistent add `_local` to IDs that only exist locally (not on Honeycomb)
-* Consistently set default algorithm parameters to values that seem to have been working the best
-* Fetch coordinate space ID rather than making user specify (for writing 3D poses)
-* Remove `match_group_label` from 3D pose generation output?
-* Add progress bar option to `generate_pose_tracks()`
 * Consolidate `search_[object]s` functions into one function that takes mutation name and id field name as argument
-* Reorder functions in `honeycomb_io`
-* Remove unused functions and methods
+* Add progress bar option to `generate_pose_tracks()`
+* Consistently set default algorithm parameters to values that seem to have been working the best
 * Make functions handle empty poses (all keypoints `NaN`) more gracefully (e.g., `score_pose_pairs()`, `draw_pose_2d()`)
-* Fix up `fetch` module to match design of `wf-video-io`
+* Fix up `honeycomb_io` module to match design of `wf-video-io`
   - Allow user to supply Honeycomb client
   - Clean up default setting
   - Other?
+  * Remove unused functions and methods
+* Reorder functions in `honeycomb_io`
 * Dockerize pipeline
 * Set up pipeline for Airflow
 * Make visualization functions handle missing fields (e.g., `pose_quality`) more gracefully
