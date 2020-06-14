@@ -22,14 +22,6 @@ KEYPOINT_CATEGORIES_BY_POSE_MODEL = {
     'BODY_25': ['head', 'neck', 'shoulder', 'elbow', 'hand', 'shoulder', 'elbow', 'hand', 'hip', 'hip', 'knee', 'foot', 'hip', 'knee', 'foot', 'head', 'head', 'head', 'head', 'foot', 'foot', 'foot', 'foot', 'foot', 'foot'],
 }
 
-def pose_3d_dispersion(pose_graph):
-    return np.linalg.norm(
-        np.std(
-            np.stack([centroid_3d for u, v, centroid_3d in pose_graph.edges(data='centroid_3d')]),
-            axis=0
-        )
-    )
-
 def reconstruct_poses_3d(
     poses_2d_df,
     pose_model_id=None,
@@ -46,9 +38,8 @@ def reconstruct_poses_3d(
     room_x_limits=None,
     room_y_limits=None,
     pose_3d_graph_initial_edge_threshold=2,
-    pose_3d_graph_evaluation_function=pose_3d_dispersion,
-    pose_3d_graph_min_evaluation_score=None,
-    pose_3d_graph_max_evaluation_score=0.40,
+    # pose_3d_graph_evaluation_function=pose_3d_dispersion,
+    pose_3d_graph_max_dispersion=0.40,
     include_track_labels=False,
     progress_bar=False,
     notebook=False
@@ -111,9 +102,8 @@ def reconstruct_poses_3d(
         pose_pair_score_summary_method=pose_pair_score_summary_method,
         pose_3d_limits=pose_3d_limits,
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
-        pose_3d_graph_evaluation_function=pose_3d_graph_evaluation_function,
-        pose_3d_graph_min_evaluation_score=pose_3d_graph_min_evaluation_score,
-        pose_3d_graph_max_evaluation_score=pose_3d_graph_max_evaluation_score,
+        # pose_3d_graph_evaluation_function=pose_3d_graph_evaluation_function,
+        pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
         include_track_labels=include_track_labels,
         validate_df=False
     )
@@ -266,8 +256,7 @@ def pose_3d_limits(
 #     pose_3d_limits=None,
 #     pose_3d_graph_initial_edge_threshold=2,
 #     pose_3d_graph_evaluation_function=pose_3d_dispersion,
-#     pose_3d_graph_min_evaluation_score=None,
-#     pose_3d_graph_max_evaluation_score=0.40,
+#     pose_3d_graph_max_dispersion=0.40,
 #     include_track_labels=False,
 #     progress_bar=False,
 #     notebook=False,
@@ -337,8 +326,7 @@ def pose_3d_limits(
 #         filter_by_best_match_and_generate_3d_poses_timestamp,
 #         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
 #         pose_3d_graph_evaluation_function=pose_3d_graph_evaluation_function,
-#         pose_3d_graph_min_evaluation_score=pose_3d_graph_min_evaluation_score,
-#         pose_3d_graph_max_evaluation_score=pose_3d_graph_max_evaluation_score,
+#         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
 #         include_track_labels=include_track_labels
 #     )
 #     poses_3d_df = pose_pairs_2d_df.groupby('timestamp').apply(
@@ -367,9 +355,8 @@ def reconstruct_poses_3d_timestamp(
     pose_pair_score_summary_method='rms',
     pose_3d_limits=None,
     pose_3d_graph_initial_edge_threshold=2,
-    pose_3d_graph_evaluation_function=pose_3d_dispersion,
-    pose_3d_graph_min_evaluation_score=None,
-    pose_3d_graph_max_evaluation_score=0.40,
+    # pose_3d_graph_evaluation_function=pose_3d_dispersion,
+    pose_3d_graph_max_dispersion=0.40,
     include_track_labels=False,
     validate_df=True
     # profile_data=None
@@ -544,10 +531,9 @@ def reconstruct_poses_3d_timestamp(
     poses_3d_df_timestamp = generate_3d_poses_timestamp(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
         coordinate_space_id=coordinate_space_id,
-        evaluation_function=pose_3d_graph_evaluation_function,
+        # evaluation_function=pose_3d_graph_evaluation_function,
         initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
-        min_evaluation_score=pose_3d_graph_min_evaluation_score,
-        max_evaluation_score=pose_3d_graph_max_evaluation_score,
+        max_pose_3d_dispersion=pose_3d_graph_max_dispersion,
         include_track_labels=include_track_labels,
         validate_df=validate_df
     )
@@ -563,8 +549,7 @@ def reconstruct_poses_3d_timestamp(
 #     pose_pairs_2d_df_timestamp,
 #     pose_3d_graph_initial_edge_threshold=2,
 #     pose_3d_graph_evaluation_function=pose_3d_dispersion,
-#     pose_3d_graph_min_evaluation_score=None,
-#     pose_3d_graph_max_evaluation_score=0.40,
+#     pose_3d_graph_max_dispersion=0.40,
 #     include_track_labels=False
 # ):
 #     pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_best_match(
@@ -574,8 +559,7 @@ def reconstruct_poses_3d_timestamp(
 #         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
 #         evaluation_function=pose_3d_graph_evaluation_function,
 #         initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
-#         min_evaluation_score=pose_3d_graph_min_evaluation_score,
-#         max_evaluation_score=pose_3d_graph_max_evaluation_score,
+#         max_pose_3d_dispersion=pose_3d_graph_max_dispersion,
 #         include_track_labels=include_track_labels,
 #         validate_df=False
 #     )
@@ -1078,10 +1062,9 @@ def extract_best_score_indices_timestamp_camera_pair(
 def generate_3d_poses_timestamp(
     pose_pairs_2d_df_timestamp,
     coordinate_space_id,
-    evaluation_function=pose_3d_dispersion,
+    # evaluation_function=pose_3d_dispersion,
     initial_edge_threshold=2,
-    min_evaluation_score=None,
-    max_evaluation_score=0.4,
+    max_pose_3d_dispersion=0.4,
     include_track_labels=False,
     validate_df=True
 ):
@@ -1097,9 +1080,8 @@ def generate_3d_poses_timestamp(
     subgraph_list = generate_k_edge_subgraph_list_iteratively(
         graph=pose_graph,
         initial_edge_threshold=initial_edge_threshold,
-        evaluation_function=evaluation_function,
-        min_evaluation_score=min_evaluation_score,
-        max_evaluation_score=max_evaluation_score
+        # evaluation_function=evaluation_function,
+        max_pose_3d_dispersion=max_pose_3d_dispersion
     )
     pose_3d_ids = list()
     keypoint_coordinates_3d = list()
@@ -1176,15 +1158,13 @@ def generate_pose_graph(
 #     df,
 #     evaluation_function=pose_3d_dispersion,
 #     initial_edge_threshold=2,
-#     min_evaluation_score=None,
-#     max_evaluation_score=0.4
+#     max_pose_3d_dispersion=0.4
 # ):
 #     extract_3d_poses_timestamp_partial = partial(
 #         extract_3d_poses_timestamp,
 #         evaluation_function=evaluation_function,
 #         initial_edge_threshold=initial_edge_threshold,
-#         min_evaluation_score=min_evaluation_score,
-#         max_evaluation_score=max_evaluation_score
+#         max_pose_3d_dispersion=max_pose_3d_dispersion
 #     )
 #     poses_3d_df = df.groupby('timestamp').apply(extract_3d_poses_timestamp_partial)
 #     poses_3d_df.reset_index(
@@ -1198,16 +1178,14 @@ def generate_pose_graph(
 #     df,
 #     evaluation_function=pose_3d_dispersion,
 #     initial_edge_threshold=2,
-#     min_evaluation_score=None,
-#     max_evaluation_score=0.4
+#     max_pose_3d_dispersion=0.4
 # ):
 #     df_copy = df.copy()
 #     df_copy = identify_match_groups_iteratively(
 #         df=df_copy,
 #         evaluation_function=evaluation_function,
 #         initial_edge_threshold=initial_edge_threshold,
-#         min_evaluation_score=min_evaluation_score,
-#         max_evaluation_score=max_evaluation_score
+#         max_pose_3d_dispersion=max_pose_3d_dispersion
 #     )
 #     poses_3d_timestamp = consolidate_poses_3d(df=df_copy)
 #     return poses_3d_timestamp
@@ -1243,8 +1221,7 @@ def generate_pose_graph(
 #     df,
 #     evaluation_function=pose_3d_dispersion,
 #     initial_edge_threshold=2,
-#     min_evaluation_score=None,
-#     max_evaluation_score=0.4
+#     max_pose_3d_dispersion=0.4
 # ):
 #     df_copy = df.copy()
 #     df_copy['group_match'] = False
@@ -1258,8 +1235,7 @@ def generate_pose_graph(
 #         graph=pose_graph,
 #         initial_edge_threshold=initial_edge_threshold,
 #         evaluation_function=evaluation_function,
-#         min_evaluation_score=min_evaluation_score,
-#         max_evaluation_score=max_evaluation_score
+#         max_pose_3d_dispersion=max_pose_3d_dispersion
 #     )
 #     for match_group_label, subgraph in enumerate(subgraph_list):
 #         pose_3d_id = uuid4().hex
@@ -1293,24 +1269,21 @@ def generate_pose_graph(
 #     graph,
 #     evaluation_function=pose_3d_dispersion,
 #     initial_edge_threshold=2,
-#     min_evaluation_score=None,
-#     max_evaluation_score=0.4
+#     max_pose_3d_dispersion=0.4
 # ):
 #     subgraph_list = generate_k_edge_subgraph_list_iteratively(
 #         graph=graph,
 #         evaluation_function=evaluation_function,
 #         initial_edge_threshold=initial_edge_threshold,
-#         min_evaluation_score=min_evaluation_score,
-#         max_evaluation_score=max_evaluation_score
+#         max_pose_3d_dispersion=max_pose_3d_dispersion
 #     )
 #     return nx.union_all(subgraph_list)
 
 def generate_k_edge_subgraph_list_iteratively(
     graph,
-    evaluation_function=pose_3d_dispersion,
+    # evaluation_function=pose_3d_dispersion,
     initial_edge_threshold=2,
-    min_evaluation_score=None,
-    max_evaluation_score=0.4
+    max_pose_3d_dispersion=0.4
 ):
     subgraph_list = list()
     for nodes in nx.k_edge_components(graph, initial_edge_threshold):
@@ -1319,21 +1292,28 @@ def generate_k_edge_subgraph_list_iteratively(
         subgraph = graph.subgraph(nodes)
         if subgraph.number_of_edges() ==0:
             continue
-        evaluation_score = evaluation_function(subgraph)
-        if (
-            (min_evaluation_score is None or evaluation_score >= min_evaluation_score) and
-            (max_evaluation_score is None or evaluation_score <= max_evaluation_score)
-        ):
+        dispersion = pose_3d_dispersion(subgraph)
+        # if (
+        #     (min_evaluation_score is None or evaluation_score >= min_evaluation_score) and
+        #     (max_evaluation_score is None or evaluation_score <= max_evaluation_score)
+        # ):
+        if max_pose_3d_dispersion is None or dispersion <= max_pose_3d_dispersion:
             subgraph_list.append(subgraph)
             continue
         subgraph_list.extend(generate_k_edge_subgraph_list_iteratively(
             graph=subgraph,
             initial_edge_threshold=initial_edge_threshold + 1,
-            evaluation_function=evaluation_function,
-            min_evaluation_score=min_evaluation_score,
-            max_evaluation_score=max_evaluation_score
+            max_pose_3d_dispersion=max_pose_3d_dispersion
         ))
     return subgraph_list
+
+def pose_3d_dispersion(pose_graph):
+    return np.linalg.norm(
+        np.std(
+            np.stack([centroid_3d for u, v, centroid_3d in pose_graph.edges(data='centroid_3d')]),
+            axis=0
+        )
+    )
 
 # def consolidate_poses_3d(
 #     df
