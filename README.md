@@ -4,7 +4,6 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Remove `match_group_label` from 3D pose generation output?
 * Consistently add `_2d` or `_3d` to variable names and field names which could be either
 * Consistent add `_local` to IDs that only exist locally (not on Honeycomb)
 * Consolidate `search_[object]s` functions into one function that takes mutation name and id field name as argument

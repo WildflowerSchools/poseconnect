@@ -22,82 +22,6 @@ KEYPOINT_CATEGORIES_BY_POSE_MODEL = {
     'BODY_25': ['head', 'neck', 'shoulder', 'elbow', 'hand', 'shoulder', 'elbow', 'hand', 'hip', 'hip', 'knee', 'foot', 'hip', 'knee', 'foot', 'head', 'head', 'head', 'head', 'foot', 'foot', 'foot', 'foot', 'foot', 'foot'],
 }
 
-def pose_3d_limits_by_pose_model(
-    room_x_limits,
-    room_y_limits,
-    pose_model_name,
-    floor_z=0.0,
-    foot_z_limits=(0.0, 1.0),
-    knee_z_limits=(0.0, 1.0),
-    hip_z_limits=(0.0, 1.5),
-    thorax_z_limits=(0.0, 1.7),
-    shoulder_z_limits=(0.0, 1.9),
-    elbow_z_limits=(0.0, 2.0),
-    hand_z_limits=(0.0, 3.0),
-    neck_z_limits=(0.0, 1.9),
-    head_z_limits=(0.0,2.0),
-    tolerance=0.2
-):
-    keypoint_categories = KEYPOINT_CATEGORIES_BY_POSE_MODEL[pose_model_name]
-    return pose_3d_limits(
-        room_x_limits=room_x_limits,
-        room_y_limits=room_y_limits,
-        keypoint_categories=keypoint_categories,
-        floor_z=floor_z,
-        foot_z_limits=foot_z_limits,
-        knee_z_limits=knee_z_limits,
-        hip_z_limits=hip_z_limits,
-        thorax_z_limits=thorax_z_limits,
-        shoulder_z_limits=shoulder_z_limits,
-        elbow_z_limits=elbow_z_limits,
-        hand_z_limits=hand_z_limits,
-        neck_z_limits=neck_z_limits,
-        head_z_limits=head_z_limits,
-        tolerance=tolerance
-    )
-
-def pose_3d_limits(
-    room_x_limits,
-    room_y_limits,
-    keypoint_categories,
-    floor_z=0.0,
-    foot_z_limits=(0.0, 1.0),
-    knee_z_limits=(0.0, 1.0),
-    hip_z_limits=(0.0, 1.5),
-    thorax_z_limits=(0.0, 1.7),
-    shoulder_z_limits=(0.0, 1.9),
-    elbow_z_limits=(0.0, 2.0),
-    hand_z_limits=(0.0, 3.0),
-    neck_z_limits=(0.0, 1.9),
-    head_z_limits=(0.0,2.0),
-    tolerance=0.2
-):
-    z_limits_dict = {
-        'foot': foot_z_limits,
-        'knee': knee_z_limits,
-        'hip': hip_z_limits,
-        'thorax': thorax_z_limits,
-        'shoulder': shoulder_z_limits,
-        'elbow': elbow_z_limits,
-        'hand': hand_z_limits,
-        'neck': neck_z_limits,
-        'head': head_z_limits
-    }
-    pose_3d_limits_min = list()
-    pose_3d_limits_max = list()
-    for keypoint_category in keypoint_categories:
-        pose_3d_limits_min.append([
-            room_x_limits[0],
-            room_y_limits[0],
-            floor_z + z_limits_dict[keypoint_category][0]
-        ])
-        pose_3d_limits_max.append([
-            room_x_limits[1],
-            room_y_limits[1],
-            floor_z + z_limits_dict[keypoint_category][1]
-        ])
-    return np.array([pose_3d_limits_min, pose_3d_limits_max]) + + np.array([[[-tolerance]], [[tolerance]]])
-
 def pose_3d_dispersion(pose_graph):
     return np.linalg.norm(
         np.std(
@@ -251,6 +175,82 @@ def extract_coordinate_space_id_from_camera_calibrations(camera_calibrations):
         raise ValueError('Multiple coordinate space IDs found in camera calibration data')
     coordinate_space_id = list(coordinate_space_ids)[0]
     return coordinate_space_id
+
+def pose_3d_limits_by_pose_model(
+    room_x_limits,
+    room_y_limits,
+    pose_model_name,
+    floor_z=0.0,
+    foot_z_limits=(0.0, 1.0),
+    knee_z_limits=(0.0, 1.0),
+    hip_z_limits=(0.0, 1.5),
+    thorax_z_limits=(0.0, 1.7),
+    shoulder_z_limits=(0.0, 1.9),
+    elbow_z_limits=(0.0, 2.0),
+    hand_z_limits=(0.0, 3.0),
+    neck_z_limits=(0.0, 1.9),
+    head_z_limits=(0.0,2.0),
+    tolerance=0.2
+):
+    keypoint_categories = KEYPOINT_CATEGORIES_BY_POSE_MODEL[pose_model_name]
+    return pose_3d_limits(
+        room_x_limits=room_x_limits,
+        room_y_limits=room_y_limits,
+        keypoint_categories=keypoint_categories,
+        floor_z=floor_z,
+        foot_z_limits=foot_z_limits,
+        knee_z_limits=knee_z_limits,
+        hip_z_limits=hip_z_limits,
+        thorax_z_limits=thorax_z_limits,
+        shoulder_z_limits=shoulder_z_limits,
+        elbow_z_limits=elbow_z_limits,
+        hand_z_limits=hand_z_limits,
+        neck_z_limits=neck_z_limits,
+        head_z_limits=head_z_limits,
+        tolerance=tolerance
+    )
+
+def pose_3d_limits(
+    room_x_limits,
+    room_y_limits,
+    keypoint_categories,
+    floor_z=0.0,
+    foot_z_limits=(0.0, 1.0),
+    knee_z_limits=(0.0, 1.0),
+    hip_z_limits=(0.0, 1.5),
+    thorax_z_limits=(0.0, 1.7),
+    shoulder_z_limits=(0.0, 1.9),
+    elbow_z_limits=(0.0, 2.0),
+    hand_z_limits=(0.0, 3.0),
+    neck_z_limits=(0.0, 1.9),
+    head_z_limits=(0.0,2.0),
+    tolerance=0.2
+):
+    z_limits_dict = {
+        'foot': foot_z_limits,
+        'knee': knee_z_limits,
+        'hip': hip_z_limits,
+        'thorax': thorax_z_limits,
+        'shoulder': shoulder_z_limits,
+        'elbow': elbow_z_limits,
+        'hand': hand_z_limits,
+        'neck': neck_z_limits,
+        'head': head_z_limits
+    }
+    pose_3d_limits_min = list()
+    pose_3d_limits_max = list()
+    for keypoint_category in keypoint_categories:
+        pose_3d_limits_min.append([
+            room_x_limits[0],
+            room_y_limits[0],
+            floor_z + z_limits_dict[keypoint_category][0]
+        ])
+        pose_3d_limits_max.append([
+            room_x_limits[1],
+            room_y_limits[1],
+            floor_z + z_limits_dict[keypoint_category][1]
+        ])
+    return np.array([pose_3d_limits_min, pose_3d_limits_max]) + + np.array([[[-tolerance]], [[tolerance]]])
 
 # def reconstruct_poses_3d_alt(
 #     poses_2d_df,
