@@ -52,8 +52,6 @@ def generate_pose_tracks(
         pose_tracks_3d.update(
             timestamp=current_timestamp,
             poses_3d=current_poses_3d
-            # max_match_distance=max_match_distance,
-            # max_iterations_since_last_match=max_iterations_since_last_match
         )
     for pose_track_3d_id, pose_track_3d in pose_tracks_3d.tracks().items():
         poses_3d_df_copy.loc[pose_track_3d.pose_3d_ids, 'pose_track_3d_id'] = pose_track_3d_id
@@ -101,8 +99,6 @@ class PoseTracks3D:
         self,
         timestamp,
         poses_3d
-        # max_match_distance=1.0,
-        # max_iterations_since_last_match=20
     ):
         self.predict(
             timestamp=timestamp
@@ -110,8 +106,6 @@ class PoseTracks3D:
         self.incorporate_observations(
             timestamp=timestamp,
             poses_3d=poses_3d
-            # max_match_distance=max_match_distance,
-            # max_iterations_since_last_match=max_iterations_since_last_match
         )
 
     def predict(
@@ -125,12 +119,9 @@ class PoseTracks3D:
         self,
         timestamp,
         poses_3d
-        # max_match_distance=1.0,
-        # max_iterations_since_last_match=20
     ):
         matches = self.match_observations_to_pose_tracks(
             poses_3d=poses_3d
-            # max_match_distance=max_match_distance
         )
         matched_pose_tracks = set(matches.keys())
         matched_poses = set(matches.values())
@@ -162,7 +153,6 @@ class PoseTracks3D:
     def match_observations_to_pose_tracks(
         self,
         poses_3d
-        # max_match_distance=1.0
     ):
         pose_track_3d_ids = self.active_tracks.keys()
         pose_3d_ids = poses_3d.keys()

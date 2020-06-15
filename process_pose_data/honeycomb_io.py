@@ -586,42 +586,6 @@ def fetch_inference_ids(
         return inference_ids
     return None
 
-# def search_2d_poses(
-#     query_list,
-#     return_data,
-#     chunk_size=100,
-#     uri=None,
-#     token_uri=None,
-#     audience=None,
-#     client_id=None,
-#     client_secret=None
-# ):
-#     client = minimal_honeycomb.MinimalHoneycombClient(
-#         uri=uri,
-#         token_uri=token_uri,
-#         audience=audience,
-#         client_id=client_id,
-#         client_secret=client_secret
-#     )
-#     logger.info('Searching for 2D poses that match the specified parameters')
-#     result = client.bulk_query(
-#         request_name='searchPoses2D',
-#         arguments={
-#             'query': {
-#                 'type': 'QueryExpression!',
-#                 'value': {
-#                     'operator': 'AND',
-#                     'children': query_list
-#                 }
-#             }
-#         },
-#         return_data=return_data,
-#         id_field_name = 'pose_id',
-#         chunk_size=chunk_size
-#     )
-#     logger.info('Fetched {} poses'.format(len(result)))
-#     return result
-
 def search_2d_poses(
     query_list,
     return_data,
@@ -1242,42 +1206,6 @@ def fetch_3d_pose_data(
     poses_3d_df = poses_3d_df.reindex(columns=return_columns)
     return poses_3d_df
 
-# def search_3d_poses(
-#     query_list,
-#     return_data,
-#     chunk_size=100,
-#     uri=None,
-#     token_uri=None,
-#     audience=None,
-#     client_id=None,
-#     client_secret=None
-# ):
-#     client = minimal_honeycomb.MinimalHoneycombClient(
-#         uri=uri,
-#         token_uri=token_uri,
-#         audience=audience,
-#         client_id=client_id,
-#         client_secret=client_secret
-#     )
-#     logger.info('Searching for 3D poses that match the specified parameters')
-#     result = client.bulk_query(
-#         request_name='searchPoses3D',
-#         arguments={
-#             'query': {
-#                 'type': 'QueryExpression!',
-#                 'value': {
-#                     'operator': 'AND',
-#                     'children': query_list
-#                 }
-#             }
-#         },
-#         return_data=return_data,
-#         id_field_name = 'pose_id',
-#         chunk_size=chunk_size
-#     )
-#     logger.info('Fetched {} poses'.format(len(result)))
-#     return result
-
 def search_3d_poses(
     query_list,
     return_data,
@@ -1426,42 +1354,6 @@ def fetch_3d_pose_track_data(
         return_columns.append('inference_id')
     pose_tracks_3d_df = pose_tracks_3d_df.reindex(columns=return_columns)
     return pose_tracks_3d_df
-
-# def search_3d_pose_tracks(
-#     query_list,
-#     return_data,
-#     chunk_size=100,
-#     uri=None,
-#     token_uri=None,
-#     audience=None,
-#     client_id=None,
-#     client_secret=None
-# ):
-#     client = minimal_honeycomb.MinimalHoneycombClient(
-#         uri=uri,
-#         token_uri=token_uri,
-#         audience=audience,
-#         client_id=client_id,
-#         client_secret=client_secret
-#     )
-#     logger.info('Searching for 3D pose tracks that match the specified parameters')
-#     result = client.bulk_query(
-#         request_name='searchPoseTracks3D',
-#         arguments={
-#             'query': {
-#                 'type': 'QueryExpression!',
-#                 'value': {
-#                     'operator': 'AND',
-#                     'children': query_list
-#                 }
-#             }
-#         },
-#         return_data=return_data,
-#         id_field_name = 'pose_track_id',
-#         chunk_size=chunk_size
-#     )
-#     logger.info('Fetched {} pose tracks'.format(len(result)))
-#     return result
 
 def search_3d_pose_tracks(
     query_list,
