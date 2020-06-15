@@ -4,7 +4,6 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Reorder functions
 * Bump version
 * Check setup script by installing in clean virtual environment
 * Dockerize pipeline
