@@ -5,17 +5,16 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 ## Task list
 
 * Add function to fetch pose tracks from Honeycomb
+* Reorder functions in `honeycomb_io`
+* Dockerize pipeline
+* Set up pipeline for Airflow
 * Add progress bar option to `generate_pose_tracks()`
-* Consistently set default algorithm parameters to values that seem to have been working the best
 * Make functions handle empty poses (all keypoints `NaN`) more gracefully (e.g., `score_pose_pairs()`, `draw_pose_2d()`)
 * Fix up `honeycomb_io` module to match design of `wf-video-io`
   - Allow user to supply Honeycomb client
   - Clean up default setting
   - Other?
   * Remove unused functions and methods
-* Reorder functions in `honeycomb_io`
-* Dockerize pipeline
-* Set up pipeline for Airflow
 * Make visualization functions handle missing fields (e.g., `pose_quality`) more gracefully
 * Figure out inconsistent behavior of `groupby(...).apply(...)` (under what conditions does it add grouping variables to index?)
 * For functions that act on dataframes, make it optional to check dataframe structure (e.g., only one timestamp and camera pair)
