@@ -4,8 +4,6 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Bump version
-* Check setup script by installing in clean virtual environment
 * Dockerize pipeline
 * Set up pipeline for Airflow
 * Add function to fetch pose tracks from Honeycomb
