@@ -16,6 +16,7 @@ BASE_DEPENDENCIES = [
     'numpy>=1.18.1',
     'networkx>=2.4',
     'tqdm>=4.42.0',
+    'opencv-python>=4.2.0.34',
     'python-slugify>=4.0.0',
     'matplotlib>=3.1.2',
     'seaborn>=0.10.0'
