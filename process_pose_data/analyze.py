@@ -1,409 +1,705 @@
+import process_pose_data.honeycomb_io
 import cv_utils
+import cv2 as cv
 import pandas as pd
 import numpy as np
+import networkx as nx
+import tqdm
+import tqdm.notebook
+from uuid import uuid4
 import logging
 import time
+import itertools
+from functools import partial
 
 logger = logging.getLogger(__name__)
 
-def filter_pose_tracks(
-    df,
-    min_pose_quality=None,
-    max_pose_quality=None,
-    min_keypoint_quality=None,
-    max_keypoint_quality=None,
-    min_num_poses_in_track=None,
-    inplace=False
-):
-    # Make copy of input dataframe if operation is not in place
-    if inplace:
-        df_filtered = df
-    else:
-        df_filtered = df.copy()
-    # Apply filters
-    if min_pose_quality is not None:
-        df_filtered = df_filtered.loc[df_filtered['pose_quality'] >= min_pose_quality]
-    if max_pose_quality is not None:
-        df_filtered = df_filtered.loc[df_filtered['pose_quality'] <= max_pose_quality]
-    if min_keypoint_quality is not None or max_keypoint_quality is not None:
-        keypoint_arrays = df_filtered['keypoint_array'].values
-        num_keypoint_arrays = len(keypoint_arrays)
-        keypoints = np.concatenate(keypoint_arrays, axis = 0)
-        keypoints_quality_arrays = df_filtered['keypoint_quality_array'].values
-        num_keypoints_quality_arrays = len(keypoints_quality_arrays)
-        keypoints_quality = np.concatenate(keypoints_quality_arrays)
-        if num_keypoint_arrays != num_keypoints_quality_arrays:
-            raise ValueError('Number of keypoint arrays ({}) does not match number of keypoint quality arrays ({})'.format(
-                num_keypoint_arrays,
-                num_keypoints_quality_arrays
-            ))
-        num_spatial_dimensions_per_keypoint = keypoints.shape[1]
-        if min_keypoint_quality is not None:
-            keypoints[np.less(keypoints_quality, min_keypoint_quality, where=~np.isnan(keypoints_quality))] = np.array(num_spatial_dimensions_per_keypoint*[np.nan])
-            keypoints_quality[np.less(keypoints_quality, min_keypoint_quality, where=~np.isnan(keypoints_quality))] = np.nan
-        if max_keypoint_quality is not None:
-            keypoints[np.greater(keypoints_quality, max_keypoint_quality, where=~np.isnan(keypoints_quality))] = np.array(num_spatial_dimensions_per_keypoint*[np.nan])
-            keypoints_quality[np.greater(keypoints_quality, max_keypoint_quality, where=~np.isnan(keypoints_quality))] = np.nan
-        df_filtered['keypoint_array'] = np.split(keypoints, num_keypoint_arrays)
-        df_filtered['keypoint_quality_array'] = np.split(keypoints_quality, num_keypoints_quality_arrays)
-    if min_num_poses_in_track is not None:
-        df_filtered = df.groupby(['camera_device_id', 'track_label']).filter(lambda x: len(x) >= min_num_poses_in_track)
-    if not inplace:
-        return df_filtered
+KEYPOINT_CATEGORIES_BY_POSE_MODEL = {
+    'COCO-17': ['head', 'head', 'head', 'head', 'head', 'shoulder', 'shoulder', 'elbow', 'elbow', 'hand', 'hand', 'hip', 'hip', 'knee', 'knee', 'foot', 'foot'],
+    'COCO-18': ['head', 'neck', 'shoulder', 'elbow', 'hand', 'shoulder', 'elbow', 'hand', 'hip', 'knee', 'foot', 'hip', 'knee', 'foot', 'head', 'head', 'head', 'head'],
+    'MPII-15': ['head', 'neck', 'shoulder', 'elbow', 'hand', 'shoulder', 'elbow', 'hand', 'hip', 'knee', 'foot', 'hip', 'knee', 'foot', 'thorax'],
+    'MPII-16': ['foot', 'knee', 'hip', 'hip', 'knee', 'foot', 'hip', 'thorax', 'neck', 'head', 'hand', 'elbow', 'shoulder', 'shoulder', 'elbow', 'hand'],
+    'BODY_25': ['head', 'neck', 'shoulder', 'elbow', 'hand', 'shoulder', 'elbow', 'hand', 'hip', 'hip', 'knee', 'foot', 'hip', 'knee', 'foot', 'head', 'head', 'head', 'head', 'foot', 'foot', 'foot', 'foot', 'foot', 'foot'],
+}
 
-def score_pose_track_matches(
-    df,
-    camera_info
+def reconstruct_poses_3d(
+    poses_2d_df,
+    pose_model_id=None,
+    camera_calibrations=None,
+    min_keypoint_quality=None,
+    min_num_keypoints=None,
+    min_pose_quality=None,
+    min_pose_pair_score=None,
+    max_pose_pair_score=25.0,
+    pose_pair_score_distance_method='pixels',
+    pose_pair_score_pixel_distance_scale=5.0,
+    pose_pair_score_summary_method='rms',
+    pose_3d_limits=None,
+    room_x_limits=None,
+    room_y_limits=None,
+    pose_3d_graph_initial_edge_threshold=2,
+    pose_3d_graph_max_dispersion=0.20,
+    include_track_labels=False,
+    progress_bar=False,
+    notebook=False
 ):
-    camera_device_ids = df['camera_device_id'].unique().tolist()
-    results = list()
-    for camera_index_a, camera_device_id_a in enumerate(camera_device_ids):
-        for camera_device_id_b in camera_device_ids[(camera_index_a + 1):]:
-            camera_name_a = df.loc[df['camera_device_id'] == camera_device_id_a, 'camera_name'][0]
-            camera_name_b = df.loc[df['camera_device_id'] == camera_device_id_b, 'camera_name'][0]
-            track_labels_a = df.loc[df['camera_device_id'] == camera_device_id_a, 'track_label'].unique().tolist()
-            track_labels_b = df.loc[df['camera_device_id'] == camera_device_id_b, 'track_label'].unique().tolist()
-            num_tracks_a = len(track_labels_a)
-            num_tracks_b = len(track_labels_b)
-            num_potential_matches = num_tracks_a*num_tracks_b
-            logger.info('Analyzing matches between {} tracks from {} and {} tracks from {} ({} potential matches)'.format(
-                num_tracks_a,
-                camera_name_a,
-                num_tracks_b,
-                camera_name_b,
-                num_potential_matches
-            ))
-            start_time = time.time()
-            for track_label_a in track_labels_a:
-                for track_label_b in track_labels_b:
-                    df_a = df.loc[
-                        (df['camera_device_id'] == camera_device_id_a) &
-                        (df['track_label'] == track_label_a)
-                    ].set_index('timestamp')
-                    df_b = df.loc[
-                        (df['camera_device_id'] == camera_device_id_b) &
-                        (df['track_label'] == track_label_b)
-                    ].set_index('timestamp')
-                    common_timestamps = df_a.index.intersection(df_b.index)
-                    num_common_frames = len(common_timestamps)
-                    if num_common_frames == 0:
-                        continue
-                    keypoints_a = np.concatenate(df_a.reindex(common_timestamps)['keypoint_array'].values)
-                    keypoints_b = np.concatenate(df_b.reindex(common_timestamps)['keypoint_array'].values)
-                    keypoints_a_undistorted = cv_utils.undistort_points(
-                        keypoints_a,
-                        camera_info[camera_device_id_a]['camera_matrix'],
-                        camera_info[camera_device_id_a]['distortion_coefficients']
-                    )
-                    keypoints_b_undistorted = cv_utils.undistort_points(
-                        keypoints_b,
-                        camera_info[camera_device_id_b]['camera_matrix'],
-                        camera_info[camera_device_id_b]['distortion_coefficients']
-                    )
-                    object_points = cv_utils.reconstruct_object_points_from_camera_poses(
-                        keypoints_a_undistorted,
-                        keypoints_b_undistorted,
-                        camera_info[camera_device_id_a]['camera_matrix'],
-                        camera_info[camera_device_id_a]['rotation_vector'],
-                        camera_info[camera_device_id_a]['translation_vector'],
-                        camera_info[camera_device_id_b]['rotation_vector'],
-                        camera_info[camera_device_id_b]['translation_vector']
-                    )
-                    keypoints_a_reprojected = cv_utils.project_points(
-                        object_points,
-                        camera_info[camera_device_id_a]['rotation_vector'],
-                        camera_info[camera_device_id_a]['translation_vector'],
-                        camera_info[camera_device_id_a]['camera_matrix'],
-                        camera_info[camera_device_id_a]['distortion_coefficients']
-                    )
-                    keypoints_b_reprojected = cv_utils.project_points(
-                        object_points,
-                        camera_info[camera_device_id_b]['rotation_vector'],
-                        camera_info[camera_device_id_b]['translation_vector'],
-                        camera_info[camera_device_id_b]['camera_matrix'],
-                        camera_info[camera_device_id_b]['distortion_coefficients']
-                    )
-                    diff_a = keypoints_a_reprojected - keypoints_a
-                    diff_b = keypoints_b_reprojected - keypoints_b
-                    diff_a_norms = np.linalg.norm(diff_a, axis=1)
-                    diff_b_norms = np.linalg.norm(diff_b, axis=1)
-                    diff_a_sum_squares = np.sum(np.square(diff_a), axis=1)
-                    diff_b_sum_squares = np.sum(np.square(diff_b), axis=1)
-                    mean_reproj_error_a = np.nanmean(diff_a_norms)
-                    mean_reproj_error_b = np.nanmean(diff_b_norms)
-                    root_mean_square_reproj_error_a = np.sqrt(np.nanmean(diff_a_sum_squares))
-                    root_mean_square_reproj_error_b = np.sqrt(np.nanmean(diff_b_sum_squares))
-                    median_reproj_error_a = np.nanmedian(diff_a_norms)
-                    median_reproj_error_b = np.nanmedian(diff_b_norms)
-                    root_median_square_reproj_error_a = np.sqrt(np.nanmedian(diff_a_sum_squares))
-                    root_median_square_reproj_error_b = np.sqrt(np.nanmedian(diff_b_sum_squares))
-                    results.append({
-                        'camera_device_id_a': camera_device_id_a,
-                        'camera_name_a': camera_name_a,
-                        'camera_device_id_b': camera_device_id_b,
-                        'camera_name_b': camera_name_b,
-                        'track_label_a': track_label_a,
-                        'track_label_b': track_label_b,
-                        'num_common_frames': num_common_frames,
-                        'mean_reproj_error_a': mean_reproj_error_a,
-                        'mean_reproj_error_b': mean_reproj_error_b,
-                        'root_mean_square_reproj_error_a': root_mean_square_reproj_error_a,
-                        'root_mean_square_reproj_error_b': root_mean_square_reproj_error_b,
-                        'median_reproj_error_a': median_reproj_error_a,
-                        'median_reproj_error_b': median_reproj_error_b,
-                        'root_median_square_reproj_error_a': root_median_square_reproj_error_a,
-                        'root_median_square_reproj_error_b': root_median_square_reproj_error_b
-                    })
-            elapsed_time = time.time() - start_time
-            logger.info('Scored {} potential matches in {:.3f} seconds ({:.1f} milliseconds per match)'.format(
-                num_potential_matches,
-                elapsed_time,
-                10**3*elapsed_time/num_potential_matches
-            ))
-    pose_tracks_3d_scored = pd.DataFrame(results)
-    pose_tracks_3d_scored.sort_values(
-        [
-            'camera_device_id_a',
-            'camera_device_id_b',
-            'track_label_a',
-            'track_label_b'
-        ],
+    camera_ids = poses_2d_df['camera_id'].unique().tolist()
+    if camera_calibrations is None:
+        start = poses_2d_df['timestamp'].min().to_pydatetime()
+        end = poses_2d_df['timestamp'].max().to_pydatetime()
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+            camera_ids=camera_ids,
+            start=start,
+            end=end
+        )
+    missing_cameras = list()
+    for camera_id in camera_ids:
+        for calibration_parameter in [
+            'camera_matrix',
+            'distortion_coefficients',
+            'rotation_vector',
+            'translation_vector'
+        ]:
+            if camera_calibrations.get(camera_id, {}).get(calibration_parameter) is None:
+                logger.warning('Camera {} in data is missing calibration information. Excluding these poses.'.format(
+                    camera_id
+                ))
+                missing_cameras.append(camera_id)
+                break
+    if len(missing_cameras) > 0:
+        poses_2d_df = poses_2d_df.loc[~poses_2d_df['camera_id'].isin(missing_cameras)]
+    coordinate_space_id = extract_coordinate_space_id_from_camera_calibrations(camera_calibrations)
+    if pose_3d_limits is None:
+        if room_x_limits is None or room_y_limits is None:
+            raise ValueError('3D pose spatial limits no specified and room boundaries not specified')
+        if pose_model_id is None:
+            if 'pose_model_id' not in poses_2d_df.columns:
+                raise ValueError('3D pose spatial limits not specified and pose model ID not inclued in 2D pose data')
+            pose_model_ids = poses_2d_df['pose_model_id'].unique()
+            if len(pose_model_ids) > 1:
+                raise ValueError('Multiple pose model IDs found in 2D pose data')
+            pose_model_id = pose_model_ids[0]
+        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(pose_model_id)
+        pose_model_name = pose_model.get('model_name')
+        pose_3d_limits = pose_3d_limits_by_pose_model(
+            room_x_limits=room_x_limits,
+            room_y_limits=room_y_limits,
+            pose_model_name=pose_model_name
+        )
+    reconstruct_poses_3d_timestamp_partial = partial(
+        reconstruct_poses_3d_timestamp,
+        camera_calibrations=camera_calibrations,
+        coordinate_space_id=coordinate_space_id,
+        min_keypoint_quality=min_keypoint_quality,
+        min_num_keypoints=min_num_keypoints,
+        min_pose_quality=min_pose_quality,
+        min_pose_pair_score=min_pose_pair_score,
+        max_pose_pair_score=max_pose_pair_score,
+        pose_pair_score_distance_method=pose_pair_score_distance_method,
+        pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
+        pose_pair_score_summary_method=pose_pair_score_summary_method,
+        pose_3d_limits=pose_3d_limits,
+        pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+        pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
+        include_track_labels=include_track_labels,
+        validate_df=False
+    )
+    num_frames = len(poses_2d_df['timestamp'].unique())
+    logger.info('Reconstruction 3D poses from {} 2D poses across {} frames ({} to {})'.format(
+        len(poses_2d_df),
+        num_frames,
+        poses_2d_df['timestamp'].min().isoformat(),
+        poses_2d_df['timestamp'].max().isoformat()
+    ))
+    start_time = time.time()
+    if progress_bar:
+        if notebook:
+            tqdm.notebook.tqdm.pandas()
+        else:
+            tqdm.pandas()
+        poses_3d_local_ids_df = poses_2d_df.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial)
+    else:
+        poses_3d_local_ids_df = poses_2d_df.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial)
+    elapsed_time = time.time() - start_time
+    logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
+        len(poses_3d_local_ids_df),
+        elapsed_time,
+        1000*elapsed_time/num_frames
+    ))
+    poses_3d_local_ids_df.reset_index('timestamp', drop=True, inplace=True)
+    return poses_3d_local_ids_df
+
+def extract_coordinate_space_id_from_camera_calibrations(camera_calibrations):
+    coordinate_space_ids = set([camera_calibration.get('space_id') for camera_calibration in camera_calibrations.values()])
+    if len(coordinate_space_ids) > 1:
+        raise ValueError('Multiple coordinate space IDs found in camera calibration data')
+    coordinate_space_id = list(coordinate_space_ids)[0]
+    return coordinate_space_id
+
+def pose_3d_limits_by_pose_model(
+    room_x_limits,
+    room_y_limits,
+    pose_model_name,
+    floor_z=0.0,
+    foot_z_limits=(0.0, 1.0),
+    knee_z_limits=(0.0, 1.0),
+    hip_z_limits=(0.0, 1.5),
+    thorax_z_limits=(0.0, 1.7),
+    shoulder_z_limits=(0.0, 1.9),
+    elbow_z_limits=(0.0, 2.0),
+    hand_z_limits=(0.0, 3.0),
+    neck_z_limits=(0.0, 1.9),
+    head_z_limits=(0.0,2.0),
+    tolerance=0.2
+):
+    keypoint_categories = KEYPOINT_CATEGORIES_BY_POSE_MODEL[pose_model_name]
+    return pose_3d_limits(
+        room_x_limits=room_x_limits,
+        room_y_limits=room_y_limits,
+        keypoint_categories=keypoint_categories,
+        floor_z=floor_z,
+        foot_z_limits=foot_z_limits,
+        knee_z_limits=knee_z_limits,
+        hip_z_limits=hip_z_limits,
+        thorax_z_limits=thorax_z_limits,
+        shoulder_z_limits=shoulder_z_limits,
+        elbow_z_limits=elbow_z_limits,
+        hand_z_limits=hand_z_limits,
+        neck_z_limits=neck_z_limits,
+        head_z_limits=head_z_limits,
+        tolerance=tolerance
+    )
+
+def pose_3d_limits(
+    room_x_limits,
+    room_y_limits,
+    keypoint_categories,
+    floor_z=0.0,
+    foot_z_limits=(0.0, 1.0),
+    knee_z_limits=(0.0, 1.0),
+    hip_z_limits=(0.0, 1.5),
+    thorax_z_limits=(0.0, 1.7),
+    shoulder_z_limits=(0.0, 1.9),
+    elbow_z_limits=(0.0, 2.0),
+    hand_z_limits=(0.0, 3.0),
+    neck_z_limits=(0.0, 1.9),
+    head_z_limits=(0.0,2.0),
+    tolerance=0.2
+):
+    z_limits_dict = {
+        'foot': foot_z_limits,
+        'knee': knee_z_limits,
+        'hip': hip_z_limits,
+        'thorax': thorax_z_limits,
+        'shoulder': shoulder_z_limits,
+        'elbow': elbow_z_limits,
+        'hand': hand_z_limits,
+        'neck': neck_z_limits,
+        'head': head_z_limits
+    }
+    pose_3d_limits_min = list()
+    pose_3d_limits_max = list()
+    for keypoint_category in keypoint_categories:
+        pose_3d_limits_min.append([
+            room_x_limits[0],
+            room_y_limits[0],
+            floor_z + z_limits_dict[keypoint_category][0]
+        ])
+        pose_3d_limits_max.append([
+            room_x_limits[1],
+            room_y_limits[1],
+            floor_z + z_limits_dict[keypoint_category][1]
+        ])
+    return np.array([pose_3d_limits_min, pose_3d_limits_max]) + + np.array([[[-tolerance]], [[tolerance]]])
+
+def reconstruct_poses_3d_timestamp(
+    poses_2d_df_timestamp,
+    camera_calibrations,
+    coordinate_space_id,
+    min_keypoint_quality=None,
+    min_num_keypoints=None,
+    min_pose_quality=None,
+    min_pose_pair_score=None,
+    max_pose_pair_score=25.0,
+    pose_pair_score_distance_method='pixels',
+    pose_pair_score_pixel_distance_scale=5.0,
+    pose_pair_score_summary_method='rms',
+    pose_3d_limits=None,
+    pose_3d_graph_initial_edge_threshold=2,
+    pose_3d_graph_max_dispersion=0.20,
+    include_track_labels=False,
+    validate_df=True
+):
+    poses_2d_df_timestamp_copy = poses_2d_df_timestamp.copy()
+    if validate_df:
+        if len(poses_2d_df_timestamp_copy['timestamp'].unique()) > 1:
+            raise ValueError('More than one timestamp found in data frame')
+    timestamp = poses_2d_df_timestamp_copy['timestamp'][0]
+    if min_keypoint_quality is not None:
+        poses_2d_df_timestamp_copy = process_pose_data.filter.filter_keypoints_by_quality(
+            poses_2d_df=poses_2d_df_timestamp_copy,
+            min_keypoint_quality=min_keypoint_quality
+        )
+    poses_2d_df_timestamp_copy = process_pose_data.filter.remove_empty_2d_poses(
+        poses_2d_df=poses_2d_df_timestamp_copy
+    )
+    if min_num_keypoints is not None:
+        poses_2d_df_timestamp_copy = process_pose_data.filter.filter_poses_by_num_valid_keypoints(
+            poses_2d_df=poses_2d_df_timestamp_copy,
+            min_num_keypoints=min_num_keypoints
+        )
+    if min_pose_quality is not None:
+        poses_2d_df_timestamp_copy = process_pose_data.filter.filter_poses_by_quality(
+            poses_2d_df=poses_2d_df_timestamp_copy,
+            min_pose_quality=min_pose_quality
+        )
+    pose_pairs_2d_df_timestamp = generate_pose_pairs_timestamp(
+        poses_2d_df_timestamp=poses_2d_df_timestamp_copy
+    )
+    pose_pairs_2d_df_timestamp = calculate_3d_poses(
+        pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+        camera_calibrations=camera_calibrations
+    )
+    pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_empty_3d_poses(
+        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+    )
+    pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_empty_reprojected_2d_poses(
+        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+    )
+    pose_pairs_2d_df_timestamp = score_pose_pairs(
+        pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+        distance_method=pose_pair_score_distance_method,
+        summary_method=pose_pair_score_summary_method,
+        pixel_distance_scale=pose_pair_score_pixel_distance_scale
+    )
+    pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_invalid_pose_pair_scores(
+        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+    )
+    if min_pose_pair_score is not None or max_pose_pair_score is not None:
+        pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_score(
+            pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+            min_score=min_pose_pair_score,
+            max_score=max_pose_pair_score
+        )
+    if pose_3d_limits is not None:
+        pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
+            pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+            pose_3d_limits=pose_3d_limits
+        )
+    pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_best_match(
+        pose_pairs_2d_df_timestamp
+    )
+    poses_3d_local_ids_df_timestamp = generate_3d_poses_timestamp(
+        pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        coordinate_space_id=coordinate_space_id,
+        initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+        max_dispersion=pose_3d_graph_max_dispersion,
+        include_track_labels=include_track_labels,
+        validate_df=validate_df
+    )
+    poses_3d_local_ids_df_timestamp.set_index('pose_id_3d_local', inplace=True)
+    return poses_3d_local_ids_df_timestamp
+
+def generate_pose_pairs_timestamp(
+    poses_2d_df_timestamp
+):
+    timestamps = poses_2d_df_timestamp['timestamp'].unique()
+    if len(timestamps) > 1:
+        raise ValueError('More than one timestamp in data frame')
+    camera_ids = poses_2d_df_timestamp['camera_id'].unique().tolist()
+    pose_id_pairs = list()
+    for camera_id_a, camera_id_b in itertools.combinations(camera_ids, 2):
+        pose_ids_a = poses_2d_df_timestamp.loc[poses_2d_df_timestamp['camera_id'] == camera_id_a].index.tolist()
+        pose_ids_b = poses_2d_df_timestamp.loc[poses_2d_df_timestamp['camera_id'] == camera_id_b].index.tolist()
+        pose_id_pairs_camera_pair = list(itertools.product(pose_ids_a, pose_ids_b))
+        pose_id_pairs.extend(pose_id_pairs_camera_pair)
+    pose_ids_a = list()
+    pose_ids_b = list()
+    if len(pose_id_pairs) > 0:
+        pose_ids_a, pose_ids_b = map(list, zip(*pose_id_pairs))
+    pose_pairs_2d_df_timestamp = pd.concat(
+        (poses_2d_df_timestamp.loc[pose_ids_a].reset_index(), poses_2d_df_timestamp.loc[pose_ids_b].reset_index()),
+        keys=['a', 'b'],
+        axis=1
+    )
+    pose_pairs_2d_df_timestamp.set_index(
+        [('a', 'pose_id_2d'), ('b', 'pose_id_2d')],
         inplace=True
     )
-    return pose_tracks_3d_scored
+    pose_pairs_2d_df_timestamp.rename_axis(
+        ['pose_id_2d_a', 'pose_id_2d_b'],
+        inplace=True
+    )
+    pose_pairs_2d_df_timestamp.columns = ['{}_{}'.format(column_name[1], column_name[0]) for column_name in pose_pairs_2d_df_timestamp.columns.values]
+    pose_pairs_2d_df_timestamp.rename(
+        columns = {'timestamp_a': 'timestamp'},
+        inplace=True
+    )
+    pose_pairs_2d_df_timestamp.drop(
+        columns=['timestamp_b'],
+        inplace=True
+    )
+    return pose_pairs_2d_df_timestamp
 
 def calculate_3d_poses(
-    df,
-    camera_info
+    pose_pairs_2d_df,
+    camera_calibrations=None
 ):
-    df_list=list()
-    camera_device_ids = df['camera_device_id'].unique().tolist()
-    for camera_index_a, camera_device_id_a in enumerate(camera_device_ids):
-        for camera_device_id_b in camera_device_ids[(camera_index_a + 1):]:
-            camera_name_a = df.loc[df['camera_device_id'] == camera_device_id_a, 'camera_name'][0]
-            camera_name_b = df.loc[df['camera_device_id'] == camera_device_id_b, 'camera_name'][0]
-            track_labels_a = df.loc[df['camera_device_id'] == camera_device_id_a, 'track_label'].unique().tolist()
-            track_labels_b = df.loc[df['camera_device_id'] == camera_device_id_b, 'track_label'].unique().tolist()
-            num_tracks_a = len(track_labels_a)
-            num_tracks_b = len(track_labels_b)
-            num_potential_matches = num_tracks_a*num_tracks_b
-            logger.info('Calculating 3D poses between {} tracks from {} and {} tracks from {} ({} potential poses)'.format(
-                num_tracks_a,
-                camera_name_a,
-                num_tracks_b,
-                camera_name_b,
-                num_potential_matches
-            ))
-            start_time = time.time()
-            for track_label_a in track_labels_a:
-                for track_label_b in track_labels_b:
-                    df_a = df.loc[
-                        (df['camera_device_id'] == camera_device_id_a) &
-                        (df['track_label'] == track_label_a),
-                        ['timestamp', 'camera_device_id', 'camera_name', 'track_label', 'keypoint_array', 'keypoint_quality_array', 'pose_quality']
-                    ].set_index('timestamp')
-                    df_b = df.loc[
-                        (df['camera_device_id'] == camera_device_id_b) &
-                        (df['track_label'] == track_label_b),
-                        ['timestamp', 'camera_device_id', 'camera_name', 'track_label', 'keypoint_array', 'keypoint_quality_array', 'pose_quality']
-                    ].set_index('timestamp')
-                    df_join = df_a.join(df_b, how='inner', lsuffix='_a', rsuffix='_b')
-                    num_common_frames = len(df_join)
-                    if num_common_frames == 0:
-                        continue
-                    keypoints_a = np.concatenate(df_join['keypoint_array_a'].values)
-                    keypoints_b = np.concatenate(df_join['keypoint_array_b'].values)
-                    keypoints_a_undistorted = cv_utils.undistort_points(
-                        keypoints_a,
-                        camera_info[camera_device_id_a]['camera_matrix'],
-                        camera_info[camera_device_id_a]['distortion_coefficients']
-                    )
-                    keypoints_b_undistorted = cv_utils.undistort_points(
-                        keypoints_b,
-                        camera_info[camera_device_id_b]['camera_matrix'],
-                        camera_info[camera_device_id_b]['distortion_coefficients']
-                    )
-                    object_points = cv_utils.reconstruct_object_points_from_camera_poses(
-                        keypoints_a_undistorted,
-                        keypoints_b_undistorted,
-                        camera_info[camera_device_id_a]['camera_matrix'],
-                        camera_info[camera_device_id_a]['rotation_vector'],
-                        camera_info[camera_device_id_a]['translation_vector'],
-                        camera_info[camera_device_id_b]['rotation_vector'],
-                        camera_info[camera_device_id_b]['translation_vector']
-                    )
-                    keypoints_a_reprojected = cv_utils.project_points(
-                        object_points,
-                        camera_info[camera_device_id_a]['rotation_vector'],
-                        camera_info[camera_device_id_a]['translation_vector'],
-                        camera_info[camera_device_id_a]['camera_matrix'],
-                        camera_info[camera_device_id_a]['distortion_coefficients']
-                    )
-                    keypoints_b_reprojected = cv_utils.project_points(
-                        object_points,
-                        camera_info[camera_device_id_b]['rotation_vector'],
-                        camera_info[camera_device_id_b]['translation_vector'],
-                        camera_info[camera_device_id_b]['camera_matrix'],
-                        camera_info[camera_device_id_b]['distortion_coefficients']
-                    )
-                    df_join['keypoint_array_3d'] = np.split(object_points, num_common_frames)
-                    df_join['keypoint_array_reprojected_a'] = np.split(keypoints_a_reprojected, num_common_frames)
-                    df_join['keypoint_array_reprojected_b'] = np.split(keypoints_b_reprojected, num_common_frames)
-                    df_list.append(df_join)
-            elapsed_time = time.time() - start_time
-            logger.info('Calculated 3D poses from {} track pairs in {:.3f} seconds ({:.1f} milliseconds per pair)'.format(
-                num_potential_matches,
-                elapsed_time,
-                10**3*elapsed_time/num_potential_matches
-            ))
-    poses_3d = pd.concat(df_list)
-    poses_3d.reset_index(inplace=True)
-    poses_3d = poses_3d.reindex(columns=[
-        'camera_device_id_a',
-        'camera_name_a',
-        'camera_device_id_b',
-        'camera_name_b',
-        'track_label_a',
-        'track_label_b',
-        'timestamp',
-        'keypoint_array_a',
-        'keypoint_quality_array_a',
-        'pose_quality_a',
-        'keypoint_array_b',
-        'keypoint_quality_array_b',
-        'pose_quality_b',
-        'keypoint_array_3d',
-        'keypoint_array_reprojected_a',
-        'keypoint_array_reprojected_b'
-    ])
-    poses_3d.sort_values(
-        [
-            'camera_device_id_a',
-            'camera_device_id_b',
-            'track_label_a',
-            'track_label_b',
-            'timestamp'
-        ],
-        inplace=True
+    if camera_calibrations is None:
+        camera_ids = np.union1d(
+            pose_pairs_2d_df['camera_id_a'].unique(),
+            pose_pairs_2d_df['camera_id_b'].unique()
+        ).tolist()
+        start = pose_pairs_2d_df['timestamp'].min().to_pydatetime()
+        end = pose_pairs_2d_df['timestamp'].max().to_pydatetime()
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+            camera_ids=camera_ids,
+            start=start,
+            end=end
+        )
+    pose_pairs_2d_df = pose_pairs_2d_df.groupby(['camera_id_a', 'camera_id_b']).apply(
+        lambda x: calculate_3d_poses_camera_pair(
+            pose_pairs_2d_df_camera_pair=x,
+            camera_calibrations=camera_calibrations,
+            inplace=False
+        )
     )
-    return poses_3d
+    return pose_pairs_2d_df
 
-def score_3d_poses(
-    poses_3d,
+def calculate_3d_poses_camera_pair(
+    pose_pairs_2d_df_camera_pair,
+    camera_calibrations,
     inplace=False
 ):
-    if inplace:
-        poses_3d_scored = poses_3d
-    else:
-        poses_3d_scored = poses_3d.copy()
-    poses_3d_scored['diff_a'] = (
-        poses_3d_scored['keypoint_array_reprojected_a'] -
-        poses_3d_scored['keypoint_array_a']
-    )
-    poses_3d_scored['diff_b'] = (
-        poses_3d_scored['keypoint_array_reprojected_b'] -
-        poses_3d_scored['keypoint_array_b']
-    )
-    poses_3d_scored['mean_reproj_error_a'] = poses_3d_scored['diff_a'].apply(
-        lambda x: np.nanmean(np.linalg.norm(x, axis=1), axis=0)
-    )
-    poses_3d_scored['mean_reproj_error_b'] = poses_3d_scored['diff_b'].apply(
-        lambda x: np.nanmean(np.linalg.norm(x, axis=1), axis=0)
-    )
-    poses_3d_scored['root_mean_square_reproj_error_a'] = poses_3d_scored['diff_a'].apply(
-        lambda x: np.sqrt(np.nanmean(np.sum(np.square(x), axis=1), axis=0))
-    )
-    poses_3d_scored['root_mean_square_reproj_error_b'] = poses_3d_scored['diff_b'].apply(
-        lambda x: np.sqrt(np.nanmean(np.sum(np.square(x), axis=1), axis=0))
-    )
-    poses_3d_scored['median_reproj_error_a'] = poses_3d_scored['diff_a'].apply(
-        lambda x: np.nanmedian(np.linalg.norm(x, axis=1), axis=0)
-    )
-    poses_3d_scored['median_reproj_error_b'] = poses_3d_scored['diff_b'].apply(
-        lambda x: np.nanmedian(np.linalg.norm(x, axis=1), axis=0)
-    )
-    poses_3d_scored['root_median_square_reproj_error_a'] = poses_3d_scored['diff_a'].apply(
-        lambda x: np.sqrt(np.nanmedian(np.sum(np.square(x), axis=1), axis=0))
-    )
-    poses_3d_scored['root_median_square_reproj_error_b'] = poses_3d_scored['diff_b'].apply(
-        lambda x: np.sqrt(np.nanmedian(np.sum(np.square(x), axis=1), axis=0))
-    )
-    poses_3d_scored.sort_values(
-        [
-            'camera_device_id_a',
-            'camera_device_id_b',
-            'track_label_a',
-            'track_label_b',
-            'timestamp'
-        ],
-        inplace=True
-    )
     if not inplace:
-        return poses_3d_scored
+        pose_pairs_2d_df_camera_pair = pose_pairs_2d_df_camera_pair.copy()
+    num_pose_pairs = len(pose_pairs_2d_df_camera_pair)
+    camera_ids_a = pose_pairs_2d_df_camera_pair['camera_id_a'].unique()
+    camera_ids_b = pose_pairs_2d_df_camera_pair['camera_id_b'].unique()
+    if len(camera_ids_a) > 1:
+        raise ValueError('More than one camera ID found for camera A')
+    if len(camera_ids_b) > 1:
+        raise ValueError('More than one camera ID found for camera B')
+    camera_id_a = camera_ids_a[0]
+    camera_id_b = camera_ids_b[0]
+    if camera_id_a not in camera_calibrations.keys():
+        raise ValueError('Camera ID {} not found in camera calibration data'.format(
+            camera_id_a
+        ))
+    if camera_id_b not in camera_calibrations.keys():
+        raise ValueError('Camera ID {} not found in camera calibration data'.format(
+            camera_id_b
+        ))
+    camera_calibration_a = camera_calibrations[camera_id_a]
+    camera_calibration_b = camera_calibrations[camera_id_b]
+    keypoint_a_lengths = pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_a'].apply(lambda x: x.shape[0]).unique()
+    keypoint_b_lengths = pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_b'].apply(lambda x: x.shape[0]).unique()
+    if len(keypoint_a_lengths) > 1:
+        raise ValueError('Keypoint arrays in column A have differing numbers of keypoints')
+    if len(keypoint_b_lengths) > 1:
+        raise ValueError('Keypoint arrays in column B have differing numbers of keypoints')
+    if keypoint_a_lengths[0] != keypoint_b_lengths[0]:
+        raise ValueError('Keypoint arrays in column A have different number of keypoints than keypoint arrays in column B')
+    keypoints_a = np.concatenate(pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_a'].values)
+    keypoints_b = np.concatenate(pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_b'].values)
+    keypoints_3d = triangulate_image_points(
+        image_points_1=keypoints_a,
+        image_points_2=keypoints_b,
+        camera_matrix_1=camera_calibration_a['camera_matrix'],
+        distortion_coefficients_1=camera_calibration_a['distortion_coefficients'],
+        rotation_vector_1=camera_calibration_a['rotation_vector'],
+        translation_vector_1=camera_calibration_a['translation_vector'],
+        camera_matrix_2=camera_calibration_b['camera_matrix'],
+        distortion_coefficients_2=camera_calibration_b['distortion_coefficients'],
+        rotation_vector_2=camera_calibration_b['rotation_vector'],
+        translation_vector_2=camera_calibration_b['translation_vector']
+    )
+    keypoints_a_reprojected = cv_utils.project_points(
+        object_points=keypoints_3d,
+        rotation_vector=camera_calibration_a['rotation_vector'],
+        translation_vector=camera_calibration_a['translation_vector'],
+        camera_matrix=camera_calibration_a['camera_matrix'],
+        distortion_coefficients=camera_calibration_a['distortion_coefficients'],
+        remove_behind_camera=True
+    )
+    keypoints_b_reprojected = cv_utils.project_points(
+        object_points=keypoints_3d,
+        rotation_vector=camera_calibration_b['rotation_vector'],
+        translation_vector=camera_calibration_b['translation_vector'],
+        camera_matrix=camera_calibration_b['camera_matrix'],
+        distortion_coefficients=camera_calibration_b['distortion_coefficients'],
+        remove_behind_camera=True
+    )
+    pose_pairs_2d_df_camera_pair['keypoint_coordinates_3d'] = np.split(keypoints_3d, num_pose_pairs)
+    pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_a_reprojected'] = np.split(keypoints_a_reprojected, num_pose_pairs)
+    pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_b_reprojected'] = np.split(keypoints_b_reprojected, num_pose_pairs)
+    if not inplace:
+        return pose_pairs_2d_df_camera_pair
 
-def score_3d_pose_tracks(
-    poses_3d
+def triangulate_image_points(
+    image_points_1,
+    image_points_2,
+    camera_matrix_1,
+    distortion_coefficients_1,
+    rotation_vector_1,
+    translation_vector_1,
+    camera_matrix_2,
+    distortion_coefficients_2,
+    rotation_vector_2,
+    translation_vector_2
 ):
-    df = poses_3d.copy()
-    df['diff_a'] = (
-        df['keypoint_array_reprojected_a'] -
-        df['keypoint_array_a']
+    image_points_1 = np.asarray(image_points_1)
+    image_points_2 = np.asarray(image_points_2)
+    camera_matrix_1 = np.asarray(camera_matrix_1)
+    distortion_coefficients_1 = np.asarray(distortion_coefficients_1)
+    rotation_vector_1 = np.asarray(rotation_vector_1)
+    translation_vector_1 = np.asarray(translation_vector_1)
+    camera_matrix_2 = np.asarray(camera_matrix_2)
+    distortion_coefficients_2 = np.asarray(distortion_coefficients_2)
+    rotation_vector_2 = np.asarray(rotation_vector_2)
+    translation_vector_2 = np.asarray(translation_vector_2)
+    if image_points_1.size == 0 or image_points_2.size == 0:
+        return np.zeros((0, 3))
+    if image_points_1.shape != image_points_2.shape:
+        raise ValueError('Sets of image points do not appear to be the same shape')
+    image_points_shape = image_points_1.shape
+    image_points_1 = image_points_1.reshape((-1, 2))
+    image_points_2 = image_points_2.reshape((-1, 2))
+    camera_matrix_1 = camera_matrix_1.reshape((3, 3))
+    distortion_coefficients_1 = np.squeeze(distortion_coefficients_1)
+    rotation_vector_1 = rotation_vector_1.reshape(3)
+    translation_vector_1 = translation_vector_1.reshape(3)
+    camera_matrix_2 = camera_matrix_2.reshape((3, 3))
+    distortion_coefficients_2 = np.squeeze(distortion_coefficients_2)
+    rotation_vector_2 = rotation_vector_2.reshape(3)
+    translation_vector_2 = translation_vector_2.reshape(3)
+    image_points_1_undistorted = cv_utils.undistort_points(
+        image_points_1,
+        camera_matrix_1,
+        distortion_coefficients_1
     )
-    df['diff_b'] = (
-        df['keypoint_array_reprojected_b'] -
-        df['keypoint_array_b']
+    image_points_2_undistorted = cv_utils.undistort_points(
+        image_points_2,
+        camera_matrix_2,
+        distortion_coefficients_2
     )
-    poses_3d_grouped = df.groupby([
-        'camera_device_id_a',
-        'camera_name_a',
-        'camera_device_id_b',
-        'camera_name_b',
-        'track_label_a',
-        'track_label_b'
-    ])
-    num_common_frames = poses_3d_grouped.apply(len)
-    mean_reproj_error_a = poses_3d_grouped.apply(lambda df:
-        np.nanmean(np.linalg.norm(np.concatenate(df['diff_a'].values), axis=1), axis=0)
+    projection_matrix_1 = cv_utils.generate_projection_matrix(
+        camera_matrix_1,
+        rotation_vector_1,
+        translation_vector_1)
+    projection_matrix_2 = cv_utils.generate_projection_matrix(
+        camera_matrix_2,
+        rotation_vector_2,
+        translation_vector_2)
+    object_points_homogeneous = cv.triangulatePoints(
+        projection_matrix_1,
+        projection_matrix_2,
+        image_points_1.T,
+        image_points_2.T)
+    object_points = cv.convertPointsFromHomogeneous(
+        object_points_homogeneous.T
     )
-    mean_reproj_error_b = poses_3d_grouped.apply(lambda df:
-        np.nanmean(np.linalg.norm(np.concatenate(df['diff_b'].values), axis=1), axis=0)
+    object_points = np.squeeze(object_points)
+    object_points.reshape(image_points_shape[:-1] + (3,))
+    return object_points
+
+def score_pose_pairs(
+    pose_pairs_2d_df,
+    distance_method='pixels',
+    summary_method='rms',
+    pixel_distance_scale=5.0
+):
+    reprojection_difference = np.stack(
+        (
+            np.subtract(
+                np.stack(pose_pairs_2d_df['keypoint_coordinates_2d_a_reprojected']),
+                np.stack(pose_pairs_2d_df['keypoint_coordinates_2d_a'])
+            ),
+            np.subtract(
+                np.stack(pose_pairs_2d_df['keypoint_coordinates_2d_b_reprojected']),
+                np.stack(pose_pairs_2d_df['keypoint_coordinates_2d_b'])
+            )
+        ),
+        axis=-2
     )
-    root_mean_square_reproj_error_a = poses_3d_grouped.apply(lambda df:
-        np.sqrt(np.nanmean(np.sum(np.square(np.concatenate(df['diff_a'].values)), axis=1), axis=0))
+    if distance_method == 'pixels':
+        distance = pixel_distance(reprojection_difference)
+    elif distance_method == 'probability':
+        distance = probability_distance(
+            reprojection_difference,
+            pixel_distance_scale=pixel_distance_scale
+        )
+    else:
+        raise ValueError('Distance method not recognized')
+    if summary_method == 'rms':
+        score = np.sqrt(np.nanmean(np.square(distance), axis=(-1, -2)))
+    elif summary_method == 'sum':
+        score = np.nansum(distance, axis=(-1, -2))
+    else:
+        raise ValueError('Summary method not recognized')
+    pose_pairs_2d_df_copy = pose_pairs_2d_df.copy()
+    pose_pairs_2d_df_copy['score'] = score
+    return pose_pairs_2d_df_copy
+
+def pixel_distance(image_point_differences):
+    return np.linalg.norm(image_point_differences, axis=-1)
+
+def probability_distance(image_point_differences, pixel_distance_scale):
+    return np.multiply(
+        1/np.sqrt(2*np.pi*pixel_distance_scale**2),
+        np.exp(
+            np.divide(
+                -np.square(pixel_distance(image_point_differences)),
+                2*pixel_distance_scale**2
+            )
+        )
     )
-    root_mean_square_reproj_error_b = poses_3d_grouped.apply(lambda df:
-        np.sqrt(np.nanmean(np.sum(np.square(np.concatenate(df['diff_b'].values)), axis=1), axis=0))
+
+def pose_3d_in_range(
+    pose_3d,
+    pose_3d_limits
+):
+    return np.logical_and(
+        np.all(np.greater_equal(
+            pose_3d,
+            pose_3d_limits[0],
+            out=np.full_like(pose_3d, True),
+            where=(np.isfinite(pose_3d) & np.isfinite(pose_3d_limits[0]))
+        )),
+        np.all(np.less_equal(
+            pose_3d,
+            pose_3d_limits[1],
+            out=np.full_like(pose_3d, True),
+            where=(np.isfinite(pose_3d) & np.isfinite(pose_3d_limits[1]))
+        ))
     )
-    median_reproj_error_a = poses_3d_grouped.apply(lambda df:
-        np.nanmedian(np.linalg.norm(np.concatenate(df['diff_a'].values), axis=1), axis=0)
+
+def extract_best_score_indices_timestamp_camera_pair(
+    pose_pairs_2d_df
+):
+    best_a_score_for_b = pose_pairs_2d_df['score'].groupby('pose_id_2d_b').idxmin().dropna()
+    best_b_score_for_a = pose_pairs_2d_df['score'].groupby('pose_id_2d_a').idxmin().dropna()
+    best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
+    return best_score_indices
+
+def generate_3d_poses_timestamp(
+    pose_pairs_2d_df_timestamp,
+    coordinate_space_id,
+    initial_edge_threshold=2,
+    max_dispersion=0.20,
+    include_track_labels=False,
+    validate_df=True
+):
+    timestamps = pose_pairs_2d_df_timestamp['timestamp'].unique()
+    if validate_df:
+        if len(timestamps) > 1:
+            raise ValueError('More than one timestamp found in data frame')
+    timestamp = timestamps[0]
+    pose_graph = generate_pose_graph(
+        pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        include_track_labels=include_track_labels
     )
-    median_reproj_error_b = poses_3d_grouped.apply(lambda df:
-        np.nanmedian(np.linalg.norm(np.concatenate(df['diff_b'].values), axis=1), axis=0)
+    subgraph_list = generate_k_edge_subgraph_list_iteratively(
+        pose_graph=pose_graph,
+        initial_edge_threshold=initial_edge_threshold,
+        max_dispersion=max_dispersion
     )
-    root_median_square_reproj_error_a = poses_3d_grouped.apply(lambda df:
-        np.sqrt(np.nanmedian(np.sum(np.square(np.concatenate(df['diff_a'].values)), axis=1), axis=0))
+    pose_ids_3d_local = list()
+    keypoint_coordinates_3d = list()
+    pose_id_2ds = list()
+    if include_track_labels:
+        track_labels = list()
+    for subgraph in subgraph_list:
+        pose_ids_3d_local.append(uuid4().hex)
+        keypoint_coordinates_3d_list = list()
+        track_label_list = list()
+        pose_id_2ds_list = list()
+        for pose_id_1, pose_id_2, keypoint_coordinates_3d_edge in subgraph.edges(data='keypoint_coordinates_3d'):
+            pose_id_2ds_list.extend([pose_id_1, pose_id_2])
+            if include_track_labels:
+                track_label_list.append((
+                    subgraph.nodes[pose_id_1]['camera_id'],
+                    subgraph.nodes[pose_id_1]['track_label_2d']
+                ))
+                track_label_list.append((
+                    subgraph.nodes[pose_id_2]['camera_id'],
+                    subgraph.nodes[pose_id_2]['track_label_2d']
+                ))
+            keypoint_coordinates_3d_list.append(keypoint_coordinates_3d_edge)
+        keypoint_coordinates_3d.append(np.nanmedian(np.stack(keypoint_coordinates_3d_list), axis=0))
+        pose_id_2ds.append(pose_id_2ds_list)
+        if include_track_labels:
+            track_labels.append(track_label_list)
+    if include_track_labels:
+        poses_3d_local_ids_df_timestamp = pd.DataFrame({
+            'pose_id_3d_local': pose_ids_3d_local,
+            'timestamp': timestamp,
+            'keypoint_coordinates_3d': keypoint_coordinates_3d,
+            'coordinate_space_id': coordinate_space_id,
+            'pose_ids_2d': pose_id_2ds,
+            'track_labels_2d': track_labels
+        })
+    else:
+        poses_3d_local_ids_df_timestamp = pd.DataFrame({
+            'pose_id_3d_local': pose_ids_3d_local,
+            'timestamp': timestamp,
+            'keypoint_coordinates_3d': keypoint_coordinates_3d,
+            'coordinate_space_id': coordinate_space_id,
+            'pose_ids_2d': pose_id_2ds
+        })
+    return poses_3d_local_ids_df_timestamp
+
+def generate_pose_graph(
+    pose_pairs_2d_df_timestamp,
+    include_track_labels=False
+):
+    pose_graph = nx.Graph()
+    for pose_ids, row in pose_pairs_2d_df_timestamp.iterrows():
+        if include_track_labels:
+            pose_graph.add_node(
+                pose_ids[0],
+                track_label=row['track_label_2d_a'],
+                camera_id = row['camera_id_a']
+            )
+            pose_graph.add_node(
+                pose_ids[1],
+                track_label=row['track_label_2d_b'],
+                camera_id = row['camera_id_b']
+            )
+        pose_graph.add_edge(
+            *pose_ids,
+            keypoint_coordinates_3d=row['keypoint_coordinates_3d'],
+            centroid_3d=np.nanmean(row['keypoint_coordinates_3d'], axis=0)
+        )
+    return pose_graph
+
+def generate_k_edge_subgraph_list_iteratively(
+    pose_graph,
+    initial_edge_threshold=2,
+    max_dispersion=0.20
+):
+    subgraph_list = list()
+    for nodes in nx.k_edge_components(pose_graph, initial_edge_threshold):
+        if len(nodes) < 2:
+            continue
+        subgraph = pose_graph.subgraph(nodes)
+        if subgraph.number_of_edges() ==0:
+            continue
+        dispersion = pose_3d_dispersion(subgraph)
+        if max_dispersion is None or dispersion <= max_dispersion:
+            subgraph_list.append(subgraph)
+            continue
+        subgraph_list.extend(generate_k_edge_subgraph_list_iteratively(
+            pose_graph=subgraph,
+            initial_edge_threshold=initial_edge_threshold + 1,
+            max_dispersion=max_dispersion
+        ))
+    return subgraph_list
+
+def pose_3d_dispersion(pose_graph):
+    return np.linalg.norm(
+        np.std(
+            np.stack([centroid_3d for u, v, centroid_3d in pose_graph.edges(data='centroid_3d')]),
+            axis=0
+        )
     )
-    root_median_square_reproj_error_b = poses_3d_grouped.apply(lambda df:
-        np.sqrt(np.nanmedian(np.sum(np.square(np.concatenate(df['diff_b'].values)), axis=1), axis=0))
-    )
-    pose_tracks_3d_scored = pd.DataFrame({
-        'num_common_frames': num_common_frames,
-        'mean_reproj_error_a': mean_reproj_error_a,
-        'mean_reproj_error_b': mean_reproj_error_b,
-        'root_mean_square_reproj_error_a': root_mean_square_reproj_error_a,
-        'root_mean_square_reproj_error_b': root_mean_square_reproj_error_b,
-        'median_reproj_error_a': median_reproj_error_a,
-        'median_reproj_error_b': median_reproj_error_b,
-        'root_median_square_reproj_error_a': root_median_square_reproj_error_a,
-        'root_median_square_reproj_error_b': root_median_square_reproj_error_b
-    }).reset_index()
-    pose_tracks_3d_scored.sort_values(
-        [
-            'camera_device_id_a',
-            'camera_device_id_b',
-            'track_label_a',
-            'track_label_b'
-        ],
-        inplace=True
-    )
-    return pose_tracks_3d_scored
