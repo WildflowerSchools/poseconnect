@@ -56,8 +56,8 @@ def overlay_video_poses_2d(
     if camera_calibrations is None:
         camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
             camera_ids,
-            start=timestamp.to_pydatetime(),
-            end=timestamp.to_pydatetime()
+            start=video_start,
+            end=video_start
         )
     for camera_id in camera_ids:
         camera_name = camera_names[camera_id]
@@ -187,8 +187,8 @@ def overlay_video_poses_3d(
     if camera_calibrations is None:
         camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
             camera_ids,
-            start=timestamp.to_pydatetime(),
-            end=timestamp.to_pydatetime()
+            start=video_start,
+            end=video_start
         )
     for camera_id in camera_ids:
         camera_name = camera_names[camera_id]
