@@ -247,7 +247,7 @@ def overlay_video_poses_3d(
             ))
         video_output_parameters = video_input.video_parameters
         if output_fourcc_string is not None:
-            video_output_parameters.four_cc_int = cv_utils.four_cc_string_to_int(output_fourcc_string)
+            video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(output_fourcc_string)
         video_output = cv_utils.VideoOutput(
             output_path,
             video_parameters=video_output_parameters
