@@ -39,6 +39,7 @@ def overlay_video_poses_2d(
     output_filename_prefix='poses_2d_overlay',
     output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
     output_filename_extension='mp4',
+    output_fourcc_string=None,
     progress_bar=False,
     notebook=False
 ):
@@ -113,9 +114,12 @@ def overlay_video_poses_2d(
                 video_end_time.isoformat(),
                 poses_2d_df['timestamp'].max().isoformat()
             ))
+        video_output_parameters = video_input.video_parameters
+        if output_fourcc_string is not None:
+            video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(output_fourcc_string)
         video_output = cv_utils.VideoOutput(
             output_path,
-            video_parameters=video_input.video_parameters
+            video_parameters=video_output_parameters
         )
         if progress_bar:
             if notebook:
@@ -171,6 +175,7 @@ def overlay_video_poses_3d(
     output_filename_prefix='poses_3d_overlay',
     output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
     output_filename_extension='mp4',
+    output_fourcc_string=None,
     progress_bar=False,
     notebook=False
 ):
@@ -244,9 +249,12 @@ def overlay_video_poses_3d(
                 video_end_time.isoformat(),
                 poses_3d_df['timestamp'].max().isoformat()
             ))
+        video_output_parameters = video_input.video_parameters
+        if output_fourcc_string is not None:
+            video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(output_fourcc_string)
         video_output = cv_utils.VideoOutput(
             output_path,
-            video_parameters=video_input.video_parameters
+            video_parameters=video_output_parameters
         )
         if progress_bar:
             if notebook:

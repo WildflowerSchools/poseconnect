@@ -4,6 +4,12 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Extend ability to set output container and code to all overlay functions
+* Loosen checks on overlap between pose data and video data (go ahead as long as there is _some_ overlap)
+* Add ability to filter 3D pose tracks on track duration/size
+* Add option to overlay function to first filter on 3D pose track duration/size
+* Add ability to overlay for a time range (batch processing)
+* Add option to concatenate videos across time range for each camera
 * Dockerize pipeline
 * Set up pipeline for Airflow
 * Add function to fetch pose tracks from Honeycomb
