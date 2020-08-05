@@ -294,6 +294,8 @@ def overlay_video_poses_3d(
                     keypoint_alpha=keypoint_alpha,
                     keypoint_connector_alpha=keypoint_connector_alpha,
                     keypoint_connector_linewidth=keypoint_connector_linewidth,
+                    pose_label_font_scale=pose_label_font_scale,
+                    pose_label_line_width=pose_label_line_width
                 )
             video_output.write_frame(frame)
             if progress_bar:
