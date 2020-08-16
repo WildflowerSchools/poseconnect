@@ -194,6 +194,8 @@ def overlay_video_poses_3d(
     output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
     output_filename_extension='mp4',
     output_fourcc_string=None,
+    concatenate_videos=True,
+    delete_individual_clips=True,
     progress_bar=False,
     notebook=False
 ):
@@ -257,6 +259,7 @@ def overlay_video_poses_3d(
         camera_calibration = camera_calibrations[camera_id]
         logger.info('Overlaying poses for {}'.format(camera_name))
         video_timestamps = sorted(video_metadata_dict[camera_id].keys())
+        output_paths = list()
         for video_timestamp in video_timestamps:
             logger.info('Overlaying poses for video starting at {}'.format(video_timestamp.isoformat()))
             input_path = video_metadata_dict[camera_id][video_timestamp]['video_local_path']
@@ -270,6 +273,7 @@ def overlay_video_poses_3d(
                     output_filename_extension
                 )
             )
+            output_paths.append(output_path)
             logger.info('Video output path: {}'.format(output_path))
             video_input = cv_utils.VideoInput(
                 input_path=input_path,
@@ -349,6 +353,29 @@ def overlay_video_poses_3d(
                     t.update()
             video_input.close()
             video_output.close()
+        if concatenate_videos:
+            concat_output_path = os.path.join(
+                output_directory,
+                '{}_{}_{}_{}.{}'.format(
+                    output_filename_prefix,
+                    video_timestamps[0].strftime(output_filename_datetime_format),
+                    video_timestamps[-1].strftime(output_filename_datetime_format),
+                    slugify.slugify(camera_name),
+                    output_filename_extension
+                )
+            )
+            logger.info('Concatenating videos from {} to {} into {}'.format(
+                output_paths[0],
+                output_paths[-1],
+                concat_output_path
+            ))
+            concat_videos(
+                input_videos_path_list=output_paths,
+                output_video_path=concat_output_path,
+                delete_input_videos=delete_individual_clips
+            )
+
+
 
 def draw_poses_2d_timestamp_camera_pair_opencv(
     df,
