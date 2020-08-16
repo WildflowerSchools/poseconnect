@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import cv_utils
 import cv2 as cv
+import ffmpeg
 import matplotlib.pyplot as plt
 import matplotlib.colors
 import seaborn as sns
@@ -1401,3 +1402,25 @@ def extract_single_camera_data(
         df_single_camera.set_index('pose_id', inplace=True)
         dfs[camera_letter] = df_single_camera
     return dfs
+
+def concat_videos(
+    input_videos_path_list,
+    output_video_path,
+    delete_input_videos=True
+):
+    temp_file_list_path = './temp_file_list.txt'
+    fp = open(temp_file_list_path, 'w')
+    for input_video_path in input_videos_path_list:
+        if not os.path.isfile(input_video_path):
+            fp.close()
+            os.remove(temp_file_list_path)
+            raise ValueError('Input video file {} does not exist'.format(input_video_path))
+        fp.write('file {}\n'.format(input_video_path))
+    fp.close()
+    stream  = ffmpeg.input(temp_file_list_path, format='concat', safe=0)
+    stream = ffmpeg.output(stream, output_video_path, c='copy')
+    ffmpeg.run(stream)
+    if delete_input_videos:
+        for input_video_path in input_videos_path_list:
+            os.remove(input_video_path)
+    os.remove(temp_file_list_path)
