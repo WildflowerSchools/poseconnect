@@ -1,3 +1,4 @@
+import process_pose_data.honeycomb_io
 import pandas as pd
 import numpy as np
 import logging
@@ -152,6 +153,35 @@ def alphapose_data_file_re_pattern(
         file_name
     )
     return re_pattern
+
+def convert_assignment_ids_to_camera_device_ids(
+    poses_2d_df,
+    camera_device_id_lookup=None,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if camera_device_id_lookup is None:
+        assignment_ids = poses_2d_df['assignment_id'].unique().tolist()
+        camera_device_id_lookup = process_pose_data.honeycomb_io.fetch_camera_device_id_lookup(
+            assignment_ids=assignment_ids,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    poses_2d_df = poses_2d_df.copy()
+    poses_2d_df['camera_id'] = poses_2d_df['assignment_id'].apply(lambda assignment_id: camera_device_id_lookup.get(assignment_id))
+    poses_2d_df.drop(columns='assignment_id', inplace=True)
+    old_column_order = poses_2d_df.columns.tolist()
+    new_column_order = [old_column_order[0], old_column_order[-1]] + old_column_order[1:-1]
+    poses_2d_df = poses_2d_df.reindex(columns=new_column_order)
+    return poses_2d_df
 
 # def fetch_2d_pose_data_from_local_json(
 #     directory_path

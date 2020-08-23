@@ -1150,6 +1150,49 @@ def fetch_extrinsic_calibrations(
         raise ValueError('More than one coordinate space found among fetched calibrations')
     return extrinsic_calibrations
 
+def fetch_camera_device_id_lookup(
+    assignment_ids,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if client is None:
+        client = minimal_honeycomb.MinimalHoneycombClient(
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    result = client.bulk_query(
+        request_name='searchAssignments',
+        arguments={
+            'query': {
+                'type': 'QueryExpression!',
+                'value': {
+                    'field': 'assignment_id',
+                    'operator': 'IN',
+                    'values': assignment_ids
+                }
+        }},
+        return_data=[
+            'assignment_id',
+            {'assigned': [
+                {'... on Device': [
+                    'device_id'
+                ]}
+            ]}
+        ],
+        id_field_name='assignment_id'
+    )
+    camera_device_id_lookup = dict()
+    for datum in result:
+        camera_device_id_lookup[datum.get('assignment_id')] = datum.get('assigned').get('device_id')
+    return camera_device_id_lookup
+
 def create_inference_execution(
     execution_start=None,
     name=None,
