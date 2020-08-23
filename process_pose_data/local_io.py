@@ -11,6 +11,27 @@ import json
 
 logger = logging.getLogger(__name__)
 
+def fetch_2d_pose_data_alphapose_local_time_segment(
+    base_dir,
+    environment_id,
+    time_segment_start,
+    file_name='alphapose-results.json'
+):
+    time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
+    df = fetch_2d_pose_data_alphapose_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        camera_assignment_id=None,
+        year=time_segment_start_utc.year,
+        month=time_segment_start_utc.month,
+        day=time_segment_start_utc.day,
+        hour=time_segment_start_utc.hour,
+        minute=time_segment_start_utc.minute,
+        second=time_segment_start_utc.second,
+        file_name=file_name
+    )
+    return df
+
 def fetch_2d_pose_data_alphapose_local(
     base_dir,
     environment_id=None,
