@@ -105,7 +105,7 @@ def reconstruct_poses_3d(
         validate_df=False
     )
     num_frames = len(poses_2d_df['timestamp'].unique())
-    logger.info('Reconstruction 3D poses from {} 2D poses across {} frames ({} to {})'.format(
+    logger.info('Reconstructing 3D poses from {} 2D poses across {} frames ({} to {})'.format(
         len(poses_2d_df),
         num_frames,
         poses_2d_df['timestamp'].min().isoformat(),
