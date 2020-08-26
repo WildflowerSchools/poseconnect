@@ -590,6 +590,8 @@ def generate_3d_poses_timestamp(
     include_track_labels=False,
     validate_df=True
 ):
+    if len(pose_pairs_2d_df_timestamp) == 0:
+        return pd.DataFrame()
     timestamps = pose_pairs_2d_df_timestamp['timestamp'].unique()
     if validate_df:
         if len(timestamps) > 1:
