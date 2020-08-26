@@ -32,6 +32,27 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
     )
     return df
 
+def write_3d_pose_data_local_time_segment(
+    poses_3d_df,
+    base_dir,
+    environment_id,
+    time_segment_start,
+    directory_name='poses_3d',
+    file_name='poses_3d.pkl'
+):
+    directory_path = pose_3d_data_directory_path_time_segment(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        time_segment_start=time_segment_start,
+        directory_name=directory_name
+    )
+    os.makedirs(directory_path, exist_ok=True)
+    file_path = os.path.join(
+        directory_path,
+        file_name
+    )
+    poses_3d_df.to_pickle(file_path)
+
 def fetch_2d_pose_data_alphapose_local(
     base_dir,
     environment_id=None,
@@ -174,6 +195,47 @@ def alphapose_data_file_re_pattern(
         file_name
     )
     return re_pattern
+
+def pose_3d_data_path_time_segment(
+    base_dir,
+    environment_id,
+    time_segment_start,
+    directory_name,
+    file_name
+):
+    directory_path = pose_3d_data_directory_path(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        time_segment_start=time_segment_start,
+        directory_name=directory_name
+    )
+    path = os.path.join(
+        directory_path,
+        file_name
+    )
+    return path
+
+def pose_3d_data_directory_path_time_segment(
+    base_dir,
+    environment_id,
+    time_segment_start,
+    directory_name
+):
+    time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
+    path = os.path.join(
+        base_dir,
+        environment_id,
+        directory_name,
+        '{:04d}'.format(time_segment_start_utc.year),
+        '{:02d}'.format(time_segment_start_utc.month),
+        '{:02d}'.format(time_segment_start_utc.day),
+        '{:02d}-{:02d}-{:02d}'.format(
+            time_segment_start_utc.hour,
+            time_segment_start_utc.minute,
+            time_segment_start_utc.second,
+        )
+    )
+    return path
 
 def convert_assignment_ids_to_camera_device_ids(
     poses_2d_df,

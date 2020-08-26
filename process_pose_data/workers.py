@@ -18,6 +18,8 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     parallel=False,
     num_parallel_processes=None,
     input_file_name='alphapose-results.json',
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name='poses_3d',
     camera_assignment_ids=None,
     camera_device_id_lookup=None,
     client=None,
@@ -101,6 +103,8 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         input_file_name=input_file_name,
+        poses_3d_directory_name=poses_3d_directory_name,
+        poses_3d_file_name=poses_3d_file_name,
         camera_device_id_lookup=camera_device_id_lookup,
         client=None,
         uri=None,
@@ -140,14 +144,14 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
             poses_3d_df_list = p.map(reconstruct_poses_3d_alphapose_local_time_segment_partial, time_segment_start_list)
     else:
         poses_3d_df_list = list(map(reconstruct_3d_poses_alphapose_local_time_segment_partial, time_segment_start_list))
-    return poses_3d_df_list
-
 
 def reconstruct_poses_3d_alphapose_local_time_segment(
     time_segment_start,
     base_dir,
     environment_id,
     input_file_name='alphapose-results.json',
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name='poses_3d',
     camera_device_id_lookup=None,
     client=None,
     uri=None,
@@ -218,7 +222,15 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         notebook=notebook
     )
     logger.info('Reconstructed 3D poses for time segment starting at {}'.format(time_segment_start.isoformat()))
-    return poses_3d_local_ids_df
+    logger.info('Writing 3D poses to disk for time segment starting at {}'.format(time_segment_start.isoformat()))
+    process_pose_data.local_io.write_3d_pose_data_local_time_segment(
+        poses_3d_df=poses_3d_local_ids_df,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        time_segment_start=time_segment_start,
+        directory_name=poses_3d_directory_name,
+        file_name=poses_3d_file_name
+    )
 
 def generate_time_segment_start_list(
     start,
