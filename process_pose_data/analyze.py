@@ -297,12 +297,16 @@ def reconstruct_poses_3d_timestamp(
         include_track_labels=include_track_labels,
         validate_df=validate_df
     )
+    if len(poses_3d_local_ids_df_timestamp) == 0:
+        return poses_3d_local_ids_df_timestamp
     poses_3d_local_ids_df_timestamp.set_index('pose_id_3d_local', inplace=True)
     return poses_3d_local_ids_df_timestamp
 
 def generate_pose_pairs_timestamp(
     poses_2d_df_timestamp
 ):
+    if len(poses_2d_df_timestamp) == 0:
+        return pd.DataFrame()
     timestamps = poses_2d_df_timestamp['timestamp'].unique()
     if len(timestamps) > 1:
         raise ValueError('More than one timestamp in data frame')
@@ -345,6 +349,8 @@ def calculate_3d_poses(
     pose_pairs_2d_df,
     camera_calibrations=None
 ):
+    if len(pose_pairs_2d_df) == 0:
+        return pose_pairs_2d_df
     if camera_calibrations is None:
         camera_ids = np.union1d(
             pose_pairs_2d_df['camera_id_a'].unique(),
@@ -509,6 +515,8 @@ def score_pose_pairs(
     summary_method='rms',
     pixel_distance_scale=5.0
 ):
+    if len(pose_pairs_2d_df) == 0:
+        return pose_pairs_2d_df.copy()
     reprojection_difference = np.stack(
         (
             np.subtract(
