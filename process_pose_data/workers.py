@@ -142,7 +142,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         with multiprocessing.Pool(num_processes) as p:
             poses_3d_df_list = p.map(reconstruct_poses_3d_alphapose_local_time_segment_partial, time_segment_start_list)
     else:
-        poses_3d_df_list = list(map(reconstruct_3d_poses_alphapose_local_time_segment_partial, time_segment_start_list))
+        poses_3d_df_list = list(map(reconstruct_poses_3d_alphapose_local_time_segment_partial, time_segment_start_list))
 
 def reconstruct_poses_3d_alphapose_local_time_segment(
     time_segment_start,
