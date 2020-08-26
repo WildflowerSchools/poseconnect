@@ -3,11 +3,14 @@ import process_pose_data.analyze
 import multiprocessing
 import functools
 import logging
+import datetime
+import math
 
 logger = logging.getLogger(__name__)
 
 def reconstruct_poses_3d_alphapose_local_by_time_segment(
-    time_segment_starts,
+    start,
+    end,
     base_dir,
     environment_id,
     room_x_limits,
@@ -40,6 +43,15 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     progress_bar=False,
     notebook=False
 ):
+    time_segment_start_list = generate_time_segment_start_list(
+        start=start,
+        end=end
+    )
+    logger.info('Reconstructing 3D poses for {} time segments: {} to {}'.format(
+        len(time_segment_start_list),
+        time_segment_start_list[0].isoformat(),
+        time_segment_start_list[-1].isoformat()
+    ))
     if camera_device_id_lookup is None:
         logger.info('Camera device ID lookup table not specified. Fetching camera device ID info from Honeycomb based on specified camera assignment IDs')
         if camera_assignment_ids is None:
@@ -58,8 +70,8 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         logger.info('Camera calibration parameters not specified. Fetching camera calibration parameters based on specified camera device IDs and time span')
         camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
             camera_ids=camera_device_ids,
-            start=min(time_segment_starts),
-            end=max(time_segment_starts),
+            start=min(time_segment_start_list),
+            end=max(time_segment_start_list),
             uri=uri,
             token_uri=token_uri,
             audience=audience,
@@ -125,9 +137,9 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
                 num_processes
             ))
         with multiprocessing.Pool(num_processes) as p:
-            poses_3d_df_list = p.map(reconstruct_poses_3d_alphapose_local_time_segment_partial, time_segment_starts)
+            poses_3d_df_list = p.map(reconstruct_poses_3d_alphapose_local_time_segment_partial, time_segment_start_list)
     else:
-        poses_3d_df_list = list(map(reconstruct_3d_poses_alphapose_local_time_segment_partial, time_segment_starts))
+        poses_3d_df_list = list(map(reconstruct_3d_poses_alphapose_local_time_segment_partial, time_segment_start_list))
     return poses_3d_df_list
 
 
@@ -207,3 +219,22 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
     )
     logger.info('Reconstructed 3D poses for time segment starting at {}'.format(time_segment_start.isoformat()))
     return poses_3d_local_ids_df
+
+def generate_time_segment_start_list(
+    start,
+    end
+):
+    start_utc = start.astimezone(datetime.timezone.utc)
+    end_utc = end.astimezone(datetime.timezone.utc)
+    start_utc_floor = datetime.datetime(
+        year=start_utc.year,
+        month=start_utc.month,
+        day=start_utc.day,
+        hour=start_utc.hour,
+        minute=start_utc.minute,
+        second=10*(start_utc.second // 10),
+        tzinfo=start_utc.tzinfo
+    )
+    num_time_segments = math.ceil((end_utc - start_utc_floor).seconds / 10.0)
+    time_segment_start_list = [start_utc_floor + i*datetime.timedelta(seconds=10) for i in range(num_time_segments)]
+    return time_segment_start_list
