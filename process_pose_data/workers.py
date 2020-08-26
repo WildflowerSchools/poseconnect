@@ -4,7 +4,6 @@ import multiprocessing
 import functools
 import logging
 import datetime
-import math
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     num_parallel_processes=None,
     input_file_name='alphapose-results.json',
     poses_3d_directory_name='poses_3d',
-    poses_3d_file_name='poses_3d',
+    poses_3d_file_name='poses_3d.pkl',
     camera_assignment_ids=None,
     camera_device_id_lookup=None,
     client=None,
@@ -45,7 +44,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     progress_bar=False,
     notebook=False
 ):
-    time_segment_start_list = generate_time_segment_start_list(
+    time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
         start=start,
         end=end
     )
@@ -151,7 +150,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
     environment_id,
     input_file_name='alphapose-results.json',
     poses_3d_directory_name='poses_3d',
-    poses_3d_file_name='poses_3d',
+    poses_3d_file_name='poses_3d.pkl',
     camera_device_id_lookup=None,
     client=None,
     uri=None,
@@ -231,22 +230,3 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         directory_name=poses_3d_directory_name,
         file_name=poses_3d_file_name
     )
-
-def generate_time_segment_start_list(
-    start,
-    end
-):
-    start_utc = start.astimezone(datetime.timezone.utc)
-    end_utc = end.astimezone(datetime.timezone.utc)
-    start_utc_floor = datetime.datetime(
-        year=start_utc.year,
-        month=start_utc.month,
-        day=start_utc.day,
-        hour=start_utc.hour,
-        minute=start_utc.minute,
-        second=10*(start_utc.second // 10),
-        tzinfo=start_utc.tzinfo
-    )
-    num_time_segments = math.ceil((end_utc - start_utc_floor).seconds / 10.0)
-    time_segment_start_list = [start_utc_floor + i*datetime.timedelta(seconds=10) for i in range(num_time_segments)]
-    return time_segment_start_list

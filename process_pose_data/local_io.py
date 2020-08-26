@@ -8,6 +8,7 @@ import os
 import glob
 import re
 import json
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -31,27 +32,6 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
         file_name=file_name
     )
     return df
-
-def write_3d_pose_data_local_time_segment(
-    poses_3d_df,
-    base_dir,
-    environment_id,
-    time_segment_start,
-    directory_name='poses_3d',
-    file_name='poses_3d.pkl'
-):
-    directory_path = pose_3d_data_directory_path_time_segment(
-        base_dir=base_dir,
-        environment_id=environment_id,
-        time_segment_start=time_segment_start,
-        directory_name=directory_name
-    )
-    os.makedirs(directory_path, exist_ok=True)
-    file_path = os.path.join(
-        directory_path,
-        file_name
-    )
-    poses_3d_df.to_pickle(file_path)
 
 def fetch_2d_pose_data_alphapose_local(
     base_dir,
@@ -122,6 +102,69 @@ def fetch_2d_pose_data_alphapose_local(
     df.set_index('pose_id_2d', inplace=True)
     df.sort_values(['timestamp', 'assignment_id'], inplace=True)
     return df
+
+def write_3d_pose_data_local_time_segment(
+    poses_3d_df,
+    base_dir,
+    environment_id,
+    time_segment_start,
+    directory_name='poses_3d',
+    file_name='poses_3d.pkl'
+):
+    directory_path = pose_3d_data_directory_path_time_segment(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        time_segment_start=time_segment_start,
+        directory_name=directory_name
+    )
+    os.makedirs(directory_path, exist_ok=True)
+    file_path = os.path.join(
+        directory_path,
+        file_name
+    )
+    poses_3d_df.to_pickle(file_path)
+
+def fetch_3d_pose_data_local(
+    start,
+    end,
+    base_dir,
+    environment_id,
+    directory_name='poses_3d',
+    file_name='poses_3d.pkl'
+):
+    time_segment_start_list = generate_time_segment_start_list(
+        start,
+        end
+    )
+    poses_3d_df_list = list()
+    for time_segment_start in time_segment_start_list:
+        poses_3d_df_time_segment = fetch_3d_pose_data_local_time_segment(
+            time_segment_start,
+            base_dir=base_dir,
+            environment_id=environment_id,
+            directory_name=directory_name,
+            file_name=file_name
+        )
+        poses_3d_df_list.append(poses_3d_df_time_segment)
+    poses_3d_df = pd.concat(poses_3d_df_list)
+    return poses_3d_df
+
+def fetch_3d_pose_data_local_time_segment(
+    time_segment_start,
+    base_dir,
+    environment_id,
+    directory_name='poses_3d',
+    file_name='poses_3d.pkl'
+):
+    path=pose_3d_data_path_time_segment(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        time_segment_start=time_segment_start,
+        directory_name=directory_name,
+        file_name=file_name
+    )
+    poses_3d_df_time_segment = pd.read_pickle(path)
+    return poses_3d_df_time_segment
 
 def alphapose_data_file_glob_pattern(
     base_dir,
@@ -200,10 +243,10 @@ def pose_3d_data_path_time_segment(
     base_dir,
     environment_id,
     time_segment_start,
-    directory_name,
-    file_name
+    directory_name='poses_3d',
+    file_name='poses_3d.pkl'
 ):
-    directory_path = pose_3d_data_directory_path(
+    directory_path = pose_3d_data_directory_path_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         time_segment_start=time_segment_start,
@@ -219,7 +262,7 @@ def pose_3d_data_directory_path_time_segment(
     base_dir,
     environment_id,
     time_segment_start,
-    directory_name
+    directory_name='poses_3d'
 ):
     time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
     path = os.path.join(
@@ -265,6 +308,25 @@ def convert_assignment_ids_to_camera_device_ids(
     new_column_order = [old_column_order[0], old_column_order[-1]] + old_column_order[1:-1]
     poses_2d_df = poses_2d_df.reindex(columns=new_column_order)
     return poses_2d_df
+
+def generate_time_segment_start_list(
+    start,
+    end
+):
+    start_utc = start.astimezone(datetime.timezone.utc)
+    end_utc = end.astimezone(datetime.timezone.utc)
+    start_utc_floor = datetime.datetime(
+        year=start_utc.year,
+        month=start_utc.month,
+        day=start_utc.day,
+        hour=start_utc.hour,
+        minute=start_utc.minute,
+        second=10*(start_utc.second // 10),
+        tzinfo=start_utc.tzinfo
+    )
+    num_time_segments = math.ceil((end_utc - start_utc_floor).seconds / 10.0)
+    time_segment_start_list = [start_utc_floor + i*datetime.timedelta(seconds=10) for i in range(num_time_segments)]
+    return time_segment_start_list
 
 # def fetch_2d_pose_data_from_local_json(
 #     directory_path
