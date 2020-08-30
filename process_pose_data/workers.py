@@ -1,5 +1,6 @@
 import process_pose_data.local_io
 import process_pose_data.analyze
+import click
 import multiprocessing
 import functools
 import logging
@@ -7,6 +8,39 @@ import datetime
 
 logger = logging.getLogger(__name__)
 
+@click.command()
+@click.option('--start', required=True, type=click.DateTime())
+@click.option('--end', required=True, type=click.DateTime())
+@click.option('--base-dir', required=True, type=click.Path(exists=True, file_okay=False, dir_okay=True))
+@click.option('--environment-id', required=True)
+@click.option('--camera-assignment-id', 'camera_assignment_ids', required=True, multiple=True)
+@click.option('--room-x-limits', required=True, nargs=2, type=float)
+@click.option('--room-y-limits', required=True, nargs=2, type=float)
+@click.option('--pose-model-id', required=True)
+@click.option('--parallel/-no-parallel', default=False, show_default=True)
+@click.option('--num-parallel-processes', type=int)
+@click.option('--poses-2d-file-name', default='alphapose-results.json', show_default=True)
+@click.option('--poses-3d-directory-name', default='poses_3d', show_default=True)
+@click.option('--poses-3d-file-name', default='poses_3d.pkl', show_default=True)
+@click.option('--client')
+@click.option('--uri')
+@click.option('--token-uri')
+@click.option('--audience')
+@click.option('--client-id')
+@click.option('--client-secret')
+@click.option('--min-keypoint-quality', type=float)
+@click.option('--min-num-keypoints', type=int)
+@click.option('--min-pose-quality', type=float)
+@click.option('--min-pose-pair-score', type=float)
+@click.option('--max-pose-pair-score', type=float, default=25.0, show_default=True)
+@click.option('--pose-pair-score-distance-method', default='pixels', show_default=True)
+@click.option('--pose-pair-score-pixel-distance-scale', default=5.0, show_default=True)
+@click.option('--pose-pair-score-summary-method', default='rms', show_default=True)
+@click.option('--pose-3d-graph-initial-edge-threshold', type=int, default=2, show_default=True)
+@click.option('--pose-3d-graph-max-dispersion', type=float, default=0.20, show_default=True)
+@click.option('--include-track-labels/--no-include-track-labels', default=False, show_default=True)
+@click.option('--progress-bar/--no-progress-bar', default=False, show_default=True)
+@click.option('--log-level')
 def reconstruct_poses_3d_alphapose_local_by_time_segment(
     start,
     end,
@@ -16,7 +50,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     room_y_limits,
     parallel=False,
     num_parallel_processes=None,
-    input_file_name='alphapose-results.json',
+    poses_2d_file_name='alphapose-results.json',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name='poses_3d.pkl',
     camera_assignment_ids=None,
@@ -42,8 +76,53 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     pose_3d_graph_max_dispersion=0.20,
     include_track_labels=False,
     progress_bar=False,
-    notebook=False
+    notebook=False,
+    log_level=None
 ):
+    # print('start: {}'.format(start))
+    # print('end: {}'.format(end))
+    # print('base_dir: {}'.format(base_dir))
+    # print('environment_id: {}'.format(environment_id))
+    # print('room_x_limits: {}'.format(room_x_limits))
+    # print('room_y_limits: {}'.format(room_y_limits))
+    # print('parallel: {}'.format(parallel))
+    # print('num_parallel_processes: {}'.format(num_parallel_processes))
+    # print('poses_2d_file_name: {}'.format(poses_2d_file_name))
+    # print('poses_3d_directory_name: {}'.format(poses_3d_directory_name))
+    # print('poses_3d_file_name: {}'.format(poses_3d_file_name))
+    # print('camera_assignment_ids: {}'.format(camera_assignment_ids))
+    # print('camera_device_id_lookup: {}'.format(camera_device_id_lookup))
+    # print('client: {}'.format(client))
+    # print('uri: {}'.format(uri))
+    # print('token_uri: {}'.format(token_uri))
+    # print('audience: {}'.format(audience))
+    # print('client_id: {}'.format(client_id))
+    # print('client_secret: {}'.format(client_secret))
+    # print('pose_model_id: {}'.format(pose_model_id))
+    # print('camera_calibrations: {}'.format(camera_calibrations))
+    # print('min_keypoint_quality: {}'.format(min_keypoint_quality))
+    # print('min_num_keypoints: {}'.format(min_num_keypoints))
+    # print('min_pose_quality: {}'.format(min_pose_quality))
+    # print('min_pose_pair_score: {}'.format(min_pose_pair_score))
+    # print('pose_pair_score_distance_method: {}'.format(pose_pair_score_distance_method))
+    # print('pose_pair_score_pixel_distance_scale: {}'.format(pose_pair_score_pixel_distance_scale))
+    # print('pose_pair_score_summary_method: {}'.format(pose_pair_score_summary_method))
+    # print('pose_3d_limits: {}'.format(pose_3d_limits))
+    # print('pose_3d_graph_initial_edge_threshold: {}'.format(pose_3d_graph_initial_edge_threshold))
+    # print('pose_3d_graph_max_dispersion: {}'.format(pose_3d_graph_max_dispersion))
+    # print('include_track_labels: {}'.format(include_track_labels))
+    # print('progress_bar: {}'.format(progress_bar))
+    # print('notebook: {}'.format(notebook))
+    # print('log_level: {}'.format(log_level))
+    if log_level is not None:
+        numeric_log_level = getattr(logging, log_level.upper(), None)
+        if not isinstance(numeric_log_level, int):
+            raise ValueError('Invalid log level: %s'.format(log_level))
+        logging.basicConfig(level=numeric_log_level)
+    if start.tzinfo is None:
+        start=start.replace(tzinfo=datetime.timezone.utc)
+    if end.tzinfo is None:
+        end=end.replace(tzinfo=datetime.timezone.utc)
     time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
         start=start,
         end=end
@@ -101,7 +180,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         reconstruct_poses_3d_alphapose_local_time_segment,
         base_dir=base_dir,
         environment_id=environment_id,
-        input_file_name=input_file_name,
+        poses_2d_file_name=poses_2d_file_name,
         poses_3d_directory_name=poses_3d_directory_name,
         poses_3d_file_name=poses_3d_file_name,
         camera_device_id_lookup=camera_device_id_lookup,
@@ -148,7 +227,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
     time_segment_start,
     base_dir,
     environment_id,
-    input_file_name='alphapose-results.json',
+    poses_2d_file_name='alphapose-results.json',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name='poses_3d.pkl',
     camera_device_id_lookup=None,
@@ -183,7 +262,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         time_segment_start=time_segment_start,
-        file_name=input_file_name
+        file_name=poses_2d_file_name
     )
     logger.info('Fetched 2D pose data for time segment starting at {}'.format(time_segment_start.isoformat()))
     logger.info('Converting camera assignment IDs to camera device IDs for time segment starting at {}'.format(time_segment_start.isoformat()))

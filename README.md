@@ -4,6 +4,14 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* For Boolean options, only include positive option
+* Turn off progress bars if multiprocessing is on but not in notebook
+* Add overall time log statement
+* Fill in help messages for each argument
+* Fill in overall help message
+* Fix `tqdm` error message: `FutureWarning: The Panel class is removed from pandas`
+* Consider reordering argument to `reconstruct_poses_3d_alphapose_local_by_time_segment()` and related functions
+* Remove commented-out print statements a beginning of `reconstruct_poses_3d_alphapose_local_by_time_segment()`
 * Rewrite `overlay.overlay_video_poses_2d()` to match functionality of `overlay.overlay_video_poses_3d()` (e.g., more flexible specification of videos, concatenation)
 * Extend ability to set output container and code to all overlay functions
 * Loosen checks on overlap between pose data and video data (go ahead as long as there is _some_ overlap)

@@ -116,7 +116,7 @@ def reconstruct_poses_3d(
         if notebook:
             tqdm.notebook.tqdm.pandas()
         else:
-            tqdm.pandas()
+            tqdm.tqdm.pandas()
         poses_3d_local_ids_df = poses_2d_df.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial)
     else:
         poses_3d_local_ids_df = poses_2d_df.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial)
