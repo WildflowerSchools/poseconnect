@@ -10,6 +10,7 @@ BASE_DEPENDENCIES = [
     'wf-smc-kalman>-0.1.0',
     'wf-cv-utils>=0.5.1',
     'wf-video-io>=0.1.0',
+    'ffmpeg-python>=0.2.0',
     'wf-minimal-honeycomb-python>=0.5.0',
     'wf-geom-render>=0.3.0',
     'pandas>=0.25.3',

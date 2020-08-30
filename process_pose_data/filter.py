@@ -11,6 +11,8 @@ def filter_keypoints_by_quality(
     max_keypoint_quality=None
 ):
     poses_2d_df_filtered = poses_2d_df.copy()
+    if len(poses_2d_df_filtered) == 0:
+        return poses_2d_df_filtered
     keypoint_coordinate_arrays = poses_2d_df_filtered['keypoint_coordinates_2d'].values
     num_keypoint_coordinate_arrays = len(keypoint_coordinate_arrays)
     keypoint_coordinates = np.concatenate(keypoint_coordinate_arrays, axis = 0)
@@ -47,6 +49,8 @@ def remove_empty_2d_poses(
     poses_2d_df
 ):
     poses_2d_df_filtered = poses_2d_df.copy()
+    if len(poses_2d_df_filtered) == 0:
+        return poses_2d_df_filtered
     non_empty = poses_2d_df['keypoint_coordinates_2d'].apply(
         lambda x: np.any(np.all(np.isfinite(x), axis=1))
     )
@@ -59,6 +63,8 @@ def filter_poses_by_num_valid_keypoints(
     max_num_keypoints=None
 ):
     poses_2d_df_filtered = poses_2d_df.copy()
+    if len(poses_2d_df_filtered) == 0:
+        return poses_2d_df_filtered
     num_keypoints = poses_2d_df['keypoint_quality_2d'].apply(
         lambda x: np.count_nonzero(~np.isnan(x))
     )
@@ -74,6 +80,8 @@ def filter_poses_by_quality(
     max_pose_quality=None
 ):
     poses_2d_df_filtered = poses_2d_df.copy()
+    if len(poses_2d_df_filtered) == 0:
+        return poses_2d_df_filtered
     if min_pose_quality is not None:
         poses_2d_df_filtered = poses_2d_df_filtered.loc[poses_2d_df_filtered['pose_quality_2d'] >= min_pose_quality]
     if max_pose_quality is not None:
@@ -86,6 +94,8 @@ def filter_pose_pairs_by_score(
     max_score=None
 ):
     pose_pairs_2d_df_filtered = pose_pairs_2d_df.copy()
+    if len(pose_pairs_2d_df_filtered) == 0:
+        return pose_pairs_2d_df_filtered
     if min_score is not None:
         pose_pairs_2d_df_filtered = pose_pairs_2d_df_filtered.loc[pose_pairs_2d_df_filtered['score'] >= min_score]
     if max_score is not None:
@@ -96,6 +106,8 @@ def filter_pose_pairs_by_3d_pose_spatial_limits(
     pose_pairs_2d_df,
     pose_3d_limits
 ):
+    if len(pose_pairs_2d_df) == 0:
+        return pose_pairs_2d_df
     valid_3d_poses = pose_pairs_2d_df['keypoint_coordinates_3d'].apply(
         lambda x: process_pose_data.analyze.pose_3d_in_range(x, pose_3d_limits)
     )
@@ -105,6 +117,8 @@ def filter_pose_pairs_by_3d_pose_spatial_limits(
 def filter_pose_pairs_by_best_match(
     pose_pairs_2d_df_timestamp
 ):
+    if len(pose_pairs_2d_df_timestamp) == 0:
+        return pose_pairs_2d_df_timestamp
     pose_pairs_2d_df_timestamp.sort_index(inplace=True)
     best_score_indices = list()
     for group_name, group_df in pose_pairs_2d_df_timestamp.groupby(['camera_id_a', 'camera_id_b']):
@@ -116,6 +130,8 @@ def remove_empty_3d_poses(
     pose_pairs_2d_df
 ):
     pose_pairs_2d_df_filtered = pose_pairs_2d_df.copy()
+    if len(pose_pairs_2d_df_filtered) == 0:
+        return pose_pairs_2d_df_filtered
     non_empty = pose_pairs_2d_df['keypoint_coordinates_3d'].apply(
         lambda x: np.any(np.all(np.isfinite(x), axis=1))
     )
@@ -126,6 +142,8 @@ def remove_empty_reprojected_2d_poses(
     pose_pairs_2d_df
 ):
     pose_pairs_2d_df_filtered = pose_pairs_2d_df.copy()
+    if len(pose_pairs_2d_df_filtered) == 0:
+        return pose_pairs_2d_df_filtered
     non_empty_a = pose_pairs_2d_df['keypoint_coordinates_2d_a_reprojected'].apply(
         lambda x: np.any(np.all(np.isfinite(x), axis=1))
     )
@@ -139,6 +157,8 @@ def remove_invalid_pose_pair_scores(
     pose_pairs_2d_df
 ):
     pose_pairs_2d_df_filtered = pose_pairs_2d_df.copy()
+    if len(pose_pairs_2d_df_filtered) == 0:
+        return pose_pairs_2d_df_filtered
     valid = ~pose_pairs_2d_df['score'].isna()
     pose_pairs_2d_df_filtered = pose_pairs_2d_df_filtered.loc[valid].copy()
     return pose_pairs_2d_df_filtered

@@ -4,6 +4,7 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Rewrite `overlay.overlay_video_poses_2d()` to match functionality of `overlay.overlay_video_poses_3d()` (e.g., more flexible specification of videos, concatenation)
 * Extend ability to set output container and code to all overlay functions
 * Loosen checks on overlap between pose data and video data (go ahead as long as there is _some_ overlap)
 * Add ability to filter 3D pose tracks on track duration/size
