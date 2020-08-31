@@ -120,6 +120,8 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         if not isinstance(numeric_log_level, int):
             raise ValueError('Invalid log level: %s'.format(log_level))
         logging.basicConfig(level=numeric_log_level)
+    if progress_bar and parallel and ~notebook:
+        logger.warning('Progress bars may not display properly with parallel processing enabled outside of a notebook')
     if start.tzinfo is None:
         start=start.replace(tzinfo=datetime.timezone.utc)
     if end.tzinfo is None:
