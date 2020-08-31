@@ -87,7 +87,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     BASE_DIR/ENVIRONMENT_ID/CAMERA_ASSIGNMENT_ID/YYYY/MM/DD/HH-MM-SS/POSES_2D_FILE_NAME
 
     Structure of local data directories for 3D poses is assumed to be:
-    BASE_DIR/ENVIRONMENT_ID/POSES_3D_DIRECTORY_NAME/YYYY/MM/DD/HH-MM-SS/POSES_2D_FILE_NAME
+    BASE_DIR/ENVIRONMENT_ID/POSES_3D_DIRECTORY_NAME/YYYY/MM/DD/HH-MM-SS/POSES_3D_FILE_NAME
     """
 
     if log_level is not None:
