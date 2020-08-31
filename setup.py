@@ -20,7 +20,8 @@ BASE_DEPENDENCIES = [
     'opencv-python>=4.2.0.34',
     'python-slugify>=4.0.0',
     'matplotlib>=3.1.2',
-    'seaborn>=0.10.0'
+    'seaborn>=0.10.0',
+    'click>=7.1.2'
 ]
 
 # TEST_DEPENDENCIES = [
@@ -48,6 +49,10 @@ setup(
     #     'test': TEST_DEPENDENCIES,
     #     'local': LOCAL_DEPENDENCIES
     # },
+    entry_points='''
+        [console_scripts]
+        reconstruct_poses_3d=process_pose_data.workers:reconstruct_poses_3d_alphapose_local_by_time_segment
+    ''',
     keywords=['pose estimation'],
     classifiers=[
         'Intended Audience :: Developers',
