@@ -4,7 +4,6 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Turn off progress bars if multiprocessing is on but not in notebook
 * Add overall time log statement
 * Fill in help messages for each argument
 * Fill in overall help message
