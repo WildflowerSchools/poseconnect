@@ -8,19 +8,19 @@ VERSION = open(os.path.join(BASEDIR, 'VERSION')).read().strip()
 BASE_DEPENDENCIES = [
     'wf-pose-tracking-3d>=0.1.0',
     'wf-smc-kalman>-0.1.0',
-    'wf-cv-utils>=0.5.1',
+    'wf-cv-utils>=0.5.4',
     'wf-video-io>=0.1.0',
     'ffmpeg-python>=0.2.0',
-    'wf-minimal-honeycomb-python>=0.5.0',
+    'wf-minimal-honeycomb-python>=0.6.0',
     'wf-geom-render>=0.3.0',
-    'pandas>=0.25.3',
-    'numpy>=1.18.1',
+    'pandas>=1.0,5',
+    'numpy>=1.19.0',
     'networkx>=2.4',
-    'tqdm>=4.42.0',
-    'opencv-python>=4.2.0.34',
-    'python-slugify>=4.0.0',
-    'matplotlib>=3.1.2',
-    'seaborn>=0.10.0',
+    'tqdm>=4.47.0',
+    'opencv-python>=4.3.0.36',
+    'python-slugify>=4.0.1',
+    'matplotlib>=3.2.2',
+    'seaborn>=0.10.1',
     'click>=7.1.2'
 ]
 
