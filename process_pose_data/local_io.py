@@ -99,6 +99,16 @@ def fetch_2d_pose_data_alphapose_local(
                     'pose_quality_2d': pose_quality
                 })
     df = pd.DataFrame(data_list)
+    if len(df) == 0:
+        logger.warning('No poses found for time segment starting at %04d/%02d/%02dT%02d:%02d:%02d. Returning empty data frame',
+            year,
+            month,
+            day,
+            hour,
+            minute,
+            second
+        )
+        return df
     df.set_index('pose_id_2d', inplace=True)
     df.sort_values(['timestamp', 'assignment_id'], inplace=True)
     return df
