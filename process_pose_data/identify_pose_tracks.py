@@ -35,19 +35,28 @@ def extract_sensor_position_data(
     poses_3d_with_tracks_df,
     sensor_position_keypoint_index=10
 ):
-    poses_3d_df_with_tracks_df = poses_3d_with_tracks_df.copy()
-    poses_3d_with_tracks_df['x_position'] = poses_3d_with_tracks_df['keypoint_coordinates_3d'].apply(lambda x: x[sensor_position_keypoint_index, 0])
-    poses_3d_with_tracks_df['z_position'] = poses_3d_with_tracks_df['keypoint_coordinates_3d'].apply(lambda x: x[sensor_position_keypoint_index, 2])
-    poses_3d_with_tracks_df['y_position'] = poses_3d_with_tracks_df['keypoint_coordinates_3d'].apply(lambda x: x[sensor_position_keypoint_index, 1])
-    return poses_3d_with_tracks_df
+    poses_3d_with_tracks_and_sensor_positions_df = poses_3d_with_tracks_df.copy()
+    poses_3d_with_tracks_and_sensor_positions_df['x_position'] = (
+        poses_3d_with_tracks_and_sensor_positions_df['keypoint_coordinates_3d']
+        .apply(lambda x: x[sensor_position_keypoint_index, 0])
+    )
+    poses_3d_with_tracks_and_sensor_positions_df['y_position'] = (
+        poses_3d_with_tracks_and_sensor_positions_df['keypoint_coordinates_3d']
+        .apply(lambda x: x[sensor_position_keypoint_index, 1])
+    )
+    poses_3d_with_tracks_and_sensor_positions_df['z_position'] = (
+        poses_3d_with_tracks_and_sensor_positions_df['keypoint_coordinates_3d']
+        .apply(lambda x: x[sensor_position_keypoint_index, 2])
+    )
+    return poses_3d_with_tracks_and_sensor_positions_df
 
-def generate_track_identification(
-    poses_3d_with_tracks_df,
-    uwb_data_df
+def calculate_track_identification(
+    poses_3d_with_tracks_and_sensor_positions_df,
+    uwb_data_interpolated_df
 ):
     indentication_df_by_timestamp_list = list()
-    for timestamp, poses_3d_with_tracks_df_timestamp in poses_3d_with_tracks_df.groupby('timestamp'):
-        uwb_data_df_timestamp = uwb_data_df.loc[uwb_data_df['timestamp'] == timestamp]
+    for timestamp, poses_3d_with_tracks_df_timestamp in poses_3d_with_tracks_and_sensor_positions_df.groupby('timestamp'):
+        uwb_data_df_timestamp = uwb_data_interpolated_df.loc[uwb_data_interpolated_df['timestamp'] == timestamp]
         if len(uwb_data_df_timestamp) == 0:
             logging.warn('No UWB data for timestamp %s', timestamp.isoformat())
             continue
