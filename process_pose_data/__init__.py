@@ -5,5 +5,6 @@ from process_pose_data.analyze import *
 from process_pose_data.visualize import *
 from process_pose_data.overlay import *
 from process_pose_data.track_poses import *
+from process_pose_data.identify_pose_tracks import *
 from process_pose_data.geom_render import *
 from process_pose_data.workers import *

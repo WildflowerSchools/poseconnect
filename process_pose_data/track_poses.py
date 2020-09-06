@@ -80,6 +80,56 @@ def generate_pose_tracks(
     )
     return poses_3d_df_copy, pose_tracks_3d
 
+def interpolate_pose_tracks(
+    poses_3d_with_tracks_df
+):
+    poses_3d_with_tracks_interpolated = (
+        poses_3d_with_tracks_df
+        .groupby('pose_track_3d_id')
+        .apply(interpolate_track)
+        .reset_index()
+    )
+    return poses_3d_with_tracks_interpolated
+
+def interpolate_track(pose_track_3d_df):
+    pose_track_3d_df = pose_track_3d_df.copy()
+    pose_track_3d_df.dropna(subset=['keypoint_coordinates_3d'])
+    pose_track_3d_df.sort_values('timestamp', inplace=True)
+    old_num_poses = len(pose_track_3d_df)
+    old_index = pd.DatetimeIndex(pose_track_3d_df['timestamp'])
+    new_index = pd.date_range(
+        start=pose_track_3d_df['timestamp'].min(),
+        end=pose_track_3d_df['timestamp'].max(),
+        freq='100ms',
+        name='timestamp'
+    )
+    new_num_poses = len(new_index)
+    keypoint_df = pd.DataFrame(
+        np.stack(pose_track_3d_df['keypoint_coordinates_3d']).reshape((old_num_poses, -1)),
+        index=old_index
+    )
+    keypoint_df_interpolated = keypoint_df.reindex(new_index).interpolate(method='time')
+    keypoint_array = keypoint_df_interpolated.values.reshape((new_num_poses, -1, 3))
+    keypoint_array_unstacked = [keypoint_array[i] for i in range(keypoint_array.shape[0])]
+    pose_track_3d_df_interpolated = pd.Series(
+        keypoint_array_unstacked,
+        index=new_index,
+        name='keypoint_coordinates_3d'
+    ).to_frame()
+    return pose_track_3d_df_interpolated
+
+def add_short_track_labels(
+    poses_3d_with_tracks_df
+):
+    pose_track_3d_id_index = poses_3d_with_tracks_df.groupby('pose_track_3d_id').apply(lambda x: x['timestamp'].min()).sort_values().index
+    track_label_lookup = pd.DataFrame(
+        range(1, len(pose_track_3d_id_index)+1),
+        columns=['pose_track_3d_id_short'],
+        index=pose_track_3d_id_index
+    )
+    poses_3d_with_tracks_df = poses_3d_with_tracks_df.join(track_label_lookup, on='pose_track_3d_id')
+    return poses_3d_with_tracks_df
+
 class PoseTracks3D:
     def __init__(
         self,
