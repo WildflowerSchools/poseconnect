@@ -2,6 +2,7 @@ import smc_kalman
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import tqdm
 from uuid import uuid4
 import logging
 import time
@@ -17,7 +18,9 @@ def generate_pose_tracks(
     centroid_velocity_initial_sd=1.0,
     reference_delta_t_seconds=1.0,
     reference_velocity_drift=0.30,
-    position_observation_sd=0.5
+    position_observation_sd=0.5,
+    progress_bar=False,
+    notebook=False
 ):
     num_seconds = (poses_3d_df['timestamp'].max() - poses_3d_df['timestamp'].min()).total_seconds()
     generate_tracks_start = time.time()
@@ -46,7 +49,14 @@ def generate_pose_tracks(
         reference_velocity_drift=reference_velocity_drift,
         position_observation_sd=position_observation_sd
     )
-    for current_timestamp in timestamps[1:]:
+    if progress_bar:
+        if notebook:
+            timestamp_iterator = tqdm.notebook.tqdm(timestamps[1:])
+        else:
+            timestamp_iterator = tqdm.tqdm(timestamps[1:])
+    else:
+        timestamp_iterator = timestamps[1:]
+    for current_timestamp in timestamp_iterator:
         current_pose_3d_ids = poses_3d_df_copy.loc[
             poses_3d_df_copy['timestamp'] == current_timestamp
         ].index.values.tolist()
