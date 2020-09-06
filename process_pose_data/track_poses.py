@@ -19,6 +19,12 @@ def generate_pose_tracks(
     reference_velocity_drift=0.30,
     position_observation_sd=0.5
 ):
+    num_seconds = (poses_3d_df['timestamp'].max() - poses_3d_df['timestamp'].min()).total_seconds()
+    generate_tracks_start = time.time()
+    logging.info(
+        'Generating pose tracks for %.3f seconds of 3D pose data',
+        num_seconds
+    )
     poses_3d_df_copy = poses_3d_df.copy()
     poses_3d_df_copy['pose_track_3d_id'] = None
     timestamps = np.sort(poses_3d_df['timestamp'].unique())
@@ -55,6 +61,13 @@ def generate_pose_tracks(
         )
     for pose_track_3d_id, pose_track_3d in pose_tracks_3d.tracks().items():
         poses_3d_df_copy.loc[pose_track_3d.pose_3d_ids, 'pose_track_3d_id'] = pose_track_3d_id
+    generate_tracks_time = time.time() - generate_tracks_start
+    logging.info(
+        'Generated pose tracks for %.3f seconds of 3D pose data in %.3f seconds (ratio of %.3f)',
+        num_seconds,
+        generate_tracks_time,
+        generate_tracks_time/num_seconds
+    )
     return poses_3d_df_copy, pose_tracks_3d
 
 class PoseTracks3D:
