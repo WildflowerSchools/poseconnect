@@ -375,3 +375,10 @@ def select_pose_pairs(
     combined_filter = np.bitwise_and.reduce(filter_list)
     pose_pairs_2d_df_selected = pose_pairs_2d_df.loc[combined_filter].copy()
     return pose_pairs_2d_df_selected
+
+def filter_pose_tracks(
+    poses_3d_with_tracks_df,
+    num_poses_min=10
+):
+    poses_3d_with_tracks_filtered_df = poses_3d_with_tracks_df.groupby('pose_track_3d_id').filter(lambda x: len(x) >= num_poses_min)
+    return poses_3d_with_tracks_filtered_df
