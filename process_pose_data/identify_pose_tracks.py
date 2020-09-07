@@ -2,17 +2,34 @@ import pandas as pd
 import numpy as np
 import scipy
 
+
+def generate_track_identification(
+    poses_3d_with_tracks_df,
+    uwb_data_df,
+    sensor_position_keypoint_index=10
+):
+    uwb_data_resampled_df = resample_uwb_data(uwb_data_df)
+    poses_3d_with_tracks_and_sensor_positions_df = extract_sensor_position_data(
+        poses_3d_with_tracks_df=poses_3d_with_tracks_df,
+        sensor_position_keypoint_index=sensor_position_keypoint_index
+    )
+    identification_df = calculate_track_identification(
+        poses_3d_with_tracks_and_sensor_positions_df=poses_3d_with_tracks_and_sensor_positions_df,
+        uwb_data_resampled_df=uwb_data_resampled_df
+    )
+    return identification_df
+
 def resample_uwb_data(
     uwb_data_df
 ):
-    uwb_data_interpolated_df = (
+    uwb_data_resampled_df = (
         uwb_data_df
         .set_index('timestamp')
         .groupby('person_id')
         .apply(resample_uwb_data_person)
         .reset_index()
     )
-    return uwb_data_interpolated_df
+    return uwb_data_resampled_df
 
 def resample_uwb_data_person(
     uwb_data_person_df
@@ -52,11 +69,11 @@ def extract_sensor_position_data(
 
 def calculate_track_identification(
     poses_3d_with_tracks_and_sensor_positions_df,
-    uwb_data_interpolated_df
+    uwb_data_resampled_df
 ):
     indentication_df_by_timestamp_list = list()
     for timestamp, poses_3d_with_tracks_df_timestamp in poses_3d_with_tracks_and_sensor_positions_df.groupby('timestamp'):
-        uwb_data_df_timestamp = uwb_data_interpolated_df.loc[uwb_data_interpolated_df['timestamp'] == timestamp]
+        uwb_data_df_timestamp = uwb_data_resampled_df.loc[uwb_data_resampled_df['timestamp'] == timestamp]
         if len(uwb_data_df_timestamp) == 0:
             logging.warn('No UWB data for timestamp %s', timestamp.isoformat())
             continue
