@@ -51,7 +51,7 @@ setup(
     # },
     entry_points='''
         [console_scripts]
-        reconstruct_poses_3d=process_pose_data.workers:reconstruct_poses_3d_alphapose_local_by_time_segment
+        reconstruct_poses_3d=process_pose_data.scripts.reconstruct_poses_3d:reconstruct_poses_3d
     ''',
     keywords=['pose estimation'],
     classifiers=[
