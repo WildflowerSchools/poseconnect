@@ -4,6 +4,12 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Implement pose track filtering
+* Implement pose track interpolation
+* Parallellize 3D pose overlay function
+* Enable `workers.reconstruct_poses_3d_alphapose_local_by_time_segment()` to be called as library function (as well as executable)
+* Write worker which produces interpolated pose tracks from local 3D pose data
+* Rewrite all log messages so formatting isn't called if log isn't printed
 * Rewrite `overlay.overlay_video_poses_2d()` to match functionality of `overlay.overlay_video_poses_3d()` (e.g., more flexible specification of videos, concatenation)
 * Extend ability to set output container and code to all overlay functions
 * Loosen checks on overlap between pose data and video data (go ahead as long as there is _some_ overlap)

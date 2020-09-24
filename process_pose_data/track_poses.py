@@ -2,6 +2,7 @@ import smc_kalman
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import tqdm
 from uuid import uuid4
 import logging
 import time
@@ -17,8 +18,16 @@ def generate_pose_tracks(
     centroid_velocity_initial_sd=1.0,
     reference_delta_t_seconds=1.0,
     reference_velocity_drift=0.30,
-    position_observation_sd=0.5
+    position_observation_sd=0.5,
+    progress_bar=False,
+    notebook=False
 ):
+    num_seconds = (poses_3d_df['timestamp'].max() - poses_3d_df['timestamp'].min()).total_seconds()
+    generate_tracks_start = time.time()
+    logging.info(
+        'Generating pose tracks for %.3f seconds of 3D pose data',
+        num_seconds
+    )
     poses_3d_df_copy = poses_3d_df.copy()
     poses_3d_df_copy['pose_track_3d_id'] = None
     timestamps = np.sort(poses_3d_df['timestamp'].unique())
@@ -40,7 +49,14 @@ def generate_pose_tracks(
         reference_velocity_drift=reference_velocity_drift,
         position_observation_sd=position_observation_sd
     )
-    for current_timestamp in timestamps[1:]:
+    if progress_bar:
+        if notebook:
+            timestamp_iterator = tqdm.notebook.tqdm(timestamps[1:])
+        else:
+            timestamp_iterator = tqdm.tqdm(timestamps[1:])
+    else:
+        timestamp_iterator = timestamps[1:]
+    for current_timestamp in timestamp_iterator:
         current_pose_3d_ids = poses_3d_df_copy.loc[
             poses_3d_df_copy['timestamp'] == current_timestamp
         ].index.values.tolist()
@@ -55,7 +71,64 @@ def generate_pose_tracks(
         )
     for pose_track_3d_id, pose_track_3d in pose_tracks_3d.tracks().items():
         poses_3d_df_copy.loc[pose_track_3d.pose_3d_ids, 'pose_track_3d_id'] = pose_track_3d_id
+    generate_tracks_time = time.time() - generate_tracks_start
+    logging.info(
+        'Generated pose tracks for %.3f seconds of 3D pose data in %.3f seconds (ratio of %.3f)',
+        num_seconds,
+        generate_tracks_time,
+        generate_tracks_time/num_seconds
+    )
     return poses_3d_df_copy, pose_tracks_3d
+
+def interpolate_pose_tracks(
+    poses_3d_with_tracks_df
+):
+    poses_3d_with_tracks_interpolated = (
+        poses_3d_with_tracks_df
+        .groupby('pose_track_3d_id')
+        .apply(interpolate_track)
+        .reset_index()
+    )
+    return poses_3d_with_tracks_interpolated
+
+def interpolate_track(pose_track_3d_df):
+    pose_track_3d_df = pose_track_3d_df.copy()
+    pose_track_3d_df.dropna(subset=['keypoint_coordinates_3d'])
+    pose_track_3d_df.sort_values('timestamp', inplace=True)
+    old_num_poses = len(pose_track_3d_df)
+    old_index = pd.DatetimeIndex(pose_track_3d_df['timestamp'])
+    new_index = pd.date_range(
+        start=pose_track_3d_df['timestamp'].min(),
+        end=pose_track_3d_df['timestamp'].max(),
+        freq='100ms',
+        name='timestamp'
+    )
+    new_num_poses = len(new_index)
+    keypoint_df = pd.DataFrame(
+        np.stack(pose_track_3d_df['keypoint_coordinates_3d']).reshape((old_num_poses, -1)),
+        index=old_index
+    )
+    keypoint_df_interpolated = keypoint_df.reindex(new_index).interpolate(method='time')
+    keypoint_array = keypoint_df_interpolated.values.reshape((new_num_poses, -1, 3))
+    keypoint_array_unstacked = [keypoint_array[i] for i in range(keypoint_array.shape[0])]
+    pose_track_3d_df_interpolated = pd.Series(
+        keypoint_array_unstacked,
+        index=new_index,
+        name='keypoint_coordinates_3d'
+    ).to_frame()
+    return pose_track_3d_df_interpolated
+
+def add_short_track_labels(
+    poses_3d_with_tracks_df
+):
+    pose_track_3d_id_index = poses_3d_with_tracks_df.groupby('pose_track_3d_id').apply(lambda x: x['timestamp'].min()).sort_values().index
+    track_label_lookup = pd.DataFrame(
+        range(1, len(pose_track_3d_id_index)+1),
+        columns=['pose_track_3d_id_short'],
+        index=pose_track_3d_id_index
+    )
+    poses_3d_with_tracks_df = poses_3d_with_tracks_df.join(track_label_lookup, on='pose_track_3d_id')
+    return poses_3d_with_tracks_df
 
 class PoseTracks3D:
     def __init__(
