@@ -16,7 +16,8 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
     base_dir,
     environment_id,
     time_segment_start,
-    file_name='alphapose-results.json'
+    file_name='alphapose-results.json',
+    json_format='cmu'
 ):
     time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
     df = fetch_2d_pose_data_alphapose_local(
@@ -29,7 +30,8 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
         hour=time_segment_start_utc.hour,
         minute=time_segment_start_utc.minute,
         second=time_segment_start_utc.second,
-        file_name=file_name
+        file_name=file_name,
+        json_format=json_format
     )
     return df
 
@@ -43,7 +45,8 @@ def fetch_2d_pose_data_alphapose_local(
     hour=None,
     minute=None,
     second=None,
-    file_name='alphapose-results.json'
+    file_name='alphapose-results.json',
+    json_format='cmu'
 ):
     glob_pattern = alphapose_data_file_glob_pattern(
         base_dir=base_dir,
@@ -77,19 +80,40 @@ def fetch_2d_pose_data_alphapose_local(
             tzinfo=datetime.timezone.utc
         )
         with open(path, 'r') as fp:
-            pose_data_dict = json.load(fp)
-        if len(pose_data_dict) == 0:
+            pose_data_object = json.load(fp)
+        if len(pose_data_object) == 0:
             continue
-        for image_filename, pose_data in pose_data_dict.items():
-            frame_number = int(image_filename.split('.')[0])
-            timestamp = timestamp_video_file + datetime.timedelta(microseconds = 10**5*frame_number)
-            for pose in pose_data['bodies']:
-                keypoint_data_array = np.asarray(pose['joints']).reshape((-1 , 3))
+        if json_format == 'cmu':
+            # JSON is a dict structure with an entry for each image
+            for image_filename, pose_data in pose_data_object.items():
+                frame_number = int(image_filename.split('.')[0])
+                timestamp = timestamp_video_file + datetime.timedelta(microseconds = 10**5*frame_number)
+                for pose in pose_data['bodies']:
+                    keypoint_data_array = np.asarray(pose['joints']).reshape((-1 , 3))
+                    keypoints = keypoint_data_array[:, :2]
+                    keypoint_quality = keypoint_data_array[:, 2]
+                    keypoints = np.where(keypoints == 0.0, np.nan, keypoints)
+                    keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
+                    pose_quality = pose.get('score')
+                    data_list.append({
+                        'pose_id_2d': uuid4().hex,
+                        'timestamp': pd.to_datetime(timestamp),
+                        'assignment_id': assignment_id,
+                        'keypoint_coordinates_2d': keypoints,
+                        'keypoint_quality_2d': keypoint_quality,
+                        'pose_quality_2d': pose_quality
+                    })
+        elif json_format == 'list':
+            # JSON is a list structure with an item for each pose
+            for pose_data in pose_data_object:
+                frame_number = int(pose_data.get('image_id').split('.')[0])
+                timestamp = timestamp_video_file + datetime.timedelta(microseconds = 10**5*frame_number)
+                keypoint_data_array = np.asarray(pose_data['keypoints']).reshape((-1 , 3))
                 keypoints = keypoint_data_array[:, :2]
                 keypoint_quality = keypoint_data_array[:, 2]
                 keypoints = np.where(keypoints == 0.0, np.nan, keypoints)
                 keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
-                pose_quality = pose.get('score')
+                pose_quality = pose_data.get('score')
                 data_list.append({
                     'pose_id_2d': uuid4().hex,
                     'timestamp': pd.to_datetime(timestamp),
@@ -98,6 +122,8 @@ def fetch_2d_pose_data_alphapose_local(
                     'keypoint_quality_2d': keypoint_quality,
                     'pose_quality_2d': pose_quality
                 })
+        else:
+            raise ValueError('JSON format specifier \'{}\' not recognized'.format(json_format))
     df = pd.DataFrame(data_list)
     if len(df) == 0:
         logger.warning('No poses found for time segment starting at %04d/%02d/%02dT%02d:%02d:%02d. Returning empty data frame',
