@@ -44,7 +44,7 @@ def overlay_video_poses_2d(
     progress_bar=False,
     notebook=False
 ):
-    camera_ids = poses_2d_df['camera_id'].unique()
+    camera_ids = poses_2d_df['camera_id'].unique().tolist()
     if pose_model_id is not None:
         pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
             pose_model_id
