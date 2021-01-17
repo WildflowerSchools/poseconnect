@@ -18,6 +18,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     parallel=False,
     num_parallel_processes=None,
     poses_2d_file_name='alphapose-results.json',
+    poses_2d_json_format='cmu',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name='poses_3d.pkl',
     camera_assignment_ids=None,
@@ -112,6 +113,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         poses_2d_file_name=poses_2d_file_name,
+        poses_2d_json_format=poses_2d_json_format,
         poses_3d_directory_name=poses_3d_directory_name,
         poses_3d_file_name=poses_3d_file_name,
         camera_device_id_lookup=camera_device_id_lookup,
@@ -166,6 +168,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
     base_dir,
     environment_id,
     poses_2d_file_name='alphapose-results.json',
+    poses_2d_json_format='cmu',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name='poses_3d.pkl',
     camera_device_id_lookup=None,
@@ -200,7 +203,8 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         time_segment_start=time_segment_start,
-        file_name=poses_2d_file_name
+        file_name=poses_2d_file_name,
+        json_format=poses_2d_json_format
     )
     if len(poses_2d_df_time_segment) == 0:
         logger.info('No 2D poses found doe time segment starting at %s', time_segment_start.isoformat())
