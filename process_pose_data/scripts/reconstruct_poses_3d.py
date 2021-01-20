@@ -22,8 +22,9 @@ logger = logging.getLogger(__name__)
 @click.option('--parallel/-no-parallel', default=False, help='Turn parallel processing on/off [default:  off]')
 @click.option('--num-parallel-processes', type=int, help='Number of parallel processes to launch [default:  number of cores - 1]')
 @click.option('--poses-2d-file-name', default='alphapose-results.json', show_default=True, help='File name for 2D pose data in each directory')
+@click.option('--honeycomb-inference-execution/--no-honeycomb-inference-execution', default=False, help='Generate/don\'t generate Honeycomb inference execution [default:  don\'t]')
 @click.option('--poses-3d-directory-name', default='poses_3d', show_default=True, help='Name of directory containing 3D pose data (just below environment ID level)')
-@click.option('--poses-3d-file-name', default='poses_3d.pkl', show_default=True, help='File name for 3D pose data in each directory')
+@click.option('--poses-3d-file-name-stem', default='poses_3d', show_default=True, help='File name stem for 3D pose data in each directory')
 @click.option('--uri', help='Honeycomb URI (defaults to value of HONEYCOMB_URI environment variable)')
 @click.option('--token-uri', help='Honeycomb token URI (defaults to value of HONEYCOMB_TOKEN_URI environment variable)')
 @click.option('--audience', help='Honeycomb audience (defaults to value of HONEYCOMB_AUDIENCE environment variable)')
@@ -52,8 +53,9 @@ def reconstruct_poses_3d(
     parallel=False,
     num_parallel_processes=None,
     poses_2d_file_name='alphapose-results.json',
+    honeycomb_inference_execution=False,
     poses_3d_directory_name='poses_3d',
-    poses_3d_file_name='poses_3d.pkl',
+    poses_3d_file_name_stem='poses_3d',
     camera_assignment_ids=None,
     camera_device_id_lookup=None,
     client=None,
@@ -106,8 +108,9 @@ def reconstruct_poses_3d(
         parallel=parallel,
         num_parallel_processes=num_parallel_processes,
         poses_2d_file_name=poses_2d_file_name,
+        honeycomb_inference_execution=honeycomb_inference_execution,
         poses_3d_directory_name=poses_3d_directory_name,
-        poses_3d_file_name=poses_3d_file_name,
+        poses_3d_file_name_stem=poses_3d_file_name_stem,
         camera_assignment_ids=camera_assignment_ids,
         camera_device_id_lookup=camera_device_id_lookup,
         client=client,

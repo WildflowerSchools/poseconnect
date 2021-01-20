@@ -144,14 +144,19 @@ def write_3d_pose_data_local_time_segment(
     base_dir,
     environment_id,
     time_segment_start,
+    inference_id,
     directory_name='poses_3d',
-    file_name='poses_3d.pkl'
+    file_name_stem='poses_3d'
 ):
     directory_path = pose_3d_data_directory_path_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         time_segment_start=time_segment_start,
         directory_name=directory_name
+    )
+    file_name = '{}_{}.pkl'.format(
+        file_name_stem,
+        inference_id
     )
     os.makedirs(directory_path, exist_ok=True)
     file_path = os.path.join(
@@ -165,8 +170,9 @@ def fetch_3d_pose_data_local(
     end,
     base_dir,
     environment_id,
+    inference_id,
     directory_name='poses_3d',
-    file_name='poses_3d.pkl'
+    file_name_stem='poses_3d'
 ):
     time_segment_start_list = generate_time_segment_start_list(
         start,
@@ -178,8 +184,9 @@ def fetch_3d_pose_data_local(
             time_segment_start,
             base_dir=base_dir,
             environment_id=environment_id,
+            inference_id=inference_id,
             directory_name=directory_name,
-            file_name=file_name
+            file_name_stem=file_name_stem
         )
         poses_3d_df_list.append(poses_3d_df_time_segment)
     poses_3d_df = pd.concat(poses_3d_df_list)
@@ -189,18 +196,50 @@ def fetch_3d_pose_data_local_time_segment(
     time_segment_start,
     base_dir,
     environment_id,
+    inference_id,
     directory_name='poses_3d',
-    file_name='poses_3d.pkl'
+    file_name_stem='poses_3d'
 ):
     path=pose_3d_data_path_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
+        inference_id=inference_id,
         time_segment_start=time_segment_start,
         directory_name=directory_name,
-        file_name=file_name
+        file_name_stem=file_name_stem
     )
     poses_3d_df_time_segment = pd.read_pickle(path)
     return poses_3d_df_time_segment
+
+def write_inference_execution_local(
+    base_dir,
+    environment_id,
+    inference_id,
+    execution_start=None,
+    name=None,
+    notes=None,
+    model=None,
+    version=None,
+    inference_execution_filename_stem='inference_execution'
+):
+    inference_execution_path = os.path.join(
+        base_dir,
+        environment_id,
+        '{}_{}.json'.format(
+            inference_execution_filename_stem,
+            inference_id
+        )
+    )
+    inference_execution_data = {
+        'inference_id': inference_id,
+        'execution_start': execution_start.isoformat(),
+        'name': name,
+        'notes': notes,
+        'model': model,
+        'version': version
+    }
+    with open(inference_execution_path, 'w') as fp:
+        json.dump(inference_execution_data, fp)
 
 def alphapose_data_file_glob_pattern(
     base_dir,
@@ -278,15 +317,20 @@ def alphapose_data_file_re_pattern(
 def pose_3d_data_path_time_segment(
     base_dir,
     environment_id,
+    inference_id,
     time_segment_start,
     directory_name='poses_3d',
-    file_name='poses_3d.pkl'
+    file_name_stem='poses_3d'
 ):
     directory_path = pose_3d_data_directory_path_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         time_segment_start=time_segment_start,
         directory_name=directory_name
+    )
+    file_name='{}_{}.pkl'.format(
+        file_name_stem,
+        inference_id
     )
     path = os.path.join(
         directory_path,

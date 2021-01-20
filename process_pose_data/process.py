@@ -1,5 +1,7 @@
 import process_pose_data.local_io
+import process_pose_data.honeycomb_io
 import process_pose_data.analyze
+from uuid import uuid4
 import multiprocessing
 import functools
 import logging
@@ -19,8 +21,9 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     num_parallel_processes=None,
     poses_2d_file_name='alphapose-results.json',
     poses_2d_json_format='cmu',
+    honeycomb_inference_execution=False,
     poses_3d_directory_name='poses_3d',
-    poses_3d_file_name='poses_3d.pkl',
+    poses_3d_file_name_stem='poses_3d',
     camera_assignment_ids=None,
     camera_device_id_lookup=None,
     client=None,
@@ -46,6 +49,50 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     progress_bar=False,
     notebook=False
 ):
+    logger.info('Reconstructing 3D poses from local 2D pose data. Base directory: {}. Environment ID: {}. Start: {}. End: {}'.format(
+        base_dir,
+        environment_id,
+        start,
+        end
+    ))
+    logger.info('Generating inference execution info')
+    inference_execution_start = datetime.datetime.now(tz=datetime.timezone.utc)
+    inference_execution_name = 'Reconstruct 3D poses from 2D poses'
+    inference_execution_notes = 'Environment: {} Start: {} End: {}'.format(
+        environment_id,
+        start.isoformat(),
+        end.isoformat()
+    )
+    inference_execution_model = 'process_pose_data.process.reconstruct_poses_3d_alphapose_local_by_time_segment'
+    inference_execution_version = '2.4.0'
+    if honeycomb_inference_execution:
+        logger.info('Writing inference execution info to Honeycomb')
+        inference_id = process_pose_data.honeycomb_io.create_inference_execution(
+            execution_start=inference_execution_start,
+            name=inference_execution_name,
+            notes=inference_execution_notes,
+            model=inference_execution_model,
+            version=inference_execution_version,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    else:
+        logger.info('Generating local inference execution ID')
+        inference_id = uuid4().hex
+    logger.info('Writing inference execution info to local file')
+    process_pose_data.local_io.write_inference_execution_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        inference_id=inference_id,
+        execution_start=inference_execution_start,
+        name=inference_execution_name,
+        notes=inference_execution_notes,
+        model=inference_execution_model,
+        version=inference_execution_version
+    )
     if progress_bar and parallel and ~notebook:
         logger.warning('Progress bars may not display properly with parallel processing enabled outside of a notebook')
     if start.tzinfo is None:
@@ -112,10 +159,11 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         reconstruct_poses_3d_alphapose_local_time_segment,
         base_dir=base_dir,
         environment_id=environment_id,
+        poses_3d_inference_id=inference_id,
         poses_2d_file_name=poses_2d_file_name,
         poses_2d_json_format=poses_2d_json_format,
         poses_3d_directory_name=poses_3d_directory_name,
-        poses_3d_file_name=poses_3d_file_name,
+        poses_3d_file_name_stem=poses_3d_file_name_stem,
         camera_device_id_lookup=camera_device_id_lookup,
         client=None,
         uri=None,
@@ -162,15 +210,17 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         processing_time/60,
         (processing_time/60)/num_minutes
     ))
+    return inference_id
 
 def reconstruct_poses_3d_alphapose_local_time_segment(
     time_segment_start,
     base_dir,
     environment_id,
+    poses_3d_inference_id,
     poses_2d_file_name='alphapose-results.json',
     poses_2d_json_format='cmu',
     poses_3d_directory_name='poses_3d',
-    poses_3d_file_name='poses_3d.pkl',
+    poses_3d_file_name_stem='poses_3d',
     camera_device_id_lookup=None,
     client=None,
     uri=None,
@@ -207,7 +257,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         json_format=poses_2d_json_format
     )
     if len(poses_2d_df_time_segment) == 0:
-        logger.info('No 2D poses found doe time segment starting at %s', time_segment_start.isoformat())
+        logger.info('No 2D poses found for time segment starting at %s', time_segment_start.isoformat())
         return
     logger.info('Fetched 2D pose data for time segment starting at {}'.format(time_segment_start.isoformat()))
     logger.info('Converting camera assignment IDs to camera device IDs for time segment starting at {}'.format(time_segment_start.isoformat()))
@@ -251,6 +301,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         time_segment_start=time_segment_start,
+        inference_id=poses_3d_inference_id,
         directory_name=poses_3d_directory_name,
-        file_name=poses_3d_file_name
+        file_name_stem=poses_3d_file_name_stem
     )

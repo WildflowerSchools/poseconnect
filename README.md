@@ -4,6 +4,19 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Fix up overlay functions so they cope if overlay already exists
+* Fix up 3D reconstruction pipeline so Honeycomb client info flows properly through function stack
+* Figure out how to make code source package version number
+* Add `poses_2d_json_format` option to `reconstruct_poses_3d` entry point
+* Update `local_io.fetch_3d_pose_data_local` to incorporate inference execution ID
+* Make function for deleting local 3D pose data
+* Update `honeycomb_io.write_3d_pose_data` to incorporate inference execution ID
+* Update `honeycomb_io.fetch_3d_pose_data` to incorporate inference execution ID
+* Make entry point for batch writing 3D pose data to Honeycomb
+* Make pipeline function for generating pose tracks and interpolating pose tracks
+* Update `honeycomb_io.write_3d_pose_tracks` to write interpolated 3D pose tracks to Honeycomb
+* Make pipeline function for identifying 3D pose tracks
+* Make function for writing pose track identification inferences to Honeycomb
 * Implement pose track filtering
 * Implement pose track interpolation
 * Parallellize 3D pose overlay function
