@@ -4,24 +4,20 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Fix up overlay functions so they cope if overlay already exists
-* Fix up 3D reconstruction pipeline so Honeycomb client info flows properly through function stack
-* Figure out how to make code source package version number
-* Add `poses_2d_json_format` option to `reconstruct_poses_3d` entry point
-* Update `local_io.fetch_3d_pose_data_local` to incorporate inference execution ID
-* Make function for deleting local 3D pose data
 * Update `honeycomb_io.write_3d_pose_data` to incorporate inference execution ID
 * Update `honeycomb_io.fetch_3d_pose_data` to incorporate inference execution ID
+* Make function for deleting local 3D pose data
 * Make entry point for batch writing 3D pose data to Honeycomb
 * Make pipeline function for generating pose tracks and interpolating pose tracks
 * Update `honeycomb_io.write_3d_pose_tracks` to write interpolated 3D pose tracks to Honeycomb
 * Make pipeline function for identifying 3D pose tracks
 * Make function for writing pose track identification inferences to Honeycomb
-* Implement pose track filtering
-* Implement pose track interpolation
+* Figure out why there's an empty `pose_id_3d_local` column in 3D pose dataframe output
+* Fix up overlay functions so they cope if overlay already exists
+* Fix up 3D reconstruction pipeline so Honeycomb client info flows properly through function stack
+* Figure out how to make code source package version number
+* Add `poses_2d_json_format` option to `reconstruct_poses_3d` entry point
 * Parallellize 3D pose overlay function
-* Enable `workers.reconstruct_poses_3d_alphapose_local_by_time_segment()` to be called as library function (as well as executable)
-* Write worker which produces interpolated pose tracks from local 3D pose data
 * Rewrite all log messages so formatting isn't called if log isn't printed
 * Rewrite `overlay.overlay_video_poses_2d()` to match functionality of `overlay.overlay_video_poses_3d()` (e.g., more flexible specification of videos, concatenation)
 * Extend ability to set output container and code to all overlay functions

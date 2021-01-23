@@ -640,6 +640,8 @@ def generate_3d_poses_timestamp(
         pose_id_2ds.append(pose_id_2ds_list)
         if include_track_labels:
             track_labels.append(track_label_list)
+    if len(pose_ids_3d_local) == 0:
+        return pd.DataFrame()
     if include_track_labels:
         poses_3d_local_ids_df_timestamp = pd.DataFrame({
             'pose_id_3d_local': pose_ids_3d_local,
