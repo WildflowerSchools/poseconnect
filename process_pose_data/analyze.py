@@ -68,7 +68,6 @@ def reconstruct_poses_3d(
                 break
     if len(missing_cameras) > 0:
         poses_2d_df = poses_2d_df.loc[~poses_2d_df['camera_id'].isin(missing_cameras)]
-    coordinate_space_id = extract_coordinate_space_id_from_camera_calibrations(camera_calibrations)
     if pose_3d_limits is None:
         if room_x_limits is None or room_y_limits is None:
             raise ValueError('3D pose spatial limits no specified and room boundaries not specified')
@@ -89,7 +88,6 @@ def reconstruct_poses_3d(
     reconstruct_poses_3d_timestamp_partial = partial(
         reconstruct_poses_3d_timestamp,
         camera_calibrations=camera_calibrations,
-        coordinate_space_id=coordinate_space_id,
         min_keypoint_quality=min_keypoint_quality,
         min_num_keypoints=min_num_keypoints,
         min_pose_quality=min_pose_quality,
@@ -215,7 +213,6 @@ def pose_3d_limits(
 def reconstruct_poses_3d_timestamp(
     poses_2d_df_timestamp,
     camera_calibrations,
-    coordinate_space_id,
     min_keypoint_quality=None,
     min_num_keypoints=None,
     min_pose_quality=None,
@@ -291,7 +288,6 @@ def reconstruct_poses_3d_timestamp(
     )
     poses_3d_local_ids_df_timestamp = generate_3d_poses_timestamp(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
-        coordinate_space_id=coordinate_space_id,
         initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         max_dispersion=pose_3d_graph_max_dispersion,
         include_track_labels=include_track_labels,
@@ -592,7 +588,6 @@ def extract_best_score_indices_timestamp_camera_pair(
 
 def generate_3d_poses_timestamp(
     pose_pairs_2d_df_timestamp,
-    coordinate_space_id,
     initial_edge_threshold=2,
     max_dispersion=0.20,
     include_track_labels=False,
@@ -647,7 +642,6 @@ def generate_3d_poses_timestamp(
             'pose_id_3d_local': pose_ids_3d_local,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
-            'coordinate_space_id': coordinate_space_id,
             'pose_ids_2d': pose_id_2ds,
             'track_labels_2d': track_labels
         })
@@ -656,7 +650,6 @@ def generate_3d_poses_timestamp(
             'pose_id_3d_local': pose_ids_3d_local,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
-            'coordinate_space_id': coordinate_space_id,
             'pose_ids_2d': pose_id_2ds
         })
     return poses_3d_local_ids_df_timestamp
