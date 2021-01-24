@@ -12,6 +12,14 @@ import math
 
 logger = logging.getLogger(__name__)
 
+class CustomJSONEncoder(json.JSONEncoder):
+        def default(self, obj):
+                if isinstance(obj, datetime.datetime):
+                        return obj.isoformat()
+                if isinstance(obj, np.ndarray):
+                        return obj.tolist()
+                return json.JSONEncoder.default(self, obj)
+
 def fetch_2d_pose_data_alphapose_local_time_segment(
     base_dir,
     environment_id,
@@ -211,9 +219,36 @@ def fetch_3d_pose_data_local_time_segment(
     poses_3d_df_time_segment = pd.read_pickle(path)
     return poses_3d_df_time_segment
 
+def write_inference_metadata_local(
+    inference_metadata,
+    base_dir,
+    environment_id,
+    subdirectory_name,
+    inference_metadata_filename_stem='inference_metadata'
+):
+    inference_id = inference_metadata.get('inference_execution').get('inference_id')
+    inference_metadata_directory = os.path.join(
+        base_dir,
+        environment_id,
+        subdirectory_name
+    )
+    inference_metadata_filename = '{}_{}.json'.format(
+        inference_metadata_filename_stem,
+        inference_id
+    )
+    inference_metadata_path = os.path.join(
+        inference_metadata_directory,
+        inference_metadata_filename
+    )
+    os.makedirs(inference_metadata_directory, exist_ok=True)
+    with open(inference_metadata_path, 'w') as fp:
+        json.dump(inference_metadata, fp, cls=CustomJSONEncoder)
+
+
 def write_inference_execution_local(
     base_dir,
     environment_id,
+    subdirectory_name,
     inference_id,
     execution_start=None,
     name=None,
@@ -222,14 +257,6 @@ def write_inference_execution_local(
     version=None,
     inference_execution_filename_stem='inference_execution'
 ):
-    inference_execution_path = os.path.join(
-        base_dir,
-        environment_id,
-        '{}_{}.json'.format(
-            inference_execution_filename_stem,
-            inference_id
-        )
-    )
     inference_execution_data = {
         'inference_id': inference_id,
         'execution_start': execution_start.isoformat(),
@@ -238,8 +265,22 @@ def write_inference_execution_local(
         'model': model,
         'version': version
     }
+    inference_execution_directory = os.path.join(
+        base_dir,
+        environment_id,
+        subdirectory_name
+    )
+    inference_execution_filename = '{}_{}.json'.format(
+        inference_execution_filename_stem,
+        inference_id
+    )
+    inference_execution_path = os.path.join(
+        inference_execution_directory,
+        inference_execution_filename
+    )
+    os.makedirs(inference_execution_directory, exist_ok=True)
     with open(inference_execution_path, 'w') as fp:
-        json.dump(inference_execution_data, fp)
+        json.dump(inference_execution_data, fp, cls=CustomJSONEncoder)
 
 def alphapose_data_file_glob_pattern(
     base_dir,

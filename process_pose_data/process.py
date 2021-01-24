@@ -15,25 +15,24 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     end,
     base_dir,
     environment_id,
+    pose_model_id,
     room_x_limits,
     room_y_limits,
-    parallel=False,
-    num_parallel_processes=None,
-    poses_2d_file_name='alphapose-results.json',
-    poses_2d_json_format='cmu',
     honeycomb_inference_execution=False,
-    poses_3d_directory_name='poses_3d',
-    poses_3d_file_name_stem='poses_3d',
     camera_assignment_ids=None,
     camera_device_id_lookup=None,
+    camera_calibrations=None,
+    coordinate_space_id=None,
     client=None,
     uri=None,
     token_uri=None,
     audience=None,
     client_id=None,
     client_secret=None,
-    pose_model_id=None,
-    camera_calibrations=None,
+    poses_2d_file_name='alphapose-results.json',
+    poses_2d_json_format='cmu',
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d',
     min_keypoint_quality=None,
     min_num_keypoints=None,
     min_pose_quality=None,
@@ -46,59 +45,67 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     pose_3d_graph_initial_edge_threshold=2,
     pose_3d_graph_max_dispersion=0.20,
     include_track_labels=False,
+    parallel=False,
+    num_parallel_processes=None,
     progress_bar=False,
     notebook=False
 ):
+    if start.tzinfo is None:
+        logger.info('Specified start is timezone-naive. Assuming UTC')
+        start=start.replace(tzinfo=datetime.timezone.utc)
+    if end.tzinfo is None:
+        logger.info('Specified end is timezone-naive. Assuming UTC')
+        end=end.replace(tzinfo=datetime.timezone.utc)
     logger.info('Reconstructing 3D poses from local 2D pose data. Base directory: {}. Environment ID: {}. Start: {}. End: {}'.format(
         base_dir,
         environment_id,
         start,
         end
     ))
-    logger.info('Generating inference execution info')
-    inference_execution_start = datetime.datetime.now(tz=datetime.timezone.utc)
-    inference_execution_name = 'Reconstruct 3D poses from 2D poses'
-    inference_execution_notes = 'Environment: {} Start: {} End: {}'.format(
-        environment_id,
-        start.isoformat(),
-        end.isoformat()
+    logger.info('Generating inference metadata')
+    inference_metadata = generate_inference_metadata_reconstruct_3d_poses_alphapose_local(
+        start=start,
+        end=end,
+        environment_id=environment_id,
+        pose_model_id=pose_model_id,
+        honeycomb_inference_execution=honeycomb_inference_execution,
+        camera_assignment_ids=camera_assignment_ids,
+        camera_device_id_lookup=camera_device_id_lookup,
+        camera_calibrations=camera_calibrations,
+        coordinate_space_id=coordinate_space_id,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
     )
-    inference_execution_model = 'process_pose_data.process.reconstruct_poses_3d_alphapose_local_by_time_segment'
-    inference_execution_version = '2.4.0'
-    if honeycomb_inference_execution:
-        logger.info('Writing inference execution info to Honeycomb')
-        inference_id = process_pose_data.honeycomb_io.create_inference_execution(
-            execution_start=inference_execution_start,
-            name=inference_execution_name,
-            notes=inference_execution_notes,
-            model=inference_execution_model,
-            version=inference_execution_version,
+    inference_id = inference_metadata.get('inference_execution').get('inference_id')
+    camera_assignment_ids = inference_metadata.get('camera_assignment_ids')
+    camera_device_id_lookup = inference_metadata.get('camera_device_id_lookup')
+    camera_device_ids = inference_metadata.get('camera_device_ids')
+    camera_calibrations = inference_metadata.get('camera_calibrations')
+    logger.info('Writing inference metadata to local file')
+    process_pose_data.local_io.write_inference_metadata_local(
+        inference_metadata=inference_metadata,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        subdirectory_name=poses_3d_directory_name,
+    )
+    if pose_3d_limits is None:
+        logger.info('3D pose spatial limits not specified. Generating default spatial limits based on specified room spatial limits and specified pose model')
+        pose_3d_limits = generate_pose_3d_limits(
+            pose_model_id=pose_model_id,
+            room_x_limits=room_x_limits,
+            room_y_limits=room_y_limits,
+            client=client,
             uri=uri,
             token_uri=token_uri,
             audience=audience,
             client_id=client_id,
             client_secret=client_secret
         )
-    else:
-        logger.info('Generating local inference execution ID')
-        inference_id = uuid4().hex
-    logger.info('Writing inference execution info to local file')
-    process_pose_data.local_io.write_inference_execution_local(
-        base_dir=base_dir,
-        environment_id=environment_id,
-        inference_id=inference_id,
-        execution_start=inference_execution_start,
-        name=inference_execution_name,
-        notes=inference_execution_notes,
-        model=inference_execution_model,
-        version=inference_execution_version
-    )
-    if progress_bar and parallel and ~notebook:
-        logger.warning('Progress bars may not display properly with parallel processing enabled outside of a notebook')
-    if start.tzinfo is None:
-        start=start.replace(tzinfo=datetime.timezone.utc)
-    if end.tzinfo is None:
-        end=end.replace(tzinfo=datetime.timezone.utc)
+    logger.info('Generating list of time segments')
     time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
         start=start,
         end=end
@@ -111,50 +118,6 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         time_segment_start_list[0].isoformat(),
         time_segment_start_list[-1].isoformat()
     ))
-    if camera_device_id_lookup is None:
-        logger.info('Camera device ID lookup table not specified. Fetching camera device ID info from Honeycomb based on specified camera assignment IDs')
-        if camera_assignment_ids is None:
-            raise ValueError('Must specify a list of camera assignment IDs present in the 2D pose data or a camera device ID lookup table')
-        camera_device_id_lookup = process_pose_data.honeycomb_io.fetch_camera_device_id_lookup(
-            assignment_ids=camera_assignment_ids,
-            client=client,
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
-    camera_device_ids = list(camera_device_id_lookup.values())
-    if camera_calibrations is None:
-        logger.info('Camera calibration parameters not specified. Fetching camera calibration parameters based on specified camera device IDs and time span')
-        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
-            camera_ids=camera_device_ids,
-            start=min(time_segment_start_list),
-            end=max(time_segment_start_list),
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
-    if pose_3d_limits is None:
-        logger.info('3D pose spatial limits not specified. Calculating default spatial limits based on specified room spatial limits and specified pose model')
-        if pose_model_id is None:
-            raise ValueError('Must specify the pose model ID or explicitly specify the 3D pose spatial limits')
-        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
-            pose_model_id,
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
-        pose_model_name = pose_model.get('model_name')
-        pose_3d_limits = process_pose_data.analyze.pose_3d_limits_by_pose_model(
-            room_x_limits=room_x_limits,
-            room_y_limits=room_y_limits,
-            pose_model_name=pose_model_name
-        )
     reconstruct_poses_3d_alphapose_local_time_segment_partial = functools.partial(
         reconstruct_poses_3d_alphapose_local_time_segment,
         base_dir=base_dir,
@@ -190,6 +153,8 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         progress_bar=progress_bar,
         notebook=notebook
     )
+    if progress_bar and parallel and ~notebook:
+        logger.warning('Progress bars may not display properly with parallel processing enabled outside of a notebook')
     processing_start = time.time()
     if parallel:
         logger.info('Attempting to launch parallel processes')
@@ -305,3 +270,165 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         directory_name=poses_3d_directory_name,
         file_name_stem=poses_3d_file_name_stem
     )
+
+def generate_inference_metadata_reconstruct_3d_poses_alphapose_local(
+    start,
+    end,
+    environment_id,
+    pose_model_id,
+    honeycomb_inference_execution=False,
+    camera_assignment_ids=None,
+    camera_device_id_lookup=None,
+    camera_calibrations=None,
+    coordinate_space_id=None,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    logger.info('Generating inference execution object')
+    inference_execution = generate_inference_execution_reconstruct_3d_poses_alphapose_local(
+        environment_id,
+        start,
+        end,
+        honeycomb_inference_execution,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    if camera_assignment_ids is None:
+        logger.info('Camera assignment IDs not specified. Fetching camera assignment IDs from Honeycomb based on environmen and time span')
+        camera_assignment_ids = process_pose_data.honeycomb_io.fetch_camera_assignment_ids_from_environment(
+            start=start,
+            end=end,
+            environment_id=environment_id,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    if camera_device_id_lookup is None:
+        logger.info('Camera device ID lookup table not specified. Fetching camera device ID info from Honeycomb based on camera assignment IDs')
+        camera_device_id_lookup = process_pose_data.honeycomb_io.fetch_camera_device_id_lookup(
+            assignment_ids=camera_assignment_ids,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    camera_device_ids = list(camera_device_id_lookup.values())
+    if camera_calibrations is None:
+        logger.info('Camera calibration parameters not specified. Fetching camera calibration parameters from Honeycomb based on camera device IDs and time span')
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+            camera_ids=camera_device_ids,
+            start=start,
+            end=end,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    if coordinate_space_id is None:
+        coordinate_space_id = extract_coordinate_space_id_from_camera_calibrations(camera_calibrations)
+    inference_metadata = {
+        'inference_execution': inference_execution,
+        'camera_assignment_ids': camera_assignment_ids,
+        'camera_device_id_lookup': camera_device_id_lookup,
+        'camera_device_ids': camera_device_ids,
+        'camera_calibrations': camera_calibrations,
+        'pose_model_id': pose_model_id,
+        'coordinate_space_id': coordinate_space_id
+    }
+    return inference_metadata
+
+def generate_inference_execution_reconstruct_3d_poses_alphapose_local(
+    environment_id,
+    start,
+    end,
+    honeycomb_inference_execution=False,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    inference_execution_start = datetime.datetime.now(tz=datetime.timezone.utc)
+    inference_execution_name = 'Reconstruct 3D poses from 2D poses'
+    inference_execution_notes = 'Environment: {} Start: {} End: {}'.format(
+        environment_id,
+        start.isoformat(),
+        end.isoformat()
+    )
+    inference_execution_model = 'process_pose_data.process.reconstruct_poses_3d_alphapose_local_by_time_segment'
+    inference_execution_version = '2.4.0'
+    if honeycomb_inference_execution:
+        logger.info('Writing inference execution info to Honeycomb')
+        inference_id = process_pose_data.honeycomb_io.create_inference_execution(
+            execution_start=inference_execution_start,
+            name=inference_execution_name,
+            notes=inference_execution_notes,
+            model=inference_execution_model,
+            version=inference_execution_version,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    else:
+        logger.info('Generating local inference execution ID')
+        inference_id = uuid4().hex
+    inference_execution = {
+        'inference_id': inference_id,
+        'name': inference_execution_name,
+        'notes': inference_execution_notes,
+        'model': inference_execution_model,
+        'version': inference_execution_version,
+        'execution_start': inference_execution_start,
+
+    }
+    return inference_execution
+
+def extract_coordinate_space_id_from_camera_calibrations(camera_calibrations):
+    coordinate_space_ids = set([camera_calibration.get('space_id') for camera_calibration in camera_calibrations.values()])
+    if len(coordinate_space_ids) > 1:
+        raise ValueError('Multiple coordinate space IDs found in camera calibration data')
+    coordinate_space_id = list(coordinate_space_ids)[0]
+    return coordinate_space_id
+
+def generate_pose_3d_limits(
+    pose_model_id,
+    room_x_limits,
+    room_y_limits,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
+        pose_model_id,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    pose_model_name = pose_model.get('model_name')
+    pose_3d_limits = process_pose_data.analyze.pose_3d_limits_by_pose_model(
+        room_x_limits=room_x_limits,
+        room_y_limits=room_y_limits,
+        pose_model_name=pose_model_name
+    )
+    return pose_3d_limits

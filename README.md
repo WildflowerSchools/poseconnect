@@ -4,6 +4,11 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Clean up argument ordering in `reconstruct_poses_3d_alphapose_local_time_segment`
+* Retool `generate_inference_metadata_reconstruct_3d_poses_alphapose_local` to exclude cameras without calibration data
+* Make function to delete Honeycomb inference executions
+* Make function to delete local inference metadata
+* Make function to delete local 3D pose files
 * Update `honeycomb_io.write_3d_pose_data` to incorporate inference execution ID
 * Update `honeycomb_io.fetch_3d_pose_data` to incorporate inference execution ID
 * Make function for deleting local 3D pose data

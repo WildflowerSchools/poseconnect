@@ -127,13 +127,6 @@ def reconstruct_poses_3d(
     poses_3d_local_ids_df.reset_index('timestamp', drop=True, inplace=True)
     return poses_3d_local_ids_df
 
-def extract_coordinate_space_id_from_camera_calibrations(camera_calibrations):
-    coordinate_space_ids = set([camera_calibration.get('space_id') for camera_calibration in camera_calibrations.values()])
-    if len(coordinate_space_ids) > 1:
-        raise ValueError('Multiple coordinate space IDs found in camera calibration data')
-    coordinate_space_id = list(coordinate_space_ids)[0]
-    return coordinate_space_id
-
 def pose_3d_limits_by_pose_model(
     room_x_limits,
     room_y_limits,

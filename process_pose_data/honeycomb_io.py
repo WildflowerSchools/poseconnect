@@ -8,6 +8,12 @@ from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_CAMERA_DEVICE_TYPES = [
+    'PI3WITHCAMERA',
+    'PI4WITHCAMERA',
+    'PIZEROWITHCAMERA'
+]
+
 def fetch_2d_pose_data(
     start=None,
     end=None,
@@ -542,6 +548,7 @@ def fetch_camera_ids_from_environment(
     environment_id=None,
     environment_name=None,
     camera_device_types=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -549,10 +556,7 @@ def fetch_camera_ids_from_environment(
     client_secret=None
 ):
     if camera_device_types is None:
-        camera_device_types = [
-            'PI3WITHCAMERA',
-            'PIZEROWITHCAMERA'
-        ]
+        camera_device_types = DEFAULT_CAMERA_DEVICE_TYPES
     environment_id = fetch_environment_id(
         environment_id=environment_id,
         environment_name=environment_name,
@@ -565,13 +569,14 @@ def fetch_camera_ids_from_environment(
     if environment_id is None:
         return None
     logger.info('Fetching camera assignments for specified environment and time span')
-    client = minimal_honeycomb.MinimalHoneycombClient(
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
-    )
+    if client is None:
+        client = minimal_honeycomb.MinimalHoneycombClient(
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
     result = client.request(
         request_type='query',
         request_name='getEnvironment',
@@ -608,6 +613,79 @@ def fetch_camera_ids_from_environment(
         raise ValueError('No camera devices found in specified environment for specified time span')
     logger.info('Found {} camera assignments for specified environment and time span'.format(len(camera_device_ids)))
     return camera_device_ids
+
+def fetch_camera_assignment_ids_from_environment(
+    start=None,
+    end=None,
+    environment_id=None,
+    environment_name=None,
+    camera_device_types=None,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if camera_device_types is None:
+        camera_device_types = DEFAULT_CAMERA_DEVICE_TYPES
+    environment_id = fetch_environment_id(
+        environment_id=environment_id,
+        environment_name=environment_name,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    if environment_id is None:
+        return None
+    logger.info('Fetching camera assignments for specified environment and time span')
+    if client is None:
+        client = minimal_honeycomb.MinimalHoneycombClient(
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    result = client.request(
+        request_type='query',
+        request_name='getEnvironment',
+        arguments={
+            'environment_id': {
+                'type': 'ID!',
+                'value': environment_id
+            }
+        },
+        return_object=[
+            {'assignments': [
+                'assignment_id',
+                'start',
+                'end',
+                {'assigned': [
+                    {'... on Device': [
+                        'device_id',
+                        'device_type'
+                    ]}
+                ]}
+            ]}
+        ]
+    )
+    filtered_assignments = minimal_honeycomb.filter_assignments(
+        assignments=result.get('assignments'),
+        start_time=start,
+        end_time=end
+    )
+    camera_assignment_ids = list()
+    for assignment in filtered_assignments:
+        device_type = assignment.get('assigned').get('device_type')
+        if device_type is not None and device_type in camera_device_types:
+            camera_assignment_ids.append(assignment.get('assignment_id'))
+    if len(camera_assignment_ids) == 0:
+        raise ValueError('No camera devices found in specified environment for specified time span')
+    logger.info('Found {} camera assignments for specified environment and time span'.format(len(camera_assignment_ids)))
+    return camera_assignment_ids
 
 def fetch_environment_id(
     environment_id=None,
