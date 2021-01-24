@@ -242,7 +242,7 @@ def write_inference_metadata_local(
     )
     os.makedirs(inference_metadata_directory, exist_ok=True)
     with open(inference_metadata_path, 'w') as fp:
-        json.dump(inference_metadata, fp, cls=CustomJSONEncoder)
+        json.dump(inference_metadata, fp, cls=CustomJSONEncoder, indent=2)
 
 
 def write_inference_execution_local(
@@ -280,7 +280,7 @@ def write_inference_execution_local(
     )
     os.makedirs(inference_execution_directory, exist_ok=True)
     with open(inference_execution_path, 'w') as fp:
-        json.dump(inference_execution_data, fp, cls=CustomJSONEncoder)
+        json.dump(inference_execution_data, fp, cls=CustomJSONEncoder, indent=2)
 
 def alphapose_data_file_glob_pattern(
     base_dir,
