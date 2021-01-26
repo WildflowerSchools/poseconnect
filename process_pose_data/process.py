@@ -96,7 +96,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         inference_metadata=inference_metadata,
         base_dir=base_dir,
         environment_id=environment_id,
-        subdirectory_name=poses_3d_directory_name,
+        poses_3d_directory_name=poses_3d_directory_name,
         inference_metadata_filename_stem=inference_metadata_filename_stem
     )
     logger.info('Generating list of time segments')
@@ -261,8 +261,8 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         environment_id=environment_id,
         time_segment_start=time_segment_start,
         inference_id=poses_3d_inference_id,
-        directory_name=poses_3d_directory_name,
-        file_name_stem=poses_3d_file_name_stem
+        poses_3d_directory_name=poses_3d_directory_name,
+        poses_3d_file_name_stem=poses_3d_file_name_stem
     )
 
 def upload_3d_poses_honeycomb(
@@ -286,7 +286,7 @@ def upload_3d_poses_honeycomb(
         inference_id=inference_id,
         base_dir=base_dir,
         environment_id=environment_id,
-        subdirectory_name=poses_3d_directory_name,
+        poses_3d_directory_name=poses_3d_directory_name,
         inference_metadata_filename_stem=inference_metadata_filename_stem
     )
     start = inference_metadata.get('start')
@@ -320,8 +320,8 @@ def upload_3d_poses_honeycomb(
             base_dir=base_dir,
             environment_id=environment_id,
             inference_id=inference_id,
-            directory_name=poses_3d_directory_name,
-            file_name_stem=poses_3d_file_name_stem
+            poses_3d_directory_name=poses_3d_directory_name,
+            poses_3d_file_name_stem=poses_3d_file_name_stem
         )
         pose_ids_3d_time_segment = process_pose_data.honeycomb_io.write_3d_pose_data(
             poses_3d_df=poses_3d_df_time_segment,
@@ -359,15 +359,15 @@ def delete_reconstruct_3d_poses_output(
         base_dir=base_dir,
         environment_id=environment_id,
         inference_id=inference_id,
-        directory_name=poses_3d_directory_name,
-        file_name_stem=poses_3d_file_name_stem
+        poses_3d_directory_name=poses_3d_directory_name,
+        poses_3d_file_name_stem=poses_3d_file_name_stem
     )
     logger.info('Deleting local inference metadata')
     process_pose_data.local_io.delete_inference_metadata_local(
         inference_id=inference_id,
         base_dir=base_dir,
         environment_id=environment_id,
-        subdirectory_name=poses_3d_directory_name,
+        poses_3d_directory_name=poses_3d_directory_name,
         inference_metadata_filename_stem=inference_metadata_filename_stem
     )
     logger.info('Deleting Honeycomb 3D pose data')

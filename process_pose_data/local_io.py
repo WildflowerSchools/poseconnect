@@ -153,17 +153,17 @@ def write_3d_pose_data_local_time_segment(
     environment_id,
     time_segment_start,
     inference_id,
-    directory_name='poses_3d',
-    file_name_stem='poses_3d'
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d'
 ):
     directory_path = pose_3d_data_directory_path_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         time_segment_start=time_segment_start,
-        directory_name=directory_name
+        poses_3d_directory_name=poses_3d_directory_name
     )
     file_name = '{}_{}.pkl'.format(
-        file_name_stem,
+        poses_3d_file_name_stem,
         inference_id
     )
     os.makedirs(directory_path, exist_ok=True)
@@ -179,8 +179,8 @@ def fetch_3d_pose_data_local(
     base_dir,
     environment_id,
     inference_id,
-    directory_name='poses_3d',
-    file_name_stem='poses_3d'
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d'
 ):
     time_segment_start_list = generate_time_segment_start_list(
         start,
@@ -193,8 +193,8 @@ def fetch_3d_pose_data_local(
             base_dir=base_dir,
             environment_id=environment_id,
             inference_id=inference_id,
-            directory_name=directory_name,
-            file_name_stem=file_name_stem
+            poses_3d_directory_name=poses_3d_directory_name,
+            poses_3d_file_name_stem=poses_3d_file_name_stem
         )
         poses_3d_df_list.append(poses_3d_df_time_segment)
     poses_3d_df = pd.concat(poses_3d_df_list)
@@ -205,16 +205,16 @@ def fetch_3d_pose_data_local_time_segment(
     base_dir,
     environment_id,
     inference_id,
-    directory_name='poses_3d',
-    file_name_stem='poses_3d'
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d'
 ):
     path=pose_3d_data_path_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         inference_id=inference_id,
         time_segment_start=time_segment_start,
-        directory_name=directory_name,
-        file_name_stem=file_name_stem
+        poses_3d_directory_name=poses_3d_directory_name,
+        poses_3d_file_name_stem=poses_3d_file_name_stem
     )
     poses_3d_df_time_segment = pd.read_pickle(path)
     return poses_3d_df_time_segment
@@ -223,18 +223,18 @@ def delete_3d_pose_data_local(
     base_dir,
     environment_id,
     inference_id,
-    directory_name='poses_3d',
-    file_name_stem='poses_3d'
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d'
 ):
     glob_pattern = os.path.join(
         base_dir,
         environment_id,
-        directory_name,
+        poses_3d_directory_name,
         '*',
         '*',
         '*',
         '*',
-        '{}_{}.pkl'.format(file_name_stem, inference_id)
+        '{}_{}.pkl'.format(poses_3d_file_name_stem, inference_id)
     )
     for path in glob.iglob(glob_pattern):
         os.remove(path)
@@ -243,14 +243,14 @@ def write_inference_metadata_local(
     inference_metadata,
     base_dir,
     environment_id,
-    subdirectory_name,
+    poses_3d_directory_name='poses_3d',
     inference_metadata_filename_stem='inference_metadata'
 ):
     inference_id = inference_metadata.get('inference_execution').get('inference_id')
     inference_metadata_directory = os.path.join(
         base_dir,
         environment_id,
-        subdirectory_name
+        poses_3d_directory_name
     )
     inference_metadata_filename = '{}_{}.json'.format(
         inference_metadata_filename_stem,
@@ -268,13 +268,13 @@ def read_inference_metadata_local(
     inference_id,
     base_dir,
     environment_id,
-    subdirectory_name,
+    poses_3d_directory_name='poses_3d',
     inference_metadata_filename_stem='inference_metadata'
 ):
     inference_metadata_directory = os.path.join(
         base_dir,
         environment_id,
-        subdirectory_name
+        poses_3d_directory_name
     )
     inference_metadata_filename = '{}_{}.json'.format(
         inference_metadata_filename_stem,
@@ -317,13 +317,13 @@ def delete_inference_metadata_local(
     inference_id,
     base_dir,
     environment_id,
-    subdirectory_name='poses_3d',
+    poses_3d_directory_name='poses_3d',
     inference_metadata_filename_stem='inference_metadata'
 ):
     inference_metadata_path = os.path.join(
         base_dir,
         environment_id,
-        subdirectory_name,
+        poses_3d_directory_name,
         '{}_{}.json'.format(
             inference_metadata_filename_stem,
             inference_id
@@ -335,7 +335,7 @@ def delete_inference_metadata_local(
 def write_inference_execution_local(
     base_dir,
     environment_id,
-    subdirectory_name,
+    poses_3d_directory_name,
     inference_id,
     execution_start=None,
     name=None,
@@ -355,7 +355,7 @@ def write_inference_execution_local(
     inference_execution_directory = os.path.join(
         base_dir,
         environment_id,
-        subdirectory_name
+        poses_3d_directory_name
     )
     inference_execution_filename = '{}_{}.json'.format(
         inference_execution_filename_stem,
@@ -447,17 +447,17 @@ def pose_3d_data_path_time_segment(
     environment_id,
     inference_id,
     time_segment_start,
-    directory_name='poses_3d',
-    file_name_stem='poses_3d'
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d'
 ):
     directory_path = pose_3d_data_directory_path_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         time_segment_start=time_segment_start,
-        directory_name=directory_name
+        poses_3d_directory_name=poses_3d_directory_name
     )
     file_name='{}_{}.pkl'.format(
-        file_name_stem,
+        poses_3d_file_name_stem,
         inference_id
     )
     path = os.path.join(
@@ -470,13 +470,13 @@ def pose_3d_data_directory_path_time_segment(
     base_dir,
     environment_id,
     time_segment_start,
-    directory_name='poses_3d'
+    poses_3d_directory_name='poses_3d'
 ):
     time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
     path = os.path.join(
         base_dir,
         environment_id,
-        directory_name,
+        poses_3d_directory_name,
         '{:04d}'.format(time_segment_start_utc.year),
         '{:02d}'.format(time_segment_start_utc.month),
         '{:02d}'.format(time_segment_start_utc.day),
