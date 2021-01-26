@@ -244,6 +244,54 @@ def write_inference_metadata_local(
     with open(inference_metadata_path, 'w') as fp:
         json.dump(inference_metadata, fp, cls=CustomJSONEncoder, indent=2)
 
+def read_inference_metadata_local(
+    inference_id,
+    base_dir,
+    environment_id,
+    subdirectory_name,
+    inference_metadata_filename_stem='inference_metadata'
+):
+    inference_metadata_directory = os.path.join(
+        base_dir,
+        environment_id,
+        subdirectory_name
+    )
+    inference_metadata_filename = '{}_{}.json'.format(
+        inference_metadata_filename_stem,
+        inference_id
+    )
+    inference_metadata_path = os.path.join(
+        inference_metadata_directory,
+        inference_metadata_filename
+    )
+    with open(inference_metadata_path, 'r') as fp:
+        inference_metadata=json.load(fp)
+    inference_metadata['start'] = datetime.datetime.fromisoformat(
+        inference_metadata.get('start')
+    )
+    inference_metadata['end'] = datetime.datetime.fromisoformat(
+        inference_metadata.get('end')
+    )
+    inference_metadata['inference_execution']['execution_start'] = datetime.datetime.fromisoformat(
+        inference_metadata.get('inference_execution').get('execution_start')
+    )
+    for camera_id in inference_metadata.get('camera_calibrations').keys():
+        inference_metadata['camera_calibrations'][camera_id]['camera_matrix']=np.asarray(
+            inference_metadata.get('camera_calibrations').get(camera_id).get('camera_matrix')
+        )
+        inference_metadata['camera_calibrations'][camera_id]['distortion_coefficients']=np.asarray(
+            inference_metadata.get('camera_calibrations').get(camera_id).get('distortion_coefficients')
+        )
+        inference_metadata['camera_calibrations'][camera_id]['rotation_vector']=np.asarray(
+            inference_metadata.get('camera_calibrations').get(camera_id).get('rotation_vector')
+        )
+        inference_metadata['camera_calibrations'][camera_id]['translation_vector']=np.asarray(
+            inference_metadata.get('camera_calibrations').get(camera_id).get('translation_vector')
+        )
+    inference_metadata['pose_3d_limits']=np.asarray(
+        inference_metadata.get('pose_3d_limits')
+    )
+    return inference_metadata
 
 def write_inference_execution_local(
     base_dir,

@@ -1,6 +1,7 @@
 import process_pose_data.local_io
 import process_pose_data.honeycomb_io
 import process_pose_data.analyze
+import tqdm
 from uuid import uuid4
 import multiprocessing
 import functools
@@ -33,6 +34,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     poses_2d_json_format='cmu',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d',
+    inference_metadata_filename_stem='inference_metadata',
     min_keypoint_quality=None,
     min_num_keypoints=None,
     min_pose_quality=None,
@@ -68,6 +70,9 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         end=end,
         environment_id=environment_id,
         pose_model_id=pose_model_id,
+        pose_3d_limits=pose_3d_limits,
+        room_x_limits=room_x_limits,
+        room_y_limits=room_y_limits,
         honeycomb_inference_execution=honeycomb_inference_execution,
         camera_assignment_ids=camera_assignment_ids,
         camera_device_id_lookup=camera_device_id_lookup,
@@ -85,26 +90,15 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     camera_device_id_lookup = inference_metadata.get('camera_device_id_lookup')
     camera_device_ids = inference_metadata.get('camera_device_ids')
     camera_calibrations = inference_metadata.get('camera_calibrations')
+    pose_3d_limits = inference_metadata.get('pose_3d_limits')
     logger.info('Writing inference metadata to local file')
     process_pose_data.local_io.write_inference_metadata_local(
         inference_metadata=inference_metadata,
         base_dir=base_dir,
         environment_id=environment_id,
         subdirectory_name=poses_3d_directory_name,
+        inference_metadata_filename_stem=inference_metadata_filename_stem
     )
-    if pose_3d_limits is None:
-        logger.info('3D pose spatial limits not specified. Generating default spatial limits based on specified room spatial limits and specified pose model')
-        pose_3d_limits = generate_pose_3d_limits(
-            pose_model_id=pose_model_id,
-            room_x_limits=room_x_limits,
-            room_y_limits=room_y_limits,
-            client=client,
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
     logger.info('Generating list of time segments')
     time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
         start=start,
@@ -271,11 +265,88 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         file_name_stem=poses_3d_file_name_stem
     )
 
+def upload_3d_poses_honeycomb(
+    inference_id,
+    base_dir,
+    environment_id,
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d',
+    inference_metadata_filename_stem='inference_metadata',
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None,
+    progress_bar=False,
+    notebook=False
+):
+    inference_metadata = process_pose_data.local_io.read_inference_metadata_local(
+        inference_id=inference_id,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        subdirectory_name=poses_3d_directory_name,
+        inference_metadata_filename_stem=inference_metadata_filename_stem
+    )
+    start = inference_metadata.get('start')
+    end = inference_metadata.get('end')
+    pose_model_id = inference_metadata.get('pose_model_id')
+    coordinate_space_id = inference_metadata.get('coordinate_space_id')
+    time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
+        start=start,
+        end=end
+    )
+    num_time_segments = len(time_segment_start_list)
+    num_minutes = (end - start).seconds/60
+    logger.info('Uploading 3D poses to Honeycomb for {} time segments spanning {:.3f} minutes: {} to {}'.format(
+        num_time_segments,
+        num_minutes,
+        time_segment_start_list[0].isoformat(),
+        time_segment_start_list[-1].isoformat()
+    ))
+    pose_ids_3d=list()
+    if progress_bar:
+        if notebook:
+            time_segment_start_iterator = tqdm.notebook.tqdm(time_segment_start_list)
+        else:
+            time_segment_start_iterator = tqdm.tqdm(time_segment_start_list)
+    else:
+        time_segment_start_iterator = time_segment_start_list
+    pose_3d_ids=list()
+    for time_segment_start in time_segment_start_list:
+        poses_3d_df_time_segment = process_pose_data.local_io.fetch_3d_pose_data_local_time_segment(
+            time_segment_start=time_segment_start,
+            base_dir=base_dir,
+            environment_id=environment_id,
+            inference_id=inference_id,
+            directory_name=poses_3d_directory_name,
+            file_name_stem=poses_3d_file_name_stem
+        )
+        pose_ids_3d_time_segment = process_pose_data.honeycomb_io.write_3d_pose_data(
+            poses_3d_df=poses_3d_df_time_segment,
+            coordinate_space_id=coordinate_space_id,
+            pose_model_id=pose_model_id,
+            source_id=inference_id,
+            source_type='INFERRED',
+            chunk_size=chunk_size,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+        pose_3d_ids.extend(pose_ids_3d_time_segment)
+    return pose_3d_ids
+
 def generate_inference_metadata_reconstruct_3d_poses_alphapose_local(
     start,
     end,
     environment_id,
     pose_model_id,
+    pose_3d_limits,
+    room_x_limits,
+    room_y_limits,
     honeycomb_inference_execution=False,
     camera_assignment_ids=None,
     camera_device_id_lookup=None,
@@ -339,14 +410,31 @@ def generate_inference_metadata_reconstruct_3d_poses_alphapose_local(
         )
     if coordinate_space_id is None:
         coordinate_space_id = extract_coordinate_space_id_from_camera_calibrations(camera_calibrations)
+    if pose_3d_limits is None:
+        logger.info('3D pose spatial limits not specified. Generating default spatial limits based on specified room spatial limits and specified pose model')
+        pose_3d_limits = generate_pose_3d_limits(
+            pose_model_id=pose_model_id,
+            room_x_limits=room_x_limits,
+            room_y_limits=room_y_limits,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
     inference_metadata = {
+        'start': start,
+        'end': end,
+        'environment_id': environment_id,
+        'pose_model_id': pose_model_id,
+        'coordinate_space_id': coordinate_space_id,
         'inference_execution': inference_execution,
         'camera_assignment_ids': camera_assignment_ids,
         'camera_device_id_lookup': camera_device_id_lookup,
         'camera_device_ids': camera_device_ids,
         'camera_calibrations': camera_calibrations,
-        'pose_model_id': pose_model_id,
-        'coordinate_space_id': coordinate_space_id
+        'pose_3d_limits': pose_3d_limits
     }
     return inference_metadata
 
