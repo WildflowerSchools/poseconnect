@@ -1324,6 +1324,70 @@ def create_inference_execution(
         raise ValueError('Received unexpected response from Honeycomb: {}'.format(result))
     return inference_id
 
+def delete_inference_execution(
+    inference_id,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if client is None:
+        client=minimal_honeycomb.MinimalHoneycombClient(
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    result = client.request(
+        request_type='mutation',
+        request_name='deleteInferenceExecution',
+        arguments={
+            'inference_id': {
+                'type': 'ID',
+                'value': inference_id
+            }
+        },
+        return_object=['status']
+    )
+    status = result.get('status')
+    return status
+
+def fetch_inference_ids_reconstruct_3d_poses(
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if client is None:
+        client=minimal_honeycomb.MinimalHoneycombClient(
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    result = client.bulk_query(
+        request_name='findInferenceExecutions',
+        arguments={
+            'name': {
+                'type': 'String',
+                'value': 'Reconstruct 3D poses from 2D poses'
+            }
+        },
+        return_data=[
+            'inference_id'
+        ],
+        id_field_name='inference_id'
+    )
+    inference_ids = [datum.get('inference_id') for datum in result]
+    return inference_ids
+
 def write_3d_pose_data(
     poses_3d_df,
     coordinate_space_id=None,
@@ -1413,6 +1477,101 @@ def write_3d_pose_data(
     except:
         raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
     return pose_ids_3d
+
+def delete_3d_pose_data_by_inference_id(
+    inference_id,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    pose_ids = fetch_pose_ids_3d(
+        inference_id,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    statuses = delete_3d_pose_data_by_pose_ids(
+        pose_ids,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    return pose_ids
+
+def fetch_pose_ids_3d(
+    inference_id,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    query_list=[{
+        'field': 'source',
+        'operator': 'EQ',
+        'value': inference_id
+    }]
+    return_data=['pose_id']
+    result = search_3d_poses(
+        query_list=query_list,
+        return_data=return_data,
+        chunk_size=chunk_size,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    pose_ids = [datum.get('pose_id') for datum in result]
+    return pose_ids
+
+def delete_3d_pose_data_by_pose_ids(
+    pose_ids,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if len(pose_ids) == 0:
+        return pose_ids
+    if client is None:
+        client=minimal_honeycomb.MinimalHoneycombClient(
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    result = client.bulk_mutation(
+        request_name='deletePose3D',
+        arguments={
+            'pose_id': {
+                'type': 'ID',
+                'value': pose_ids
+            }
+        },
+        return_object=['status'],
+        chunk_size=chunk_size
+    )
+    statuses = [datum.get('status') for datum in result]
+    return statuses
 
 def write_3d_pose_tracks(
     poses_3d_df,

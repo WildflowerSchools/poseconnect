@@ -219,6 +219,26 @@ def fetch_3d_pose_data_local_time_segment(
     poses_3d_df_time_segment = pd.read_pickle(path)
     return poses_3d_df_time_segment
 
+def delete_3d_pose_data_local(
+    base_dir,
+    environment_id,
+    inference_id,
+    directory_name='poses_3d',
+    file_name_stem='poses_3d'
+):
+    glob_pattern = os.path.join(
+        base_dir,
+        environment_id,
+        directory_name,
+        '*',
+        '*',
+        '*',
+        '*',
+        '{}_{}.pkl'.format(file_name_stem, inference_id)
+    )
+    for path in glob.iglob(glob_pattern):
+        os.remove(path)
+
 def write_inference_metadata_local(
     inference_metadata,
     base_dir,
@@ -292,6 +312,25 @@ def read_inference_metadata_local(
         inference_metadata.get('pose_3d_limits')
     )
     return inference_metadata
+
+def delete_inference_metadata_local(
+    inference_id,
+    base_dir,
+    environment_id,
+    subdirectory_name='poses_3d',
+    inference_metadata_filename_stem='inference_metadata'
+):
+    inference_metadata_path = os.path.join(
+        base_dir,
+        environment_id,
+        subdirectory_name,
+        '{}_{}.json'.format(
+            inference_metadata_filename_stem,
+            inference_id
+        )
+    )
+    if os.path.exists(inference_metadata_path):
+        os.remove(inference_metadata_path)
 
 def write_inference_execution_local(
     base_dir,

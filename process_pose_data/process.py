@@ -339,6 +339,59 @@ def upload_3d_poses_honeycomb(
         pose_3d_ids.extend(pose_ids_3d_time_segment)
     return pose_3d_ids
 
+def delete_reconstruct_3d_poses_output(
+    base_dir,
+    environment_id,
+    inference_id,
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d',
+    inference_metadata_filename_stem='inference_metadata',
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    logger.info('Deleting local 3D pose data')
+    process_pose_data.local_io.delete_3d_pose_data_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        inference_id=inference_id,
+        directory_name=poses_3d_directory_name,
+        file_name_stem=poses_3d_file_name_stem
+    )
+    logger.info('Deleting local inference metadata')
+    process_pose_data.local_io.delete_inference_metadata_local(
+        inference_id=inference_id,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        subdirectory_name=poses_3d_directory_name,
+        inference_metadata_filename_stem=inference_metadata_filename_stem
+    )
+    logger.info('Deleting Honeycomb 3D pose data')
+    process_pose_data.honeycomb_io.delete_3d_pose_data_by_inference_id(
+        inference_id=inference_id,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Deleting Honeycomb inference execution object')
+    process_pose_data.honeycomb_io.delete_inference_execution(
+        inference_id=inference_id,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+
 def generate_inference_metadata_reconstruct_3d_poses_alphapose_local(
     start,
     end,
