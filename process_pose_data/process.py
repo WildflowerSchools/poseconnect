@@ -314,7 +314,7 @@ def upload_3d_poses_honeycomb(
     else:
         time_segment_start_iterator = time_segment_start_list
     pose_3d_ids=list()
-    for time_segment_start in time_segment_start_list:
+    for time_segment_start in time_segment_start_iterator:
         poses_3d_df_time_segment = process_pose_data.local_io.fetch_3d_pose_data_local_time_segment(
             time_segment_start=time_segment_start,
             base_dir=base_dir,
