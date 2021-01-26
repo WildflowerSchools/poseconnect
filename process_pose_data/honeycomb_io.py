@@ -37,6 +37,7 @@ def fetch_2d_pose_data(
     return_pose_model_id=True,
     return_pose_quality=False,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -49,11 +50,12 @@ def fetch_2d_pose_data(
         environment_id=environment_id,
         environment_name=environment_name,
         camera_device_types=camera_device_types,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     camera_ids_from_camera_properties = fetch_camera_ids_from_camera_properties(
         camera_ids=camera_ids,
@@ -61,32 +63,35 @@ def fetch_2d_pose_data(
         camera_part_numbers=camera_part_numbers,
         camera_names=camera_names,
         camera_serial_numbers=camera_serial_numbers,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     pose_model_id = fetch_pose_model_id(
         pose_model_id=pose_model_id,
         pose_model_name=pose_model_name,
         pose_model_variant_name=pose_model_variant_name,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     inference_ids = fetch_inference_ids(
         inference_ids=inference_ids,
         inference_names=inference_names,
         inference_models=inference_models,
         inference_versions=inference_versions,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Building query list for 2D pose search')
     query_list = list()
@@ -154,11 +159,12 @@ def fetch_2d_pose_data(
         query_list=query_list,
         return_data=return_data,
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     data = list()
     logger.info('Parsing {} returned poses'.format(len(result)))
@@ -208,6 +214,7 @@ def search_2d_poses(
     query_list,
     return_data,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -221,10 +228,12 @@ def search_2d_poses(
         return_data=return_data,
         id_field_name='pose_id',
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Fetched {} poses'.format(len(result)))
     return result
@@ -248,6 +257,7 @@ def fetch_3d_pose_data(
     return_pose_model_id=False,
     return_pose_quality=False,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -258,22 +268,24 @@ def fetch_3d_pose_data(
         pose_model_id=pose_model_id,
         pose_model_name=pose_model_name,
         pose_model_variant_name=pose_model_variant_name,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     inference_ids = fetch_inference_ids(
         inference_ids=inference_ids,
         inference_names=inference_names,
         inference_models=inference_models,
         inference_versions=inference_versions,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Building query list for 3D pose search')
     query_list = list()
@@ -330,11 +342,12 @@ def fetch_3d_pose_data(
         query_list=query_list,
         return_data=return_data,
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     data = list()
     logger.info('Parsing {} returned poses'.format(len(result)))
@@ -386,6 +399,7 @@ def search_3d_poses(
     query_list,
     return_data,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -399,10 +413,12 @@ def search_3d_poses(
         return_data=return_data,
         id_field_name='pose_id',
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Fetched {} poses'.format(len(result)))
     return result
@@ -413,13 +429,15 @@ def search_objects(
     return_data,
     id_field_name,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
     client_id=None,
     client_secret=None
 ):
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -451,6 +469,7 @@ def fetch_3d_pose_track_data(
     return_track_label=False,
     return_inference_id=False,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -462,11 +481,12 @@ def fetch_3d_pose_track_data(
         inference_names=inference_names,
         inference_models=inference_models,
         inference_versions=inference_versions,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Building query list for 3D pose track search')
     query_list = list()
@@ -490,11 +510,12 @@ def fetch_3d_pose_track_data(
         query_list=query_list,
         return_data=return_data,
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     data = list()
     logger.info('Parsing {} returned pose tracks'.format(len(result)))
@@ -521,6 +542,7 @@ def search_3d_pose_tracks(
     query_list,
     return_data,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -534,10 +556,12 @@ def search_3d_pose_tracks(
         return_data=return_data,
         id_field_name='pose_track_id',
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Fetched {} pose tracks'.format(len(result)))
     return result
@@ -560,23 +584,24 @@ def fetch_camera_ids_from_environment(
     environment_id = fetch_environment_id(
         environment_id=environment_id,
         environment_name=environment_name,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
+    )
+    if environment_id is None:
+        return None
+    logger.info('Fetching camera assignments for specified environment and time span')
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
         client_id=client_id,
         client_secret=client_secret
     )
-    if environment_id is None:
-        return None
-    logger.info('Fetching camera assignments for specified environment and time span')
-    if client is None:
-        client = minimal_honeycomb.MinimalHoneycombClient(
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
     result = client.request(
         request_type='query',
         request_name='getEnvironment',
@@ -632,23 +657,24 @@ def fetch_camera_assignment_ids_from_environment(
     environment_id = fetch_environment_id(
         environment_id=environment_id,
         environment_name=environment_name,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
+    )
+    if environment_id is None:
+        return None
+    logger.info('Fetching camera assignments for specified environment and time span')
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
         client_id=client_id,
         client_secret=client_secret
     )
-    if environment_id is None:
-        return None
-    logger.info('Fetching camera assignments for specified environment and time span')
-    if client is None:
-        client = minimal_honeycomb.MinimalHoneycombClient(
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
     result = client.request(
         request_type='query',
         request_name='getEnvironment',
@@ -690,6 +716,7 @@ def fetch_camera_assignment_ids_from_environment(
 def fetch_environment_id(
     environment_id=None,
     environment_name=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -702,7 +729,8 @@ def fetch_environment_id(
         return environment_id
     if environment_name is not None:
         logger.info('Fetching environment ID for specified environment name')
-        client = minimal_honeycomb.MinimalHoneycombClient(
+        client = generate_client(
+            client=client,
             uri=uri,
             token_uri=token_uri,
             audience=audience,
@@ -741,6 +769,7 @@ def fetch_camera_ids_from_camera_properties(
     camera_part_numbers=None,
     camera_names=None,
     camera_serial_numbers=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -778,7 +807,8 @@ def fetch_camera_ids_from_camera_properties(
                 'values': camera_serial_numbers
             })
         logger.info('Fetching camera IDs for cameras with specified properties')
-        client = minimal_honeycomb.MinimalHoneycombClient(
+        client = generate_client(
+            client=client,
             uri=uri,
             token_uri=token_uri,
             audience=audience,
@@ -812,6 +842,7 @@ def fetch_pose_model_id(
     pose_model_id=None,
     pose_model_name=None,
     pose_model_variant_name=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -835,7 +866,8 @@ def fetch_pose_model_id(
                 'value': pose_model_variant_name
             }
         logger.info('Fetching pose model ID for pose model with specified properties')
-        client = minimal_honeycomb.MinimalHoneycombClient(
+        client = generate_client(
+            client=client,
             uri=uri,
             token_uri=token_uri,
             audience=audience,
@@ -861,6 +893,7 @@ def fetch_pose_model_id(
 
 def fetch_pose_model(
     pose_id_2d,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -868,7 +901,8 @@ def fetch_pose_model(
     client_secret=None
 ):
     logger.info('Fetching pose model information for specified pose')
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -899,6 +933,7 @@ def fetch_pose_model(
 
 def fetch_pose_model_by_pose_model_id(
     pose_model_id,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -906,7 +941,8 @@ def fetch_pose_model_by_pose_model_id(
     client_secret=None
 ):
     logger.info('Fetching pose model information for specified pose model ID')
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -938,6 +974,7 @@ def fetch_inference_ids(
     inference_names=None,
     inference_models=None,
     inference_versions=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -969,7 +1006,8 @@ def fetch_inference_ids(
                 'values': inference_versions
             })
         logger.info('Fetching inference IDs for inference runs with specified properties')
-        client = minimal_honeycomb.MinimalHoneycombClient(
+        client = generate_client(
+            client=client,
             uri=uri,
             token_uri=token_uri,
             audience=audience,
@@ -1002,13 +1040,15 @@ def fetch_inference_ids(
 def fetch_camera_names(
     camera_ids,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
     client_id=None,
     client_secret=None
 ):
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -1044,6 +1084,7 @@ def fetch_camera_calibrations(
     start=None,
     end=None,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -1055,22 +1096,24 @@ def fetch_camera_calibrations(
         start=start,
         end=end,
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     extrinsic_calibrations = fetch_extrinsic_calibrations(
         camera_ids=camera_ids,
         start=start,
         end=end,
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     camera_calibrations = dict()
     for camera_id in camera_ids:
@@ -1092,13 +1135,15 @@ def fetch_intrinsic_calibrations(
     start=None,
     end=None,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
     client_id=None,
     client_secret=None
 ):
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -1160,13 +1205,15 @@ def fetch_extrinsic_calibrations(
     start=None,
     end=None,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
     client_id=None,
     client_secret=None
 ):
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -1237,14 +1284,14 @@ def fetch_camera_device_id_lookup(
     client_id=None,
     client_secret=None
 ):
-    if client is None:
-        client = minimal_honeycomb.MinimalHoneycombClient(
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
     result = client.bulk_query(
         request_name='searchAssignments',
         arguments={
@@ -1279,6 +1326,7 @@ def create_inference_execution(
     version=None,
     data_sources=None,
     data_results=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -1289,7 +1337,8 @@ def create_inference_execution(
         execution_start = minimal_honeycomb.to_honeycomb_datetime(datetime.datetime.now(tz=datetime.timezone.utc))
     else:
         execution_start = minimal_honeycomb.to_honeycomb_datetime(execution_start)
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -1333,14 +1382,14 @@ def delete_inference_execution(
     client_id=None,
     client_secret=None
 ):
-    if client is None:
-        client=minimal_honeycomb.MinimalHoneycombClient(
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
     result = client.request(
         request_type='mutation',
         request_name='deleteInferenceExecution',
@@ -1364,14 +1413,14 @@ def fetch_inference_ids_reconstruct_3d_poses(
     client_id=None,
     client_secret=None
 ):
-    if client is None:
-        client=minimal_honeycomb.MinimalHoneycombClient(
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
     result = client.bulk_query(
         request_name='findInferenceExecutions',
         arguments={
@@ -1395,6 +1444,7 @@ def write_3d_pose_data(
     source_id=None,
     source_type=None,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -1451,7 +1501,8 @@ def write_3d_pose_data(
         inplace=True
     )
     poses_3d_list_honeycomb = poses_3d_df_honeycomb.to_dict(orient='records')
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -1530,11 +1581,12 @@ def fetch_pose_ids_3d(
         query_list=query_list,
         return_data=return_data,
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     pose_ids = [datum.get('pose_id') for datum in result]
     return pose_ids
@@ -1551,14 +1603,14 @@ def delete_3d_pose_data_by_pose_ids(
 ):
     if len(pose_ids) == 0:
         return pose_ids
-    if client is None:
-        client=minimal_honeycomb.MinimalHoneycombClient(
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
     result = client.bulk_mutation(
         request_name='deletePose3D',
         arguments={
@@ -1577,12 +1629,13 @@ def write_3d_pose_tracks(
     poses_3d_df,
     source_id,
     source_type,
+    chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
     client_id=None,
-    client_secret=None,
-    chunk_size=100
+    client_secret=None
 ):
     poses_3d_df_copy = poses_3d_df.copy()
     current_index_name = poses_3d_df_copy.index.name
@@ -1596,7 +1649,8 @@ def write_3d_pose_tracks(
     pose_tracks_3d_df['source'] = source_id
     pose_tracks_3d_df['source_type'] = source_type
     pose_tracks_3d_list = pose_tracks_3d_df.to_dict(orient='records')
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -1622,3 +1676,21 @@ def write_3d_pose_tracks(
     except:
         raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
     return pose_track_ids
+
+def generate_client(
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if client is None:
+        client=minimal_honeycomb.MinimalHoneycombClient(
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    return client
