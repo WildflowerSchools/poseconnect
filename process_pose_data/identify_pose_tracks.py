@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
 import scipy
+import logging
 
+logger = logging.getLogger(__name__)
 
 def generate_track_identification(
     poses_3d_with_tracks_df,
@@ -75,7 +77,7 @@ def calculate_track_identification(
     for timestamp, poses_3d_with_tracks_df_timestamp in poses_3d_with_tracks_and_sensor_positions_df.groupby('timestamp'):
         uwb_data_df_timestamp = uwb_data_resampled_df.loc[uwb_data_resampled_df['timestamp'] == timestamp]
         if len(uwb_data_df_timestamp) == 0:
-            logging.warn('No UWB data for timestamp %s', timestamp.isoformat())
+            logger.warn('No UWB data for timestamp %s', timestamp.isoformat())
             continue
         num_pose_tracks = len(poses_3d_with_tracks_df_timestamp)
         pose_track_ids = poses_3d_with_tracks_df_timestamp['pose_track_3d_id'].values
