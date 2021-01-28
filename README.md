@@ -4,6 +4,11 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Diagnose missing CUWB data in analysis of 19:48-19:55 UTC on Jan 21
+* Diagnose floating pose in output from 19:48-19:55 UTC on Jan 21 and from earlier test night
+* Add ability to write locally generated object IDs to Honeycomb
+* Create separate workers for 3D pose reconstruction, 3D pose tracking, 3D pose track interpolation, and 3D pose track identification (saving output from each stage locally)
+* Create separate workers for uploading to Honeycomb 3D poses, 3D pose tracks, interpolated 3D pose tracks, 3D pose identification, 3D pose track identification
 * Clean up argument ordering in `reconstruct_poses_3d_alphapose_local_time_segment`
 * Retool `generate_inference_metadata_reconstruct_3d_poses_alphapose_local` to exclude cameras without calibration data
 * Make function to delete Honeycomb inference executions

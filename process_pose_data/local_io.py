@@ -152,7 +152,7 @@ def write_3d_pose_data_local_time_segment(
     base_dir,
     environment_id,
     time_segment_start,
-    inference_id,
+    inference_id_local,
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
@@ -164,7 +164,7 @@ def write_3d_pose_data_local_time_segment(
     )
     file_name = '{}_{}.pkl'.format(
         poses_3d_file_name_stem,
-        inference_id
+        inference_id_local
     )
     os.makedirs(directory_path, exist_ok=True)
     file_path = os.path.join(
@@ -178,7 +178,7 @@ def fetch_3d_pose_data_local(
     end,
     base_dir,
     environment_id,
-    inference_id,
+    inference_id_local,
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
@@ -192,7 +192,7 @@ def fetch_3d_pose_data_local(
             time_segment_start,
             base_dir=base_dir,
             environment_id=environment_id,
-            inference_id=inference_id,
+            inference_id_local=inference_id_local,
             poses_3d_directory_name=poses_3d_directory_name,
             poses_3d_file_name_stem=poses_3d_file_name_stem
         )
@@ -204,14 +204,14 @@ def fetch_3d_pose_data_local_time_segment(
     time_segment_start,
     base_dir,
     environment_id,
-    inference_id,
+    inference_id_local,
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
     path=pose_3d_data_path_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
-        inference_id=inference_id,
+        inference_id_local=inference_id_local,
         time_segment_start=time_segment_start,
         poses_3d_directory_name=poses_3d_directory_name,
         poses_3d_file_name_stem=poses_3d_file_name_stem
@@ -222,7 +222,7 @@ def fetch_3d_pose_data_local_time_segment(
 def delete_3d_pose_data_local(
     base_dir,
     environment_id,
-    inference_id,
+    inference_id_local,
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
@@ -234,7 +234,7 @@ def delete_3d_pose_data_local(
         '*',
         '*',
         '*',
-        '{}_{}.pkl'.format(poses_3d_file_name_stem, inference_id)
+        '{}_{}.pkl'.format(poses_3d_file_name_stem, inference_id_local)
     )
     for path in glob.iglob(glob_pattern):
         os.remove(path)
@@ -246,7 +246,7 @@ def write_inference_metadata_local(
     poses_3d_directory_name='poses_3d',
     inference_metadata_filename_stem='inference_metadata'
 ):
-    inference_id = inference_metadata.get('inference_execution').get('inference_id')
+    inference_id_local = inference_metadata.get('inference_execution').get('inference_id_local')
     inference_metadata_directory = os.path.join(
         base_dir,
         environment_id,
@@ -254,7 +254,7 @@ def write_inference_metadata_local(
     )
     inference_metadata_filename = '{}_{}.json'.format(
         inference_metadata_filename_stem,
-        inference_id
+        inference_id_local
     )
     inference_metadata_path = os.path.join(
         inference_metadata_directory,
@@ -265,7 +265,7 @@ def write_inference_metadata_local(
         json.dump(inference_metadata, fp, cls=CustomJSONEncoder, indent=2)
 
 def read_inference_metadata_local(
-    inference_id,
+    inference_id_local,
     base_dir,
     environment_id,
     poses_3d_directory_name='poses_3d',
@@ -278,7 +278,7 @@ def read_inference_metadata_local(
     )
     inference_metadata_filename = '{}_{}.json'.format(
         inference_metadata_filename_stem,
-        inference_id
+        inference_id_local
     )
     inference_metadata_path = os.path.join(
         inference_metadata_directory,
@@ -314,7 +314,7 @@ def read_inference_metadata_local(
     return inference_metadata
 
 def delete_inference_metadata_local(
-    inference_id,
+    inference_id_local,
     base_dir,
     environment_id,
     poses_3d_directory_name='poses_3d',
@@ -326,48 +326,48 @@ def delete_inference_metadata_local(
         poses_3d_directory_name,
         '{}_{}.json'.format(
             inference_metadata_filename_stem,
-            inference_id
+            inference_id_local
         )
     )
     if os.path.exists(inference_metadata_path):
         os.remove(inference_metadata_path)
 
-def write_inference_execution_local(
-    base_dir,
-    environment_id,
-    poses_3d_directory_name,
-    inference_id,
-    execution_start=None,
-    name=None,
-    notes=None,
-    model=None,
-    version=None,
-    inference_execution_filename_stem='inference_execution'
-):
-    inference_execution_data = {
-        'inference_id': inference_id,
-        'execution_start': execution_start.isoformat(),
-        'name': name,
-        'notes': notes,
-        'model': model,
-        'version': version
-    }
-    inference_execution_directory = os.path.join(
-        base_dir,
-        environment_id,
-        poses_3d_directory_name
-    )
-    inference_execution_filename = '{}_{}.json'.format(
-        inference_execution_filename_stem,
-        inference_id
-    )
-    inference_execution_path = os.path.join(
-        inference_execution_directory,
-        inference_execution_filename
-    )
-    os.makedirs(inference_execution_directory, exist_ok=True)
-    with open(inference_execution_path, 'w') as fp:
-        json.dump(inference_execution_data, fp, cls=CustomJSONEncoder, indent=2)
+# def write_inference_execution_local(
+#     base_dir,
+#     environment_id,
+#     poses_3d_directory_name,
+#     inference_id_local,
+#     execution_start=None,
+#     name=None,
+#     notes=None,
+#     model=None,
+#     version=None,
+#     inference_execution_filename_stem='inference_execution'
+# ):
+#     inference_execution_data = {
+#         'inference_id_local': inference_id_local,
+#         'execution_start': execution_start.isoformat(),
+#         'name': name,
+#         'notes': notes,
+#         'model': model,
+#         'version': version
+#     }
+#     inference_execution_directory = os.path.join(
+#         base_dir,
+#         environment_id,
+#         poses_3d_directory_name
+#     )
+#     inference_execution_filename = '{}_{}.json'.format(
+#         inference_execution_filename_stem,
+#         inference_id_local
+#     )
+#     inference_execution_path = os.path.join(
+#         inference_execution_directory,
+#         inference_execution_filename
+#     )
+#     os.makedirs(inference_execution_directory, exist_ok=True)
+#     with open(inference_execution_path, 'w') as fp:
+#         json.dump(inference_execution_data, fp, cls=CustomJSONEncoder, indent=2)
 
 def alphapose_data_file_glob_pattern(
     base_dir,
@@ -445,7 +445,7 @@ def alphapose_data_file_re_pattern(
 def pose_3d_data_path_time_segment(
     base_dir,
     environment_id,
-    inference_id,
+    inference_id_local,
     time_segment_start,
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
@@ -458,7 +458,7 @@ def pose_3d_data_path_time_segment(
     )
     file_name='{}_{}.pkl'.format(
         poses_3d_file_name_stem,
-        inference_id
+        inference_id_local
     )
     path = os.path.join(
         directory_path,
