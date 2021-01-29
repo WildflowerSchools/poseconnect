@@ -24,6 +24,8 @@ KEYPOINT_CATEGORIES_BY_POSE_MODEL = {
 
 def reconstruct_poses_3d(
     poses_2d_df,
+    pose_id_2d_column_name='pose_id_2d',
+    pose_ids_2d_column_name='pose_ids_2d',
     pose_model_id=None,
     camera_calibrations=None,
     min_keypoint_quality=None,
@@ -88,6 +90,8 @@ def reconstruct_poses_3d(
     reconstruct_poses_3d_timestamp_partial = partial(
         reconstruct_poses_3d_timestamp,
         camera_calibrations=camera_calibrations,
+        pose_id_2d_column_name=pose_id_2d_column_name,
+        pose_ids_2d_column_name=pose_ids_2d_column_name,
         min_keypoint_quality=min_keypoint_quality,
         min_num_keypoints=min_num_keypoints,
         min_pose_quality=min_pose_quality,
@@ -206,6 +210,8 @@ def pose_3d_limits(
 def reconstruct_poses_3d_timestamp(
     poses_2d_df_timestamp,
     camera_calibrations,
+    pose_id_2d_column_name='pose_id_2d',
+    pose_ids_2d_column_name='pose_ids_2d',
     min_keypoint_quality=None,
     min_num_keypoints=None,
     min_pose_quality=None,
@@ -244,7 +250,8 @@ def reconstruct_poses_3d_timestamp(
             min_pose_quality=min_pose_quality
         )
     pose_pairs_2d_df_timestamp = generate_pose_pairs_timestamp(
-        poses_2d_df_timestamp=poses_2d_df_timestamp_copy
+        poses_2d_df_timestamp=poses_2d_df_timestamp_copy,
+        pose_id_2d_column_name=pose_id_2d_column_name
     )
     pose_pairs_2d_df_timestamp = calculate_3d_poses(
         pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
@@ -277,10 +284,12 @@ def reconstruct_poses_3d_timestamp(
             pose_3d_limits=pose_3d_limits
         )
     pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_best_match(
-        pose_pairs_2d_df_timestamp
+        pose_pairs_2d_df_timestamp,
+        pose_id_2d_column_name=pose_id_2d_column_name
     )
     poses_3d_local_ids_df_timestamp = generate_3d_poses_timestamp(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        pose_ids_2d_column_name=pose_ids_2d_column_name,
         initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         max_dispersion=pose_3d_graph_max_dispersion,
         include_track_labels=include_track_labels,
@@ -292,7 +301,8 @@ def reconstruct_poses_3d_timestamp(
     return poses_3d_local_ids_df_timestamp
 
 def generate_pose_pairs_timestamp(
-    poses_2d_df_timestamp
+    poses_2d_df_timestamp,
+    pose_id_2d_column_name='pose_id_2d'
 ):
     if len(poses_2d_df_timestamp) == 0:
         return pd.DataFrame()
@@ -316,11 +326,11 @@ def generate_pose_pairs_timestamp(
         axis=1
     )
     pose_pairs_2d_df_timestamp.set_index(
-        [('a', 'pose_id_2d'), ('b', 'pose_id_2d')],
+        [('a', pose_id_2d_column_name), ('b', pose_id_2d_column_name)],
         inplace=True
     )
     pose_pairs_2d_df_timestamp.rename_axis(
-        ['pose_id_2d_a', 'pose_id_2d_b'],
+        [pose_id_2d_column_name + '_a', pose_id_2d_column_name + '_b'],
         inplace=True
     )
     pose_pairs_2d_df_timestamp.columns = ['{}_{}'.format(column_name[1], column_name[0]) for column_name in pose_pairs_2d_df_timestamp.columns.values]
@@ -572,15 +582,17 @@ def pose_3d_in_range(
     )
 
 def extract_best_score_indices_timestamp_camera_pair(
-    pose_pairs_2d_df
+    pose_pairs_2d_df,
+    pose_id_2d_column_name='pose_id_2d'
 ):
-    best_a_score_for_b = pose_pairs_2d_df['score'].groupby('pose_id_2d_b').idxmin().dropna()
-    best_b_score_for_a = pose_pairs_2d_df['score'].groupby('pose_id_2d_a').idxmin().dropna()
+    best_a_score_for_b = pose_pairs_2d_df['score'].groupby(pose_id_2d_column_name + '_b').idxmin().dropna()
+    best_b_score_for_a = pose_pairs_2d_df['score'].groupby(pose_id_2d_column_name + '_a').idxmin().dropna()
     best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
     return best_score_indices
 
 def generate_3d_poses_timestamp(
     pose_pairs_2d_df_timestamp,
+    pose_ids_2d_column_name='pose_ids_2d',
     initial_edge_threshold=2,
     max_dispersion=0.20,
     include_track_labels=False,
@@ -635,7 +647,7 @@ def generate_3d_poses_timestamp(
             'pose_id_3d_local': pose_ids_3d_local,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
-            'pose_ids_2d': pose_id_2ds,
+            pose_ids_2d_column_name: pose_id_2ds,
             'track_labels_2d': track_labels
         })
     else:
@@ -643,7 +655,7 @@ def generate_3d_poses_timestamp(
             'pose_id_3d_local': pose_ids_3d_local,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
-            'pose_ids_2d': pose_id_2ds
+            pose_ids_2d_column_name: pose_id_2ds
         })
     return poses_3d_local_ids_df_timestamp
 

@@ -242,9 +242,10 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
     )
     logger.info('Converted camera assignment IDs to camera device IDs for time segment starting at {}'.format(time_segment_start.isoformat()))
     logger.info('Reconstructing 3D poses for time segment starting at {}'.format(time_segment_start.isoformat()))
-    poses_2d_df_time_segment.index.name = 'pose_id_2d'
     poses_3d_local_ids_df = process_pose_data.analyze.reconstruct_poses_3d(
         poses_2d_df=poses_2d_df_time_segment,
+        pose_id_2d_column_name='pose_id_2d_local',
+        pose_ids_2d_column_name='pose_ids_2d_local',
         pose_model_id=pose_model_id,
         camera_calibrations=camera_calibrations,
         min_keypoint_quality=min_keypoint_quality,
@@ -263,10 +264,6 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         include_track_labels=include_track_labels,
         progress_bar=progress_bar,
         notebook=notebook
-    )
-    poses_3d_local_ids_df.rename(
-        columns={'pose_ids_2d': 'pose_ids_2d_local'},
-        inplace=True
     )
     logger.info('Reconstructed 3D poses for time segment starting at {}'.format(time_segment_start.isoformat()))
     logger.info('Writing 3D poses to disk for time segment starting at {}'.format(time_segment_start.isoformat()))
