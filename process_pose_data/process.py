@@ -19,7 +19,6 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     pose_model_id,
     room_x_limits,
     room_y_limits,
-    honeycomb_inference_execution=False,
     camera_assignment_ids=None,
     camera_device_id_lookup=None,
     camera_calibrations=None,
@@ -34,7 +33,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     poses_2d_json_format='cmu',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d',
-    inference_metadata_filename_stem='inference_metadata',
+    pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata',
     min_keypoint_quality=None,
     min_num_keypoints=None,
     min_pose_quality=None,
@@ -64,8 +63,8 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         start,
         end
     ))
-    logger.info('Generating inference metadata')
-    inference_metadata = generate_inference_metadata_reconstruct_3d_poses_alphapose_local(
+    logger.info('Generating metadata')
+    pose_reconstruction_3d_metadata = generate_pose_reconstruction_3d_metadata(
         start=start,
         end=end,
         environment_id=environment_id,
@@ -96,19 +95,19 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         client_id=client_id,
         client_secret=client_secret
     )
-    inference_id_local = inference_metadata.get('inference_execution').get('inference_id_local')
-    camera_assignment_ids = inference_metadata.get('camera_assignment_ids')
-    camera_device_id_lookup = inference_metadata.get('camera_device_id_lookup')
-    camera_device_ids = inference_metadata.get('camera_device_ids')
-    camera_calibrations = inference_metadata.get('camera_calibrations')
-    pose_3d_limits = inference_metadata.get('pose_3d_limits')
+    inference_id_local = pose_reconstruction_3d_metadata.get('inference_execution').get('inference_id_local')
+    camera_assignment_ids = pose_reconstruction_3d_metadata.get('camera_assignment_ids')
+    camera_device_id_lookup = pose_reconstruction_3d_metadata.get('camera_device_id_lookup')
+    camera_device_ids = pose_reconstruction_3d_metadata.get('camera_device_ids')
+    camera_calibrations = pose_reconstruction_3d_metadata.get('camera_calibrations')
+    pose_3d_limits = pose_reconstruction_3d_metadata.get('pose_3d_limits')
     logger.info('Writing inference metadata to local file')
-    process_pose_data.local_io.write_inference_metadata_local(
-        inference_metadata=inference_metadata,
+    process_pose_data.local_io.write_pose_reconstruction_3d_metadata_local(
+        pose_reconstruction_3d_metadata=pose_reconstruction_3d_metadata,
         base_dir=base_dir,
         environment_id=environment_id,
         poses_3d_directory_name=poses_3d_directory_name,
-        inference_metadata_filename_stem=inference_metadata_filename_stem
+        pose_reconstruction_3d_metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
     )
     logger.info('Generating list of time segments')
     time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
@@ -287,7 +286,7 @@ def upload_3d_poses_honeycomb(
     environment_id,
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d',
-    inference_metadata_filename_stem='inference_metadata',
+    pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata',
     chunk_size=100,
     client=None,
     uri=None,
@@ -298,17 +297,17 @@ def upload_3d_poses_honeycomb(
     progress_bar=False,
     notebook=False
 ):
-    inference_metadata = process_pose_data.local_io.read_inference_metadata_local(
+    pose_reconstruction_3d_metadata = process_pose_data.local_io.read_pose_reconstruction_3d_metadata_local(
         inference_id_local=inference_id_local,
         base_dir=base_dir,
         environment_id=environment_id,
         poses_3d_directory_name=poses_3d_directory_name,
-        inference_metadata_filename_stem=inference_metadata_filename_stem
+        pose_reconstruction_3d_metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
     )
-    start = inference_metadata.get('start')
-    end = inference_metadata.get('end')
-    pose_model_id = inference_metadata.get('pose_model_id')
-    coordinate_space_id = inference_metadata.get('coordinate_space_id')
+    start = pose_reconstruction_3d_metadata.get('start')
+    end = pose_reconstruction_3d_metadata.get('end')
+    pose_model_id = pose_reconstruction_3d_metadata.get('pose_model_id')
+    coordinate_space_id = pose_reconstruction_3d_metadata.get('coordinate_space_id')
     time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
         start=start,
         end=end
@@ -362,7 +361,7 @@ def delete_reconstruct_3d_poses_output(
     inference_id_local,
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d',
-    inference_metadata_filename_stem='inference_metadata',
+    pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata',
     chunk_size=100,
     client=None,
     uri=None,
@@ -380,12 +379,12 @@ def delete_reconstruct_3d_poses_output(
         poses_3d_file_name_stem=poses_3d_file_name_stem
     )
     logger.info('Deleting local inference metadata')
-    process_pose_data.local_io.delete_inference_metadata_local(
+    process_pose_data.local_io.delete_pose_reconstruction_3d_metadata_local(
         inference_id_local=inference_id_local,
         base_dir=base_dir,
         environment_id=environment_id,
         poses_3d_directory_name=poses_3d_directory_name,
-        inference_metadata_filename_stem=inference_metadata_filename_stem
+        pose_reconstruction_3d_metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
     )
     logger.info('Deleting Honeycomb 3D pose data')
     raise ValueError('We need a way of fetching Honeycomb inference ID before deleting 3D pose data from Honeycomb')
@@ -410,7 +409,7 @@ def delete_reconstruct_3d_poses_output(
         client_secret=client_secret
     )
 
-def generate_inference_metadata_reconstruct_3d_poses_alphapose_local(
+def generate_pose_reconstruction_3d_metadata(
     start,
     end,
     environment_id,
@@ -442,7 +441,7 @@ def generate_inference_metadata_reconstruct_3d_poses_alphapose_local(
     client_secret=None
 ):
     logger.info('Generating inference execution object')
-    inference_execution = generate_inference_execution_reconstruct_3d_poses_alphapose_local(
+    inference_execution = generate_pose_reconstruction_3d_inference_execution(
         environment_id,
         start,
         end
@@ -498,7 +497,7 @@ def generate_inference_metadata_reconstruct_3d_poses_alphapose_local(
             client_id=client_id,
             client_secret=client_secret
         )
-    inference_metadata = {
+    pose_reconstruction_3d_metadata = {
         'inference_execution': inference_execution,
         'start': start,
         'end': end,
@@ -524,9 +523,9 @@ def generate_inference_metadata_reconstruct_3d_poses_alphapose_local(
         'pose_3d_graph_max_dispersion': pose_3d_graph_max_dispersion,
         'include_track_labels': include_track_labels
     }
-    return inference_metadata
+    return pose_reconstruction_3d_metadata
 
-def generate_inference_execution_reconstruct_3d_poses_alphapose_local(
+def generate_pose_reconstruction_3d_inference_execution(
     environment_id,
     start,
     end

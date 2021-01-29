@@ -239,98 +239,98 @@ def delete_3d_pose_data_local(
     for path in glob.iglob(glob_pattern):
         os.remove(path)
 
-def write_inference_metadata_local(
-    inference_metadata,
+def write_pose_reconstruction_3d_metadata_local(
+    pose_reconstruction_3d_metadata,
     base_dir,
     environment_id,
     poses_3d_directory_name='poses_3d',
-    inference_metadata_filename_stem='inference_metadata'
+    pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
 ):
-    inference_id_local = inference_metadata.get('inference_execution').get('inference_id_local')
-    inference_metadata_directory = os.path.join(
+    inference_id_local = pose_reconstruction_3d_metadata.get('inference_execution').get('inference_id_local')
+    metadata_directory = os.path.join(
         base_dir,
         environment_id,
         poses_3d_directory_name
     )
-    inference_metadata_filename = '{}_{}.json'.format(
-        inference_metadata_filename_stem,
+    metadata_filename = '{}_{}.json'.format(
+        pose_reconstruction_3d_metadata_filename_stem,
         inference_id_local
     )
-    inference_metadata_path = os.path.join(
-        inference_metadata_directory,
-        inference_metadata_filename
+    metadata_path = os.path.join(
+        metadata_directory,
+        metadata_filename
     )
-    os.makedirs(inference_metadata_directory, exist_ok=True)
-    with open(inference_metadata_path, 'w') as fp:
-        json.dump(inference_metadata, fp, cls=CustomJSONEncoder, indent=2)
+    os.makedirs(metadata_directory, exist_ok=True)
+    with open(metadata_path, 'w') as fp:
+        json.dump(pose_reconstruction_3d_metadata, fp, cls=CustomJSONEncoder, indent=2)
 
-def read_inference_metadata_local(
+def read_pose_reconstruction_3d_metadata_local(
     inference_id_local,
     base_dir,
     environment_id,
     poses_3d_directory_name='poses_3d',
-    inference_metadata_filename_stem='inference_metadata'
+    pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
 ):
-    inference_metadata_directory = os.path.join(
+    metadata_directory = os.path.join(
         base_dir,
         environment_id,
         poses_3d_directory_name
     )
-    inference_metadata_filename = '{}_{}.json'.format(
-        inference_metadata_filename_stem,
+    metadata_filename = '{}_{}.json'.format(
+        pose_reconstruction_3d_metadata_filename_stem,
         inference_id_local
     )
-    inference_metadata_path = os.path.join(
-        inference_metadata_directory,
-        inference_metadata_filename
+    metadata_path = os.path.join(
+        metadata_directory,
+        metadata_filename
     )
-    with open(inference_metadata_path, 'r') as fp:
-        inference_metadata=json.load(fp)
-    inference_metadata['start'] = datetime.datetime.fromisoformat(
-        inference_metadata.get('start')
+    with open(metadata_path, 'r') as fp:
+        pose_reconstruction_3d_metadata=json.load(fp)
+    pose_reconstruction_3d_metadata['start'] = datetime.datetime.fromisoformat(
+        pose_reconstruction_3d_metadata.get('start')
     )
-    inference_metadata['end'] = datetime.datetime.fromisoformat(
-        inference_metadata.get('end')
+    pose_reconstruction_3d_metadata['end'] = datetime.datetime.fromisoformat(
+        pose_reconstruction_3d_metadata.get('end')
     )
-    inference_metadata['inference_execution']['execution_start'] = datetime.datetime.fromisoformat(
-        inference_metadata.get('inference_execution').get('execution_start')
+    pose_reconstruction_3d_metadata['inference_execution']['execution_start'] = datetime.datetime.fromisoformat(
+        pose_reconstruction_3d_metadata.get('inference_execution').get('execution_start')
     )
-    for camera_id in inference_metadata.get('camera_calibrations').keys():
-        inference_metadata['camera_calibrations'][camera_id]['camera_matrix']=np.asarray(
-            inference_metadata.get('camera_calibrations').get(camera_id).get('camera_matrix')
+    for camera_id in pose_reconstruction_3d_metadata.get('camera_calibrations').keys():
+        pose_reconstruction_3d_metadata['camera_calibrations'][camera_id]['camera_matrix']=np.asarray(
+            pose_reconstruction_3d_metadata.get('camera_calibrations').get(camera_id).get('camera_matrix')
         )
-        inference_metadata['camera_calibrations'][camera_id]['distortion_coefficients']=np.asarray(
-            inference_metadata.get('camera_calibrations').get(camera_id).get('distortion_coefficients')
+        pose_reconstruction_3d_metadata['camera_calibrations'][camera_id]['distortion_coefficients']=np.asarray(
+            pose_reconstruction_3d_metadata.get('camera_calibrations').get(camera_id).get('distortion_coefficients')
         )
-        inference_metadata['camera_calibrations'][camera_id]['rotation_vector']=np.asarray(
-            inference_metadata.get('camera_calibrations').get(camera_id).get('rotation_vector')
+        pose_reconstruction_3d_metadata['camera_calibrations'][camera_id]['rotation_vector']=np.asarray(
+            pose_reconstruction_3d_metadata.get('camera_calibrations').get(camera_id).get('rotation_vector')
         )
-        inference_metadata['camera_calibrations'][camera_id]['translation_vector']=np.asarray(
-            inference_metadata.get('camera_calibrations').get(camera_id).get('translation_vector')
+        pose_reconstruction_3d_metadata['camera_calibrations'][camera_id]['translation_vector']=np.asarray(
+            pose_reconstruction_3d_metadata.get('camera_calibrations').get(camera_id).get('translation_vector')
         )
-    inference_metadata['pose_3d_limits']=np.asarray(
-        inference_metadata.get('pose_3d_limits')
+    pose_reconstruction_3d_metadata['pose_3d_limits']=np.asarray(
+        pose_reconstruction_3d_metadata.get('pose_3d_limits')
     )
-    return inference_metadata
+    return pose_reconstruction_3d_metadata
 
-def delete_inference_metadata_local(
+def delete_pose_reconstruction_3d_metadata_local(
     inference_id_local,
     base_dir,
     environment_id,
     poses_3d_directory_name='poses_3d',
-    inference_metadata_filename_stem='inference_metadata'
+    pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
 ):
-    inference_metadata_path = os.path.join(
+    metadata_path = os.path.join(
         base_dir,
         environment_id,
         poses_3d_directory_name,
         '{}_{}.json'.format(
-            inference_metadata_filename_stem,
+            pose_reconstruction_3d_metadata_filename_stem,
             inference_id_local
         )
     )
-    if os.path.exists(inference_metadata_path):
-        os.remove(inference_metadata_path)
+    if os.path.exists(metadata_path):
+        os.remove(metadata_path)
 
 def alphapose_data_file_glob_pattern(
     base_dir,
