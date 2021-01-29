@@ -170,7 +170,7 @@ def fetch_2d_pose_data(
     logger.info('Parsing {} returned poses'.format(len(result)))
     for datum in result:
         data.append({
-            'pose_id_2d': datum.get('pose_id'),
+            'pose_2d_id': datum.get('pose_id'),
             'timestamp': datum.get('timestamp'),
             'camera_id': (datum.get('camera') if datum.get('camera') is not None else {}).get('device_id'),
             'track_label_2d': datum.get('track_label'),
@@ -188,7 +188,7 @@ def fetch_2d_pose_data(
         raise ValueError('Returned poses are associated with multiple pose models')
     if (poses_2d_df.groupby(['timestamp', 'camera_id'])['inference_id'].nunique() > 1).any():
         raise ValueError('Returned poses have multiple inference IDs for some camera IDs at some timestamps')
-    poses_2d_df.set_index('pose_id_2d', inplace=True)
+    poses_2d_df.set_index('pose_2d_id', inplace=True)
     return_columns = [
         'timestamp',
         'camera_id'
@@ -353,10 +353,10 @@ def fetch_3d_pose_data(
     logger.info('Parsing {} returned poses'.format(len(result)))
     for datum in result:
         data.append({
-            'pose_id_3d': datum.get('pose_id'),
+            'pose_3d_id': datum.get('pose_id'),
             'timestamp': datum.get('timestamp'),
             'track_label_3d': datum.get('track_label'),
-            'pose_ids_2d': datum.get('poses_2d'),
+            'pose_2d_ids': datum.get('poses_2d'),
             'person_id': (datum.get('person') if datum.get('person') is not None else {}).get('person_id'),
             'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id'),
             'pose_model_id': (datum.get('pose_model') if datum.get('pose_model') is not None else {}).get('pose_model_id'),
@@ -371,14 +371,14 @@ def fetch_3d_pose_data(
         raise ValueError('Returned poses are associated with multiple pose models')
     if (poses_3d_df.groupby('timestamp')['inference_id'].nunique() > 1).any():
         raise ValueError('Returned poses have multiple inference IDs for timestamps')
-    poses_3d_df.set_index('pose_id_3d', inplace=True)
+    poses_3d_df.set_index('pose_3d_id', inplace=True)
     return_columns = [
         'timestamp'
     ]
     if return_track_label:
         return_columns.append('track_label_3d')
     if return_poses_2d:
-        return_columns.append('pose_ids_2d')
+        return_columns.append('pose_2d_ids')
     if return_person_id:
         return_columns.append('person_id')
     if return_inference_id:
@@ -506,7 +506,7 @@ def fetch_3d_pose_track_data(
             ]}
         ]}
     ]
-    result = search_3d_pose_tracks(
+    result = search_pose_tracks_3d(
         query_list=query_list,
         return_data=return_data,
         chunk_size=chunk_size,
@@ -522,14 +522,14 @@ def fetch_3d_pose_track_data(
     for datum in result:
         data.append({
             'pose_track_3d_id': datum.get('pose_track_id'),
-            'pose_id_3ds': datum.get('poses_3d'),
+            'pose_3d_ids': datum.get('poses_3d'),
             'track_label_3d': datum.get('track_label'),
             'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id')
         })
     pose_tracks_3d_df = pd.DataFrame(data)
     pose_tracks_3d_df.set_index('pose_track_3d_id', inplace=True)
     return_columns = [
-        'pose_id_3ds'
+        'pose_3d_ids'
     ]
     if return_track_label:
         return_columns.append('track_label_3d')
@@ -538,7 +538,7 @@ def fetch_3d_pose_track_data(
     pose_tracks_3d_df = pose_tracks_3d_df.reindex(columns=return_columns)
     return pose_tracks_3d_df
 
-def search_3d_pose_tracks(
+def search_pose_tracks_3d(
     query_list,
     return_data,
     chunk_size=100,
@@ -892,7 +892,7 @@ def fetch_pose_model_id(
     return None
 
 def fetch_pose_model(
-    pose_id_2d,
+    pose_2d_id,
     client=None,
     uri=None,
     token_uri=None,
@@ -915,7 +915,7 @@ def fetch_pose_model(
         arguments={
             'pose_id': {
                 'type': 'ID!',
-                'value': pose_id_2d
+                'value': pose_2d_id
             }
         },
         return_object=[
@@ -1486,7 +1486,7 @@ def write_3d_pose_data(
         'coordinate_space_id',
         'pose_model_id',
         'keypoint_coordinates_3d',
-        'pose_ids_2d',
+        'pose_2d_ids',
         'source_id',
         'source_type'
     ])
@@ -1495,7 +1495,7 @@ def write_3d_pose_data(
             'coordinate_space_id': 'coordinate_space',
             'pose_model_id': 'pose_model',
             'keypoint_coordinates_3d': 'keypoints',
-            'pose_ids_2d': 'poses_2d',
+            'pose_2d_ids': 'poses_2d',
             'source_id': 'source'
         },
         inplace=True
@@ -1524,10 +1524,10 @@ def write_3d_pose_data(
         chunk_size=chunk_size
     )
     try:
-        pose_ids_3d = [datum['pose_id'] for datum in result]
+        pose_3d_ids = [datum['pose_id'] for datum in result]
     except:
         raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
-    return pose_ids_3d
+    return pose_3d_ids
 
 def delete_3d_pose_data_by_inference_id(
     inference_id,
@@ -1539,7 +1539,7 @@ def delete_3d_pose_data_by_inference_id(
     client_id=None,
     client_secret=None
 ):
-    pose_ids = fetch_pose_ids_3d(
+    pose_ids = fetch_pose_3d_ids(
         inference_id,
         chunk_size=chunk_size,
         client=client,
@@ -1561,7 +1561,7 @@ def delete_3d_pose_data_by_inference_id(
     )
     return pose_ids
 
-def fetch_pose_ids_3d(
+def fetch_pose_3d_ids(
     inference_id,
     chunk_size=100,
     client=None,
@@ -1625,7 +1625,7 @@ def delete_3d_pose_data_by_pose_ids(
     statuses = [datum.get('status') for datum in result]
     return statuses
 
-def write_3d_pose_tracks(
+def write_pose_tracks_3d(
     poses_3d_df,
     source_id,
     source_type,
@@ -1639,10 +1639,10 @@ def write_3d_pose_tracks(
 ):
     poses_3d_df_copy = poses_3d_df.copy()
     current_index_name = poses_3d_df_copy.index.name
-    poses_3d_df_copy = poses_3d_df_copy.reset_index().rename(columns={current_index_name: 'pose_id_3d'})
+    poses_3d_df_copy = poses_3d_df_copy.reset_index().rename(columns={current_index_name: 'pose_3d_id'})
     pose_tracks_3d_df = poses_3d_df_copy.groupby('pose_track_3d_id').agg(
         poses_3d = pd.NamedAgg(
-            column='pose_id_3d',
+            column='pose_3d_id',
             aggfunc = lambda x: x.tolist()
         )
     )
@@ -1672,10 +1672,10 @@ def write_3d_pose_tracks(
         chunk_size=chunk_size
     )
     try:
-        pose_track_ids = [datum['pose_track_id'] for datum in result]
+        pose_track_3d_ids = [datum['pose_track_id'] for datum in result]
     except:
         raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
-    return pose_track_ids
+    return pose_track_3d_ids
 
 def generate_client(
     client=None,

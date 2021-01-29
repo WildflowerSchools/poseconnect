@@ -133,7 +133,7 @@ def overlay_video_poses_2d(
             frame = video_input.get_frame()
             if frame is None:
                 raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
-            for pose_id_2d, row in poses_2d_df.loc[
+            for pose_2d_id, row in poses_2d_df.loc[
                 (poses_2d_df['timestamp'] == timestamp_pandas) &
                 (poses_2d_df['camera_id'] == camera_id)
             ].iterrows():
@@ -318,7 +318,7 @@ def overlay_video_poses_3d(
                 frame = video_input.get_frame()
                 if frame is None:
                     raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
-                for pose_id_3d, row in poses_3d_df.loc[poses_3d_df['timestamp'] == timestamp_pandas].iterrows():
+                for pose_3d_id, row in poses_3d_df.loc[poses_3d_df['timestamp'] == timestamp_pandas].iterrows():
                     keypoint_coordinates_2d = cv_utils.project_points(
                         object_points=row['keypoint_coordinates_3d'],
                         rotation_vector=camera_calibration['rotation_vector'],
@@ -407,38 +407,38 @@ def draw_poses_2d_timestamp_camera_pair_opencv(
     if annotate_matches:
         num_matches = df['match'].sum()
         for camera_letter in ['a', 'b']:
-            pose_ids = dfs_single_camera[camera_letter].index.values.tolist()
-            pose_label_maps[camera_letter] = {pose_id: '' for pose_id in pose_ids}
+            pose_2d_ids = dfs_single_camera[camera_letter].index.values.tolist()
+            pose_label_maps[camera_letter] = {pose_2d_id: '' for pose_2d_id in pose_2d_ids}
             if not generate_match_aliases:
                 if 'track_label_2d' in dfs_single_camera[camera_letter].columns:
                     pose_labels = dfs_single_camera[camera_letter]['track_label_2d'].values.tolist()
-                elif len(pose_ids) <= 26:
-                    pose_labels = string.ascii_uppercase[:len(pose_ids)]
+                elif len(pose_2d_ids) <= 26:
+                    pose_labels = string.ascii_uppercase[:len(pose_2d_ids)]
                 else:
-                    pose_labels = range(len(pose_ids))
-                pose_label_maps[camera_letter] = dict(zip(pose_ids, pose_labels))
-            pose_color_maps[camera_letter] = {pose_id: 'grey' for pose_id in pose_ids}
+                    pose_labels = range(len(pose_2d_ids))
+                pose_label_maps[camera_letter] = dict(zip(pose_2d_ids, pose_labels))
+            pose_color_maps[camera_letter] = {pose_2d_id: 'grey' for pose_2d_id in pose_2d_ids}
         match_aliases = iter(list(string.ascii_uppercase[:num_matches]))
         match_colors = iter(sns.color_palette('husl', n_colors=num_matches))
-        for (pose_id_a, pose_id_b), row in df.iterrows():
+        for (pose_2d_id_a, pose_2d_id_b), row in df.iterrows():
             if row['match']:
-                old_label_a = pose_label_maps['a'][pose_id_a]
-                old_label_b = pose_label_maps['b'][pose_id_b]
-                pose_label_maps['a'][pose_id_a] = '{} ({})'.format(
+                old_label_a = pose_label_maps['a'][pose_2d_id_a]
+                old_label_b = pose_label_maps['b'][pose_2d_id_b]
+                pose_label_maps['a'][pose_2d_id_a] = '{} ({})'.format(
                     old_label_a,
                     old_label_b
                 )
-                pose_label_maps['b'][pose_id_b] = '{} ({})'.format(
+                pose_label_maps['b'][pose_2d_id_b] = '{} ({})'.format(
                     old_label_b,
                     old_label_a
                 )
                 if generate_match_aliases:
                     match_alias = next(match_aliases)
-                    pose_label_maps['a'][pose_id_a] = match_alias
-                    pose_label_maps['b'][pose_id_b] = match_alias
+                    pose_label_maps['a'][pose_2d_id_a] = match_alias
+                    pose_label_maps['b'][pose_2d_id_b] = match_alias
                 pose_color = next(match_colors)
-                pose_color_maps['a'][pose_id_a] = pose_color
-                pose_color_maps['b'][pose_id_b] = pose_color
+                pose_color_maps['a'][pose_2d_id_a] = pose_color
+                pose_color_maps['b'][pose_2d_id_b] = pose_color
     for camera_letter in ['a', 'b']:
         draw_poses_2d_timestamp_camera_opencv(
             df=dfs_single_camera[camera_letter],
@@ -485,22 +485,22 @@ def draw_poses_2d_timestamp_camera_opencv(
     camera_id = camera_ids[0]
     camera_identifier = camera_id
     df = df.sort_index()
-    pose_ids = df.index.tolist()
+    pose_2d_ids = df.index.tolist()
     if pose_label_map is None:
         if 'track_label_2d' in df.columns:
             pose_labels = df['track_label_2d'].values.tolist()
-        elif len(pose_ids) <= 26:
-            pose_labels = string.ascii_uppercase[:len(pose_ids)]
+        elif len(pose_2d_ids) <= 26:
+            pose_labels = string.ascii_uppercase[:len(pose_2d_ids)]
         else:
-            pose_labels = range(len(pose_ids))
-        pose_label_map = dict(zip(pose_ids, pose_labels))
+            pose_labels = range(len(pose_2d_ids))
+        pose_label_map = dict(zip(pose_2d_ids, pose_labels))
     if pose_color_map is None:
-        pose_colors = sns.color_palette('husl', n_colors=len(pose_ids))
-        pose_color_map = dict(zip(pose_ids, pose_colors))
+        pose_colors = sns.color_palette('husl', n_colors=len(pose_2d_ids))
+        pose_color_map = dict(zip(pose_2d_ids, pose_colors))
     if draw_keypoint_connectors:
         if keypoint_connectors is None:
             pose_model = process_pose_data.honeycomb_io.fetch_pose_model(
-                pose_id=pose_ids[0]
+                pose_2d_id=pose_2d_ids[0]
             )
             keypoint_connectors = pose_model.get('keypoint_connectors')
     if background_image is None:
@@ -511,14 +511,14 @@ def draw_poses_2d_timestamp_camera_opencv(
         image_local_path = image_metadata[0]['image_local_path']
         background_image = cv_utils.fetch_image_from_local_drive(image_local_path)
     new_image = background_image
-    for pose_id, row in df.iterrows():
+    for pose_2d_id, row in df.iterrows():
         new_image = process_pose_data.draw_pose_2d_opencv(
             image=new_image,
             keypoint_coordinates=row['keypoint_coordinates_2d'],
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
-            pose_label=pose_label_map[pose_id],
-            pose_color=pose_color_map[pose_id],
+            pose_label=pose_label_map[pose_2d_id],
+            pose_color=pose_color_map[pose_2d_id],
             keypoint_alpha=keypoint_alpha,
             keypoint_connector_alpha=keypoint_connector_alpha,
             keypoint_connector_linewidth=keypoint_connector_linewidth,
@@ -674,7 +674,7 @@ def draw_poses_3d_timestamp_camera_opencv(
         image_local_path = image_metadata[0]['image_local_path']
         background_image = cv_utils.fetch_image_from_local_drive(image_local_path)
         new_image = background_image
-        for pose_id_3d, row in df.iterrows():
+        for pose_3d_id, row in df.iterrows():
             keypoint_coordinates_2d = cv_utils.project_points(
                 object_points=row['keypoint_coordinates_3d'],
                 rotation_vector=camera_calibration['rotation_vector'],
@@ -749,38 +749,38 @@ def draw_poses_2d_timestamp_camera_pair(
     if annotate_matches:
         num_matches = df['match'].sum()
         for camera_letter in ['a', 'b']:
-            pose_ids = dfs_single_camera[camera_letter].index.values.tolist()
-            pose_label_maps[camera_letter] = {pose_id: '' for pose_id in pose_ids}
+            pose_2d_ids = dfs_single_camera[camera_letter].index.values.tolist()
+            pose_label_maps[camera_letter] = {pose_2d_id: '' for pose_2d_id in pose_2d_ids}
             if not generate_match_aliases:
                 if 'track_label_2d' in dfs_single_camera[camera_letter].columns:
                     pose_labels = dfs_single_camera[camera_letter]['track_label_2d'].values.tolist()
-                elif len(pose_ids) <= 26:
-                    pose_labels = string.ascii_uppercase[:len(pose_ids)]
+                elif len(pose_2d_ids) <= 26:
+                    pose_labels = string.ascii_uppercase[:len(pose_2d_ids)]
                 else:
-                    pose_labels = range(len(pose_ids))
-                pose_label_maps[camera_letter] = dict(zip(pose_ids, pose_labels))
-            pose_color_maps[camera_letter] = {pose_id: 'grey' for pose_id in pose_ids}
+                    pose_labels = range(len(pose_2d_ids))
+                pose_label_maps[camera_letter] = dict(zip(pose_2d_ids, pose_labels))
+            pose_color_maps[camera_letter] = {pose_2d_id: 'grey' for pose_2d_id in pose_2d_ids}
         match_aliases = iter(list(string.ascii_uppercase[:num_matches]))
         match_colors = iter(sns.color_palette('husl', n_colors=num_matches))
-        for (pose_id_a, pose_id_b), row in df.iterrows():
+        for (pose_2d_id_a, pose_2d_id_b), row in df.iterrows():
             if row['match']:
-                old_label_a = pose_label_maps['a'][pose_id_a]
-                old_label_b = pose_label_maps['b'][pose_id_b]
-                pose_label_maps['a'][pose_id_a] = '{} ({})'.format(
+                old_label_a = pose_label_maps['a'][pose_2d_id_a]
+                old_label_b = pose_label_maps['b'][pose_2d_id_b]
+                pose_label_maps['a'][pose_2d_id_a] = '{} ({})'.format(
                     old_label_a,
                     old_label_b
                 )
-                pose_label_maps['b'][pose_id_b] = '{} ({})'.format(
+                pose_label_maps['b'][pose_2d_id_b] = '{} ({})'.format(
                     old_label_b,
                     old_label_a
                 )
                 if generate_match_aliases:
                     match_alias = next(match_aliases)
-                    pose_label_maps['a'][pose_id_a] = match_alias
-                    pose_label_maps['b'][pose_id_b] = match_alias
+                    pose_label_maps['a'][pose_2d_id_a] = match_alias
+                    pose_label_maps['b'][pose_2d_id_b] = match_alias
                 pose_color = next(match_colors)
-                pose_color_maps['a'][pose_id_a] = pose_color
-                pose_color_maps['b'][pose_id_b] = pose_color
+                pose_color_maps['a'][pose_2d_id_a] = pose_color
+                pose_color_maps['b'][pose_2d_id_b] = pose_color
     for camera_letter in ['a', 'b']:
         draw_poses_2d_timestamp_camera(
             df=dfs_single_camera[camera_letter],
@@ -865,31 +865,31 @@ def draw_poses_2d_timestamp_camera(
         filename_extension
     )
     df = df.sort_index()
-    pose_ids = df.index.tolist()
+    pose_2d_ids = df.index.tolist()
     if pose_label_map is None:
         if 'track_label_2d' in df.columns:
             pose_labels = df['track_label_2d'].values.tolist()
-        elif len(pose_ids) <= 26:
-            pose_labels = string.ascii_uppercase[:len(pose_ids)]
+        elif len(pose_2d_ids) <= 26:
+            pose_labels = string.ascii_uppercase[:len(pose_2d_ids)]
         else:
-            pose_labels = range(len(pose_ids))
-        pose_label_map = dict(zip(pose_ids, pose_labels))
+            pose_labels = range(len(pose_2d_ids))
+        pose_label_map = dict(zip(pose_2d_ids, pose_labels))
     if pose_color_map is None:
-        pose_colors = sns.color_palette('husl', n_colors=len(pose_ids))
-        pose_color_map = dict(zip(pose_ids, pose_colors))
+        pose_colors = sns.color_palette('husl', n_colors=len(pose_2d_ids))
+        pose_color_map = dict(zip(pose_2d_ids, pose_colors))
     if draw_keypoint_connectors:
         if keypoint_connectors is None:
             pose_model = process_pose_data.honeycomb_io.fetch_pose_model(
-                pose_id=pose_ids[0]
+                pose_2d_id=pose_2d_ids[0]
             )
             keypoint_connectors = pose_model.get('keypoint_connectors')
-    for pose_id, row in df.iterrows():
+    for pose_2d_id, row in df.iterrows():
         process_pose_data.draw_pose_2d(
             row['keypoint_coordinates_2d'],
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
-            pose_label=pose_label_map[pose_id],
-            pose_color=pose_color_map[pose_id],
+            pose_label=pose_label_map[pose_2d_id],
+            pose_color=pose_color_map[pose_2d_id],
             keypoint_alpha=keypoint_alpha,
             keypoint_connector_alpha=keypoint_connector_alpha,
             keypoint_connector_linewidth=keypoint_connector_linewidth,
@@ -1016,7 +1016,7 @@ def draw_poses_3d_timestamp_camera(
             cv.cvtColor(background_image, cv.COLOR_BGR2RGB),
             alpha=background_image_alpha
         )
-        for pose_id_3d, row in df.iterrows():
+        for pose_3d_id, row in df.iterrows():
             keypoint_coordinates_2d = cv_utils.project_points(
                 object_points=row['keypoint_coordinates_3d'],
                 rotation_vector=camera_calibration['rotation_vector'],
@@ -1127,7 +1127,7 @@ def draw_poses_3d_consecutive_timestamps(
                 cv.cvtColor(background_image, cv.COLOR_BGR2RGB),
                 alpha=background_image_alpha
             )
-            for pose_id_3d, row in poses_3d_df[poses_3d_df['timestamp'] == selected_timestamp].iterrows():
+            for pose_3d_id, row in poses_3d_df[poses_3d_df['timestamp'] == selected_timestamp].iterrows():
                 keypoint_coordinates_2d = cv_utils.project_points(
                     object_points=row['keypoint_coordinates_3d'],
                     rotation_vector=camera_calibration['rotation_vector'],
@@ -1284,8 +1284,8 @@ def visualize_pose_pair(
     fig_suptitle = timestamp.strftime(plot_title_datetime_format)
     save_filename = '{}_{}_{}.{}'.format(
         filename_prefix,
-        slugify.slugify(pose_pair['pose_id_a']),
-        slugify.slugify(pose_pair['pose_id_b']),
+        slugify.slugify(pose_pair['pose_2d_id_a']),
+        slugify.slugify(pose_pair['pose_2d_id_b']),
         filename_extension
     )
     centroid_3d = np.nanmean(pose_pair['keypoint_coordinates_3d'], axis=0)
@@ -1418,15 +1418,15 @@ def extract_single_camera_data(
     df = df.reset_index()
     dfs = dict()
     for camera_letter in ['a', 'b']:
-        extraction_columns = ['pose_id_' + camera_letter, 'timestamp']
+        extraction_columns = ['pose_2d_id_' + camera_letter, 'timestamp']
         extraction_columns.extend([single_camera_column + '_' + camera_letter for single_camera_column in single_camera_columns])
-        target_columns = ['pose_id', 'timestamp']
+        target_columns = ['pose_2d_id', 'timestamp']
         target_columns.extend(single_camera_columns)
         column_map = dict(zip(extraction_columns, target_columns))
         df_single_camera = df.reindex(columns=extraction_columns)
         df_single_camera.rename(columns=column_map, inplace=True)
-        df_single_camera.drop_duplicates(subset='pose_id', inplace=True)
-        df_single_camera.set_index('pose_id', inplace=True)
+        df_single_camera.drop_duplicates(subset='pose_2d_id', inplace=True)
+        df_single_camera.set_index('pose_2d_id', inplace=True)
         dfs[camera_letter] = df_single_camera
     return dfs
 

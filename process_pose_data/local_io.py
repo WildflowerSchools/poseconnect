@@ -104,7 +104,7 @@ def fetch_2d_pose_data_alphapose_local(
                     keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
                     pose_quality = pose.get('score')
                     data_list.append({
-                        'pose_id_2d_local': uuid4().hex,
+                        'pose_2d_id_local': uuid4().hex,
                         'timestamp': pd.to_datetime(timestamp),
                         'assignment_id': assignment_id,
                         'keypoint_coordinates_2d': keypoints,
@@ -123,7 +123,7 @@ def fetch_2d_pose_data_alphapose_local(
                 keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
                 pose_quality = pose_data.get('score')
                 data_list.append({
-                    'pose_id_2d_local': uuid4().hex,
+                    'pose_2d_id_local': uuid4().hex,
                     'timestamp': pd.to_datetime(timestamp),
                     'assignment_id': assignment_id,
                     'keypoint_coordinates_2d': keypoints,
@@ -143,7 +143,7 @@ def fetch_2d_pose_data_alphapose_local(
             second
         )
         return df
-    df.set_index('pose_id_2d_local', inplace=True)
+    df.set_index('pose_2d_id_local', inplace=True)
     df.sort_values(['timestamp', 'assignment_id'], inplace=True)
     return df
 

@@ -669,32 +669,32 @@ def pose_pair_score_heatmap_timestamp_camera_pair(
         logger.warn('No pose pairs meet score criteria')
         return
     df = df.sort_index()
-    pose_ids_a = df.index.get_level_values('pose_id_2d_a').unique().sort_values().tolist()
-    pose_ids_b = df.index.get_level_values('pose_id_2d_b').unique().sort_values().tolist()
+    pose_2d_ids_a = df.index.get_level_values('pose_2d_id_a').unique().sort_values().tolist()
+    pose_2d_ids_b = df.index.get_level_values('pose_2d_id_b').unique().sort_values().tolist()
     if pose_label_map_a is None:
         if 'track_label_a' in df.columns:
-            track_labels_a = df['track_label_a'].reset_index(level='pose_id_2d_b', drop=True).drop_duplicates()
-            pose_labels_a = [track_labels_a.loc[pose_id] for pose_id in pose_ids_a]
-        elif len(pose_ids_a) <= 26:
-            pose_labels_a = string.ascii_uppercase[:len(pose_ids_a)]
+            track_labels_a = df['track_label_a'].reset_index(level='pose_2d_id_b', drop=True).drop_duplicates()
+            pose_labels_a = [track_labels_a.loc[pose_2d_id] for pose_2d_id in pose_2d_ids_a]
+        elif len(pose_2d_ids_a) <= 26:
+            pose_labels_a = string.ascii_uppercase[:len(pose_2d_ids_a)]
         else:
-            pose_labels_a = range(len(pose_ids_a))
-        pose_label_map_a = dict(zip(pose_ids_a, pose_labels_a))
+            pose_labels_a = range(len(pose_2d_ids_a))
+        pose_label_map_a = dict(zip(pose_2d_ids_a, pose_labels_a))
     if pose_label_map_b is None:
         if 'track_label_b' in df.columns:
-            track_labels_b = df['track_label_b'].reset_index(level='pose_id_2d_a', drop=True).drop_duplicates()
-            pose_labels_b = [track_labels_b.loc[pose_id] for pose_id in pose_ids_b]
-        elif len(pose_ids_b) <= 26:
-            pose_labels_b = string.ascii_uppercase[:len(pose_ids_b)]
+            track_labels_b = df['track_label_b'].reset_index(level='pose_2d_id_a', drop=True).drop_duplicates()
+            pose_labels_b = [track_labels_b.loc[pose_2d_id] for pose_2d_id in pose_2d_ids_b]
+        elif len(pose_2d_ids_b) <= 26:
+            pose_labels_b = string.ascii_uppercase[:len(pose_2d_ids_b)]
         else:
-            pose_labels_b = range(len(pose_ids_b))
-        pose_label_map_b = dict(zip(pose_ids_b, pose_labels_b))
-    scores_df=df.reset_index().pivot(index='pose_id_2d_a', columns='pose_id_2d_b', values='score')
+            pose_labels_b = range(len(pose_2d_ids_b))
+        pose_label_map_b = dict(zip(pose_2d_ids_b, pose_labels_b))
+    scores_df=df.reset_index().pivot(index='pose_2d_id_a', columns='pose_2d_id_b', values='score')
     scores_df.rename(index=pose_label_map_a, inplace=True)
     scores_df.rename(columns=pose_label_map_b, inplace=True)
     scores_df.sort_index(axis=0, inplace=True)
     scores_df.sort_index(axis=1, inplace=True)
-    matches_df=df.reset_index().pivot(index='pose_id_2d_a', columns='pose_id_2d_b', values='match')
+    matches_df=df.reset_index().pivot(index='pose_2d_id_a', columns='pose_2d_id_b', values='match')
     matches_df.rename(index=pose_label_map_a, inplace=True)
     matches_df.rename(columns=pose_label_map_b, inplace=True)
     matches_df.sort_index(axis=0, inplace=True)
@@ -833,7 +833,7 @@ def visualize_poses_3d_top_down_timestamp(
         )
         fig.savefig(path)
 
-def pose_track_timelines_by_camera(
+def pose_track_3d_timelines_by_camera(
     df,
     color_by_pose_quality=False,
     display_camera_name=False,
@@ -842,7 +842,7 @@ def pose_track_timelines_by_camera(
     show=True,
     save=False,
     save_directory='.',
-    filename_prefix='pose_track_timelines',
+    filename_prefix='pose_track_3d_timelines',
     filename_datetime_format='%Y%m%d_%H%M%S',
     filename_extension='png',
     fig_width_inches=10.5,
@@ -859,7 +859,7 @@ def pose_track_timelines_by_camera(
             camera_id_string = camera_id
         plot_title = camera_id_string
         file_identifier = camera_id_string
-        pose_track_timelines(
+        pose_track_3d_timelines(
             df=group_df,
             color_by_pose_quality=color_by_pose_quality,
             plot_title=plot_title,
@@ -875,7 +875,7 @@ def pose_track_timelines_by_camera(
             fig_height_inches=fig_height_inches
         )
 
-def pose_track_timelines(
+def pose_track_3d_timelines(
     df,
     color_by_pose_quality=False,
     plot_title=None,
@@ -883,7 +883,7 @@ def pose_track_timelines(
     show=True,
     save=False,
     save_directory='.',
-    filename_prefix='pose_track_timelines',
+    filename_prefix='pose_track_3d_timelines',
     file_identifier=None,
     filename_datetime_format='%Y%m%d_%H%M%S',
     filename_extension='png',

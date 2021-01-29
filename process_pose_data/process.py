@@ -244,8 +244,8 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
     logger.info('Reconstructing 3D poses for time segment starting at {}'.format(time_segment_start.isoformat()))
     poses_3d_local_ids_df = process_pose_data.analyze.reconstruct_poses_3d(
         poses_2d_df=poses_2d_df_time_segment,
-        pose_id_2d_column_name='pose_id_2d_local',
-        pose_ids_2d_column_name='pose_ids_2d_local',
+        pose_2d_id_column_name='pose_2d_id_local',
+        pose_2d_ids_column_name='pose_2d_ids_local',
         pose_model_id=pose_model_id,
         camera_calibrations=camera_calibrations,
         min_keypoint_quality=min_keypoint_quality,
@@ -317,7 +317,7 @@ def upload_3d_poses_honeycomb(
         time_segment_start_list[0].isoformat(),
         time_segment_start_list[-1].isoformat()
     ))
-    pose_ids_3d=list()
+    pose_3d_ids=list()
     if progress_bar:
         if notebook:
             time_segment_start_iterator = tqdm.notebook.tqdm(time_segment_start_list)
@@ -336,7 +336,7 @@ def upload_3d_poses_honeycomb(
             poses_3d_file_name_stem=poses_3d_file_name_stem
         )
         raise ValueError('We need a way of fetching Honeycomb inference ID before writing 3D pose data to Honeycomb')
-        pose_ids_3d_time_segment = process_pose_data.honeycomb_io.write_3d_pose_data(
+        pose_3d_ids_time_segment = process_pose_data.honeycomb_io.write_3d_pose_data(
             poses_3d_df=poses_3d_df_time_segment,
             coordinate_space_id=coordinate_space_id,
             pose_model_id=pose_model_id,
@@ -349,7 +349,7 @@ def upload_3d_poses_honeycomb(
             client_id=client_id,
             client_secret=client_secret
         )
-        pose_3d_ids.extend(pose_ids_3d_time_segment)
+        pose_3d_ids.extend(pose_3d_ids_time_segment)
     return pose_3d_ids
 
 def delete_reconstruct_3d_poses_output(

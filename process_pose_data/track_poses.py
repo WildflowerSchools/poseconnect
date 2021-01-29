@@ -10,7 +10,7 @@ import itertools
 
 logger = logging.getLogger(__name__)
 
-def generate_pose_tracks(
+def generate_pose_tracks_3d(
     poses_3d_df,
     max_match_distance=1.0,
     max_iterations_since_last_match=20,
@@ -80,9 +80,9 @@ def generate_pose_tracks(
     )
     return poses_3d_df_copy, pose_tracks_3d
 
-def update_pose_tracks(
+def update_pose_tracks_3d(
     poses_3d_df,
-    pose_tracks=None,
+    pose_tracks_3d=None,
     max_match_distance=1.0,
     max_iterations_since_last_match=20,
     centroid_position_initial_sd=1.0,
@@ -93,7 +93,7 @@ def update_pose_tracks(
     progress_bar=False,
     notebook=False
 ):
-    if pose_tracks is None:
+    if pose_tracks_3d is None:
         initial_timestamp = poses_3d_df['timestamp'].min()
         initial_pose_3d_ids = poses_3d_df.loc[
             poses_3d_df['timestamp'] == initial_timestamp
@@ -103,7 +103,7 @@ def update_pose_tracks(
             'keypoint_coordinates_3d'
         ].values.tolist()
         initial_poses_3d = dict(zip(initial_pose_3d_ids, initial_keypoint_coordinates_3d))
-        pose_tracks = PoseTracks3D(
+        pose_tracks_3d = PoseTracks3D(
             timestamp=initial_timestamp,
             poses_3d=initial_poses_3d,
             centroid_position_initial_sd=centroid_position_initial_sd,
@@ -112,20 +112,20 @@ def update_pose_tracks(
             reference_velocity_drift=reference_velocity_drift,
             position_observation_sd=position_observation_sd
         )
-        pose_tracks.update_df(
+        pose_tracks_3d.update_df(
             poses_3d_df=poses_3d_df.loc[poses_3d_df['timestamp'] != initial_timestamp],
             progress_bar=progress_bar,
             notebook=notebook
         )
     else:
-        pose_tracks.update_df(
+        pose_tracks_3d.update_df(
             poses_3d_df=poses_3d_df,
             progress_bar=progress_bar,
             notebook=notebook
         )
-    return pose_tracks
+    return pose_tracks_3d
 
-def interpolate_pose_tracks(
+def interpolate_pose_tracks_3d(
     poses_3d_with_tracks_df
 ):
     poses_3d_with_tracks_interpolated = (
@@ -198,7 +198,7 @@ class PoseTracks3D:
         self.active_tracks = dict()
         self.inactive_tracks = dict()
         for pose_3d_id, keypoint_coordinates_3d in poses_3d.items():
-            pose_track = PoseTrack3D(
+            pose_track_3d = PoseTrack3D(
                 timestamp=timestamp,
                 pose_3d_id = pose_3d_id,
                 keypoint_coordinates_3d=keypoint_coordinates_3d,
@@ -208,7 +208,7 @@ class PoseTracks3D:
                 reference_velocity_drift=self.reference_velocity_drift,
                 position_observation_sd=self.position_observation_sd
             )
-            self.active_tracks[pose_track.pose_track_3d_id] = pose_track
+            self.active_tracks[pose_track_3d.pose_track_3d_id] = pose_track_3d
 
     def update_df(
         self,
@@ -238,7 +238,7 @@ class PoseTracks3D:
                 poses_3d=current_poses_3d
             )
 
-    def extract_pose_tracks(
+    def extract_pose_tracks_3d(
         self,
         poses_3d_df
     ):
@@ -248,11 +248,11 @@ class PoseTracks3D:
         return poses_3d_with_tracks_df
 
     def output(self):
-        output = {pose_track_id: pose_track.output() for pose_track_id, pose_track in self.tracks().items()}
+        output = {pose_track_3d_id: pose_track_3d.output() for pose_track_3d_id, pose_track_3d in self.tracks().items()}
         return output
 
     def output_df(self):
-        df = pd.concat([pose_track.output_df() for pose_track in self.tracks().values()])
+        df = pd.concat([pose_track_3d.output_df() for pose_track_3d in self.tracks().values()])
         return df
 
     def tracks(self):
@@ -284,12 +284,12 @@ class PoseTracks3D:
         timestamp,
         poses_3d
     ):
-        matches = self.match_observations_to_pose_tracks(
+        matches = self.match_observations_to_pose_tracks_3d(
             poses_3d=poses_3d
         )
-        matched_pose_tracks = set(matches.keys())
+        matched_pose_tracks_3d = set(matches.keys())
         matched_poses = set(matches.values())
-        unmatched_pose_tracks = set(self.active_tracks.keys()) - matched_pose_tracks
+        unmatched_pose_tracks_3d = set(self.active_tracks.keys()) - matched_pose_tracks_3d
         unmatched_poses = set(poses_3d.keys()) - matched_poses
         for pose_track_3d_id, pose_3d_id in matches.items():
             self.active_tracks[pose_track_3d_id].iterations_since_last_match = 0
@@ -297,7 +297,7 @@ class PoseTracks3D:
                 pose_3d_id = pose_3d_id,
                 keypoint_coordinates_3d = poses_3d[pose_3d_id],
             )
-        for pose_track_3d_id in unmatched_pose_tracks:
+        for pose_track_3d_id in unmatched_pose_tracks_3d:
             self.active_tracks[pose_track_3d_id].iterations_since_last_match += 1
             if self.active_tracks[pose_track_3d_id].iterations_since_last_match > self.max_iterations_since_last_match:
                 self.inactive_tracks[pose_track_3d_id] = self.active_tracks.pop(pose_track_3d_id)
@@ -314,7 +314,7 @@ class PoseTracks3D:
             )
             self.active_tracks[pose_track_3d.pose_track_3d_id] = pose_track_3d
 
-    def match_observations_to_pose_tracks(
+    def match_observations_to_pose_tracks_3d(
         self,
         poses_3d
     ):
@@ -470,7 +470,7 @@ class PoseTrack3D:
         return output
 
     def output_df(self):
-        df = pd.DataFrame([{'pose_id': pose_id, 'pose_track_id_local': self.pose_track_3d_id} for pose_id in self.pose_3d_ids]).set_index('pose_id')
+        df = pd.DataFrame([{'pose_id': pose_id, 'pose_track_3d_id_local': self.pose_track_3d_id} for pose_id in self.pose_3d_ids]).set_index('pose_id')
         return df
 
     def plot_trajectory(

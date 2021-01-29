@@ -24,8 +24,8 @@ KEYPOINT_CATEGORIES_BY_POSE_MODEL = {
 
 def reconstruct_poses_3d(
     poses_2d_df,
-    pose_id_2d_column_name='pose_id_2d',
-    pose_ids_2d_column_name='pose_ids_2d',
+    pose_2d_id_column_name='pose_2d_id',
+    pose_2d_ids_column_name='pose_2d_ids',
     pose_model_id=None,
     camera_calibrations=None,
     min_keypoint_quality=None,
@@ -90,8 +90,8 @@ def reconstruct_poses_3d(
     reconstruct_poses_3d_timestamp_partial = partial(
         reconstruct_poses_3d_timestamp,
         camera_calibrations=camera_calibrations,
-        pose_id_2d_column_name=pose_id_2d_column_name,
-        pose_ids_2d_column_name=pose_ids_2d_column_name,
+        pose_2d_id_column_name=pose_2d_id_column_name,
+        pose_2d_ids_column_name=pose_2d_ids_column_name,
         min_keypoint_quality=min_keypoint_quality,
         min_num_keypoints=min_num_keypoints,
         min_pose_quality=min_pose_quality,
@@ -210,8 +210,8 @@ def pose_3d_limits(
 def reconstruct_poses_3d_timestamp(
     poses_2d_df_timestamp,
     camera_calibrations,
-    pose_id_2d_column_name='pose_id_2d',
-    pose_ids_2d_column_name='pose_ids_2d',
+    pose_2d_id_column_name='pose_2d_id',
+    pose_2d_ids_column_name='pose_2d_ids',
     min_keypoint_quality=None,
     min_num_keypoints=None,
     min_pose_quality=None,
@@ -251,7 +251,7 @@ def reconstruct_poses_3d_timestamp(
         )
     pose_pairs_2d_df_timestamp = generate_pose_pairs_timestamp(
         poses_2d_df_timestamp=poses_2d_df_timestamp_copy,
-        pose_id_2d_column_name=pose_id_2d_column_name
+        pose_2d_id_column_name=pose_2d_id_column_name
     )
     pose_pairs_2d_df_timestamp = calculate_3d_poses(
         pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
@@ -285,11 +285,11 @@ def reconstruct_poses_3d_timestamp(
         )
     pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_best_match(
         pose_pairs_2d_df_timestamp,
-        pose_id_2d_column_name=pose_id_2d_column_name
+        pose_2d_id_column_name=pose_2d_id_column_name
     )
     poses_3d_local_ids_df_timestamp = generate_3d_poses_timestamp(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
-        pose_ids_2d_column_name=pose_ids_2d_column_name,
+        pose_2d_ids_column_name=pose_2d_ids_column_name,
         initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         max_dispersion=pose_3d_graph_max_dispersion,
         include_track_labels=include_track_labels,
@@ -297,12 +297,12 @@ def reconstruct_poses_3d_timestamp(
     )
     if len(poses_3d_local_ids_df_timestamp) == 0:
         return poses_3d_local_ids_df_timestamp
-    poses_3d_local_ids_df_timestamp.set_index('pose_id_3d_local', inplace=True)
+    poses_3d_local_ids_df_timestamp.set_index('pose_3d_id_local', inplace=True)
     return poses_3d_local_ids_df_timestamp
 
 def generate_pose_pairs_timestamp(
     poses_2d_df_timestamp,
-    pose_id_2d_column_name='pose_id_2d'
+    pose_2d_id_column_name='pose_2d_id'
 ):
     if len(poses_2d_df_timestamp) == 0:
         return pd.DataFrame()
@@ -310,27 +310,27 @@ def generate_pose_pairs_timestamp(
     if len(timestamps) > 1:
         raise ValueError('More than one timestamp in data frame')
     camera_ids = poses_2d_df_timestamp['camera_id'].unique().tolist()
-    pose_id_pairs = list()
+    pose_2d_id_pairs = list()
     for camera_id_a, camera_id_b in itertools.combinations(camera_ids, 2):
-        pose_ids_a = poses_2d_df_timestamp.loc[poses_2d_df_timestamp['camera_id'] == camera_id_a].index.tolist()
-        pose_ids_b = poses_2d_df_timestamp.loc[poses_2d_df_timestamp['camera_id'] == camera_id_b].index.tolist()
-        pose_id_pairs_camera_pair = list(itertools.product(pose_ids_a, pose_ids_b))
-        pose_id_pairs.extend(pose_id_pairs_camera_pair)
-    pose_ids_a = list()
-    pose_ids_b = list()
-    if len(pose_id_pairs) > 0:
-        pose_ids_a, pose_ids_b = map(list, zip(*pose_id_pairs))
+        pose_2d_ids_a = poses_2d_df_timestamp.loc[poses_2d_df_timestamp['camera_id'] == camera_id_a].index.tolist()
+        pose_2d_ids_b = poses_2d_df_timestamp.loc[poses_2d_df_timestamp['camera_id'] == camera_id_b].index.tolist()
+        pose_2d_id_pairs_camera_pair = list(itertools.product(pose_2d_ids_a, pose_2d_ids_b))
+        pose_2d_id_pairs.extend(pose_2d_id_pairs_camera_pair)
+    pose_2d_ids_a = list()
+    pose_2d_ids_b = list()
+    if len(pose_2d_id_pairs) > 0:
+        pose_2d_ids_a, pose_2d_ids_b = map(list, zip(*pose_2d_id_pairs))
     pose_pairs_2d_df_timestamp = pd.concat(
-        (poses_2d_df_timestamp.loc[pose_ids_a].reset_index(), poses_2d_df_timestamp.loc[pose_ids_b].reset_index()),
+        (poses_2d_df_timestamp.loc[pose_2d_ids_a].reset_index(), poses_2d_df_timestamp.loc[pose_2d_ids_b].reset_index()),
         keys=['a', 'b'],
         axis=1
     )
     pose_pairs_2d_df_timestamp.set_index(
-        [('a', pose_id_2d_column_name), ('b', pose_id_2d_column_name)],
+        [('a', pose_2d_id_column_name), ('b', pose_2d_id_column_name)],
         inplace=True
     )
     pose_pairs_2d_df_timestamp.rename_axis(
-        [pose_id_2d_column_name + '_a', pose_id_2d_column_name + '_b'],
+        [pose_2d_id_column_name + '_a', pose_2d_id_column_name + '_b'],
         inplace=True
     )
     pose_pairs_2d_df_timestamp.columns = ['{}_{}'.format(column_name[1], column_name[0]) for column_name in pose_pairs_2d_df_timestamp.columns.values]
@@ -583,16 +583,16 @@ def pose_3d_in_range(
 
 def extract_best_score_indices_timestamp_camera_pair(
     pose_pairs_2d_df,
-    pose_id_2d_column_name='pose_id_2d'
+    pose_2d_id_column_name='pose_2d_id'
 ):
-    best_a_score_for_b = pose_pairs_2d_df['score'].groupby(pose_id_2d_column_name + '_b').idxmin().dropna()
-    best_b_score_for_a = pose_pairs_2d_df['score'].groupby(pose_id_2d_column_name + '_a').idxmin().dropna()
+    best_a_score_for_b = pose_pairs_2d_df['score'].groupby(pose_2d_id_column_name + '_b').idxmin().dropna()
+    best_b_score_for_a = pose_pairs_2d_df['score'].groupby(pose_2d_id_column_name + '_a').idxmin().dropna()
     best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
     return best_score_indices
 
 def generate_3d_poses_timestamp(
     pose_pairs_2d_df_timestamp,
-    pose_ids_2d_column_name='pose_ids_2d',
+    pose_2d_ids_column_name='pose_2d_ids',
     initial_edge_threshold=2,
     max_dispersion=0.20,
     include_track_labels=False,
@@ -614,48 +614,48 @@ def generate_3d_poses_timestamp(
         initial_edge_threshold=initial_edge_threshold,
         max_dispersion=max_dispersion
     )
-    pose_ids_3d_local = list()
+    pose_3d_ids_local = list()
     keypoint_coordinates_3d = list()
-    pose_id_2ds = list()
+    pose_2d_ids = list()
     if include_track_labels:
         track_labels = list()
     for subgraph in subgraph_list:
-        pose_ids_3d_local.append(uuid4().hex)
+        pose_3d_ids_local.append(uuid4().hex)
         keypoint_coordinates_3d_list = list()
         track_label_list = list()
-        pose_id_2ds_list = list()
-        for pose_id_1, pose_id_2, keypoint_coordinates_3d_edge in subgraph.edges(data='keypoint_coordinates_3d'):
-            pose_id_2ds_list.extend([pose_id_1, pose_id_2])
+        pose_2d_ids_list = list()
+        for pose_2d_id_1, pose_2d_id_2, keypoint_coordinates_3d_edge in subgraph.edges(data='keypoint_coordinates_3d'):
+            pose_2d_ids_list.extend([pose_2d_id_1, pose_2d_id_2])
             if include_track_labels:
                 track_label_list.append((
-                    subgraph.nodes[pose_id_1]['camera_id'],
-                    subgraph.nodes[pose_id_1]['track_label_2d']
+                    subgraph.nodes[pose_2d_id_1]['camera_id'],
+                    subgraph.nodes[pose_2d_id_1]['track_label_2d']
                 ))
                 track_label_list.append((
-                    subgraph.nodes[pose_id_2]['camera_id'],
-                    subgraph.nodes[pose_id_2]['track_label_2d']
+                    subgraph.nodes[pose_2d_id_2]['camera_id'],
+                    subgraph.nodes[pose_2d_id_2]['track_label_2d']
                 ))
             keypoint_coordinates_3d_list.append(keypoint_coordinates_3d_edge)
         keypoint_coordinates_3d.append(np.nanmedian(np.stack(keypoint_coordinates_3d_list), axis=0))
-        pose_id_2ds.append(pose_id_2ds_list)
+        pose_2d_ids.append(pose_2d_ids_list)
         if include_track_labels:
             track_labels.append(track_label_list)
-    if len(pose_ids_3d_local) == 0:
+    if len(pose_3d_ids_local) == 0:
         return pd.DataFrame()
     if include_track_labels:
         poses_3d_local_ids_df_timestamp = pd.DataFrame({
-            'pose_id_3d_local': pose_ids_3d_local,
+            'pose_3d_id_local': pose_3d_ids_local,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
-            pose_ids_2d_column_name: pose_id_2ds,
+            pose_2d_ids_column_name: pose_2d_ids,
             'track_labels_2d': track_labels
         })
     else:
         poses_3d_local_ids_df_timestamp = pd.DataFrame({
-            'pose_id_3d_local': pose_ids_3d_local,
+            'pose_3d_id_local': pose_3d_ids_local,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
-            pose_ids_2d_column_name: pose_id_2ds
+            pose_2d_ids_column_name: pose_2d_ids
         })
     return poses_3d_local_ids_df_timestamp
 
@@ -664,20 +664,20 @@ def generate_pose_graph(
     include_track_labels=False
 ):
     pose_graph = nx.Graph()
-    for pose_ids, row in pose_pairs_2d_df_timestamp.iterrows():
+    for pose_2d_ids, row in pose_pairs_2d_df_timestamp.iterrows():
         if include_track_labels:
             pose_graph.add_node(
-                pose_ids[0],
+                pose_2d_ids[0],
                 track_label=row['track_label_2d_a'],
                 camera_id = row['camera_id_a']
             )
             pose_graph.add_node(
-                pose_ids[1],
+                pose_2d_ids[1],
                 track_label=row['track_label_2d_b'],
                 camera_id = row['camera_id_b']
             )
         pose_graph.add_edge(
-            *pose_ids,
+            *pose_2d_ids,
             keypoint_coordinates_3d=row['keypoint_coordinates_3d'],
             centroid_3d=np.nanmean(row['keypoint_coordinates_3d'], axis=0)
         )

@@ -116,7 +116,7 @@ def filter_pose_pairs_by_3d_pose_spatial_limits(
 
 def filter_pose_pairs_by_best_match(
     pose_pairs_2d_df_timestamp,
-    pose_id_2d_column_name='pose_id_2d'
+    pose_2d_id_column_name='pose_2d_id'
 ):
     if len(pose_pairs_2d_df_timestamp) == 0:
         return pose_pairs_2d_df_timestamp
@@ -125,7 +125,7 @@ def filter_pose_pairs_by_best_match(
     for group_name, group_df in pose_pairs_2d_df_timestamp.groupby(['camera_id_a', 'camera_id_b']):
         best_score_indices.extend(process_pose_data.analyze.extract_best_score_indices_timestamp_camera_pair(
             pose_pairs_2d_df=group_df,
-            pose_id_2d_column_name=pose_id_2d_column_name
+            pose_2d_id_column_name=pose_2d_id_column_name
         ))
     pose_pairs_2d_df_timestamp = pose_pairs_2d_df_timestamp.loc[best_score_indices].copy()
     return pose_pairs_2d_df_timestamp
@@ -211,7 +211,7 @@ def select_random_camera_pair(
 
 def select_pose(
     poses_2d_df,
-    pose_id=None,
+    pose_2d_id=None,
     timestamp=None,
     camera_id=None,
     camera_name=None,
@@ -220,7 +220,7 @@ def select_pose(
 ):
     poses_2d_df_selected = select_poses(
         poses_2d_df,
-        pose_id=pose_id,
+        pose_2d_id=pose_2d_id,
         timestamp=timestamp,
         camera_id=camera_id,
         camera_name=camera_name,
@@ -235,7 +235,7 @@ def select_pose(
 
 def select_poses(
     poses_2d_df,
-    pose_id=None,
+    pose_2d_id=None,
     timestamp=None,
     camera_id=None,
     camera_name=None,
@@ -243,9 +243,9 @@ def select_poses(
     camera_names=None
 ):
     filter_list = list()
-    if pose_id is not None:
-        pose_id_filter = (poses_2d_df.index == pose_id)
-        filter_list.append(pose_id_filter)
+    if pose_2d_id is not None:
+        pose_2d_id_filter = (poses_2d_df.index == pose_2d_id)
+        filter_list.append(pose_2d_id_filter)
     if timestamp is not None:
         timestamp_pandas = pd.to_datetime(timestamp, utc=True)
         timestamp_filter = (poses_2d_df['timestamp'] == timestamp_pandas)
@@ -278,8 +278,8 @@ def select_poses(
 
 def select_pose_pair(
     pose_pairs_2d_df,
-    pose_id_a=None,
-    pose_id_b=None,
+    pose_2d_id_a=None,
+    pose_2d_id_b=None,
     timestamp=None,
     camera_id_a=None,
     camera_id_b=None,
@@ -291,8 +291,8 @@ def select_pose_pair(
 ):
     pose_pairs_2d_df_selected = select_pose_pairs(
         pose_pairs_2d_df,
-        pose_id_a=pose_id_a,
-        pose_id_b=pose_id_b,
+        pose_2d_id_a=pose_2d_id_a,
+        pose_2d_id_b=pose_2d_id_b,
         timestamp=timestamp,
         camera_id_a=camera_id_a,
         camera_id_b=camera_id_b,
@@ -310,9 +310,9 @@ def select_pose_pair(
 
 def select_pose_pairs(
     pose_pairs_2d_df,
-    pose_id_2d_column_name='pose_id_2d',
-    pose_id_a=None,
-    pose_id_b=None,
+    pose_2d_id_column_name='pose_2d_id',
+    pose_2d_id_a=None,
+    pose_2d_id_b=None,
     timestamp=None,
     camera_id_a=None,
     camera_id_b=None,
@@ -323,12 +323,12 @@ def select_pose_pairs(
     camera_names=None
 ):
     filter_list = list()
-    if pose_id_a is not None:
-        pose_id_a_filter = (pose_pairs_2d_df.index.get_level_values(pose_id_2d_column_name + '_a') == pose_id_a)
-        filter_list.append(pose_id_a_filter)
-    if pose_id_b is not None:
-        pose_id_b_filter = (pose_pairs_2d_df.index.get_level_values(pose_id_2d_column_name + '_b') == pose_id_b)
-        filter_list.append(pose_id_b_filter)
+    if pose_2d_id_a is not None:
+        pose_2d_id_a_filter = (pose_pairs_2d_df.index.get_level_values(pose_2d_id_column_name + '_a') == pose_2d_id_a)
+        filter_list.append(pose_2d_id_a_filter)
+    if pose_2d_id_b is not None:
+        pose_2d_id_b_filter = (pose_pairs_2d_df.index.get_level_values(pose_2d_id_column_name + '_b') == pose_2d_id_b)
+        filter_list.append(pose_2d_id_b_filter)
     if timestamp is not None:
         timestamp_pandas = pd.to_datetime(timestamp, utc=True)
         timestamp_filter = (pose_pairs_2d_df['timestamp'] == timestamp_pandas)
@@ -381,7 +381,7 @@ def select_pose_pairs(
     pose_pairs_2d_df_selected = pose_pairs_2d_df.loc[combined_filter].copy()
     return pose_pairs_2d_df_selected
 
-def filter_pose_tracks(
+def filter_pose_tracks_3d(
     poses_3d_with_tracks_df,
     num_poses_min=10
 ):
