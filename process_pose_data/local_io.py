@@ -104,7 +104,7 @@ def fetch_2d_pose_data_alphapose_local(
                     keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
                     pose_quality = pose.get('score')
                     data_list.append({
-                        'pose_id_2d': uuid4().hex,
+                        'pose_id_2d_local': uuid4().hex,
                         'timestamp': pd.to_datetime(timestamp),
                         'assignment_id': assignment_id,
                         'keypoint_coordinates_2d': keypoints,
@@ -123,7 +123,7 @@ def fetch_2d_pose_data_alphapose_local(
                 keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
                 pose_quality = pose_data.get('score')
                 data_list.append({
-                    'pose_id_2d': uuid4().hex,
+                    'pose_id_2d_local': uuid4().hex,
                     'timestamp': pd.to_datetime(timestamp),
                     'assignment_id': assignment_id,
                     'keypoint_coordinates_2d': keypoints,
@@ -143,7 +143,7 @@ def fetch_2d_pose_data_alphapose_local(
             second
         )
         return df
-    df.set_index('pose_id_2d', inplace=True)
+    df.set_index('pose_id_2d_local', inplace=True)
     df.sort_values(['timestamp', 'assignment_id'], inplace=True)
     return df
 
@@ -332,43 +332,6 @@ def delete_inference_metadata_local(
     if os.path.exists(inference_metadata_path):
         os.remove(inference_metadata_path)
 
-# def write_inference_execution_local(
-#     base_dir,
-#     environment_id,
-#     poses_3d_directory_name,
-#     inference_id_local,
-#     execution_start=None,
-#     name=None,
-#     notes=None,
-#     model=None,
-#     version=None,
-#     inference_execution_filename_stem='inference_execution'
-# ):
-#     inference_execution_data = {
-#         'inference_id_local': inference_id_local,
-#         'execution_start': execution_start.isoformat(),
-#         'name': name,
-#         'notes': notes,
-#         'model': model,
-#         'version': version
-#     }
-#     inference_execution_directory = os.path.join(
-#         base_dir,
-#         environment_id,
-#         poses_3d_directory_name
-#     )
-#     inference_execution_filename = '{}_{}.json'.format(
-#         inference_execution_filename_stem,
-#         inference_id_local
-#     )
-#     inference_execution_path = os.path.join(
-#         inference_execution_directory,
-#         inference_execution_filename
-#     )
-#     os.makedirs(inference_execution_directory, exist_ok=True)
-#     with open(inference_execution_path, 'w') as fp:
-#         json.dump(inference_execution_data, fp, cls=CustomJSONEncoder, indent=2)
-
 def alphapose_data_file_glob_pattern(
     base_dir,
     environment_id=None,
@@ -535,37 +498,3 @@ def generate_time_segment_start_list(
     num_time_segments = math.ceil((end_utc - start_utc_floor).seconds / 10.0)
     time_segment_start_list = [start_utc_floor + i*datetime.timedelta(seconds=10) for i in range(num_time_segments)]
     return time_segment_start_list
-
-# def fetch_2d_pose_data_from_local_json(
-#     directory_path
-# ):
-#     data = list()
-#     for directory_entry in os.listdir(directory_path):
-#         if re.match(r'.*\.json', directory_entry):
-#             logger.info('Retrieving pose data from {}'.format(directory_entry))
-#             with open(os.path.join(directory_path, directory_entry), 'r') as fh:
-#                 data_this_file = json.load(fh)
-#             logger.info('Retrieved {} poses from {}'.format(
-#                 len(data_this_file),
-#                 directory_entry
-#             ))
-#             data.extend(data_this_file)
-#     logger.info('Retrieved {} poses overall. Parsing')
-#     parsed_data = list()
-#     for datum in data:
-#         parsed_data.append({
-#             'pose_id_2d': uuid4().hex,
-#             'timestamp': datum.get('timestamp'),
-#             'camera_id': datum.get('camera'),
-#             'track_label_2d': datum.get('track_label'),
-#             'pose_model_id': datum.get('pose_model'),
-#             'keypoint_coordinates_2d': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')]),
-#             'keypoint_quality_2d': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')]),
-#             'pose_quality_2d': datum.get('quality')
-#         })
-#     poses_2d_df = pd.DataFrame(parsed_data)
-#     poses_2d_df['timestamp'] = pd.to_datetime(poses_2d_df['timestamp'])
-#     if poses_2d_df['pose_model_id'].nunique() > 1:
-#         raise ValueError('Returned poses are associated with multiple pose models')
-#     poses_2d_df.set_index('pose_id_2d', inplace=True)
-#     return poses_2d_df
