@@ -80,6 +80,51 @@ def generate_pose_tracks(
     )
     return poses_3d_df_copy, pose_tracks_3d
 
+def update_pose_tracks(
+    poses_3d_df,
+    pose_tracks=None,
+    max_match_distance=1.0,
+    max_iterations_since_last_match=20,
+    centroid_position_initial_sd=1.0,
+    centroid_velocity_initial_sd=1.0,
+    reference_delta_t_seconds=1.0,
+    reference_velocity_drift=0.30,
+    position_observation_sd=0.5,
+    progress_bar=False,
+    notebook=False
+):
+    if pose_tracks is None:
+        initial_timestamp = poses_3d_df['timestamp'].min()
+        initial_pose_3d_ids = poses_3d_df.loc[
+            poses_3d_df['timestamp'] == initial_timestamp
+        ].index.values.tolist()
+        initial_keypoint_coordinates_3d = poses_3d_df.loc[
+            poses_3d_df['timestamp'] == initial_timestamp,
+            'keypoint_coordinates_3d'
+        ].values.tolist()
+        initial_poses_3d = dict(zip(initial_pose_3d_ids, initial_keypoint_coordinates_3d))
+        pose_tracks = PoseTracks3D(
+            timestamp=initial_timestamp,
+            poses_3d=initial_poses_3d,
+            centroid_position_initial_sd=centroid_position_initial_sd,
+            centroid_velocity_initial_sd=centroid_velocity_initial_sd,
+            reference_delta_t_seconds=reference_delta_t_seconds,
+            reference_velocity_drift=reference_velocity_drift,
+            position_observation_sd=position_observation_sd
+        )
+        pose_tracks.update_df(
+            poses_3d_df=poses_3d_df.loc[poses_3d_df['timestamp'] != initial_timestamp],
+            progress_bar=progress_bar,
+            notebook=notebook
+        )
+    else:
+        pose_tracks.update_df(
+            poses_3d_df=poses_3d_df,
+            progress_bar=progress_bar,
+            notebook=notebook
+        )
+    return pose_tracks
+
 def interpolate_pose_tracks(
     poses_3d_with_tracks_df
 ):
@@ -165,8 +210,54 @@ class PoseTracks3D:
             )
             self.active_tracks[pose_track.pose_track_3d_id] = pose_track
 
+    def update_df(
+        self,
+        poses_3d_df,
+        progress_bar=False,
+        notebook=False
+    ):
+        timestamps = np.sort(poses_3d_df['timestamp'].unique())
+        if progress_bar:
+            if notebook:
+                timestamp_iterator = tqdm.notebook.tqdm(timestamps)
+            else:
+                timestamp_iterator = tqdm.tqdm(timestamps)
+        else:
+            timestamp_iterator = timestamps
+        for current_timestamp in timestamp_iterator:
+            current_pose_3d_ids = poses_3d_df.loc[
+                poses_3d_df['timestamp'] == current_timestamp
+            ].index.values.tolist()
+            current_keypoint_coordinates_3d = poses_3d_df.loc[
+                poses_3d_df['timestamp'] == current_timestamp,
+                'keypoint_coordinates_3d'
+            ].values.tolist()
+            current_poses_3d = dict(zip(current_pose_3d_ids, current_keypoint_coordinates_3d))
+            self.update(
+                timestamp=current_timestamp,
+                poses_3d=current_poses_3d
+            )
+
+    def extract_pose_tracks(
+        self,
+        poses_3d_df
+    ):
+        input_index_name = poses_3d_df.index.name
+        poses_3d_with_tracks_df = poses_3d_df.join(self.output_df(), how='inner')
+        poses_3d_with_tracks_df.index.name = input_index_name
+        return poses_3d_with_tracks_df
+
+    def output(self):
+        output = {pose_track_id: pose_track.output() for pose_track_id, pose_track in self.tracks().items()}
+        return output
+
+    def output_df(self):
+        df = pd.concat([pose_track.output_df() for pose_track in self.tracks().values()])
+        return df
+
     def tracks(self):
         return {**self.active_tracks, **self.inactive_tracks}
+
 
     def update(
         self,
@@ -368,6 +459,18 @@ class PoseTrack3D:
             'covariance': self.centroid_distribution_trajectory['covariance']
         })
         df.set_index('timestamp', inplace=True)
+        return df
+
+    def output(self):
+        output = {
+            'start': self.initial_timestamp,
+            'end': self.latest_timestamp,
+            'pose_ids': self.pose_3d_ids
+        }
+        return output
+
+    def output_df(self):
+        df = pd.DataFrame([{'pose_id': pose_id, 'pose_track_id_local': self.pose_track_3d_id} for pose_id in self.pose_3d_ids]).set_index('pose_id')
         return df
 
     def plot_trajectory(
