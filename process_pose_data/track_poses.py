@@ -10,75 +10,75 @@ import itertools
 
 logger = logging.getLogger(__name__)
 
-def generate_pose_tracks_3d(
-    poses_3d_df,
-    max_match_distance=1.0,
-    max_iterations_since_last_match=20,
-    centroid_position_initial_sd=1.0,
-    centroid_velocity_initial_sd=1.0,
-    reference_delta_t_seconds=1.0,
-    reference_velocity_drift=0.30,
-    position_observation_sd=0.5,
-    progress_bar=False,
-    notebook=False
-):
-    num_seconds = (poses_3d_df['timestamp'].max() - poses_3d_df['timestamp'].min()).total_seconds()
-    generate_tracks_start = time.time()
-    logging.info(
-        'Generating pose tracks for %.3f seconds of 3D pose data',
-        num_seconds
-    )
-    poses_3d_df_copy = poses_3d_df.copy()
-    poses_3d_df_copy['pose_track_3d_id'] = None
-    timestamps = np.sort(poses_3d_df['timestamp'].unique())
-    initial_timestamp = timestamps[0]
-    initial_pose_3d_ids = poses_3d_df_copy.loc[
-        poses_3d_df_copy['timestamp'] == initial_timestamp
-    ].index.values.tolist()
-    initial_keypoint_coordinates_3d = poses_3d_df_copy.loc[
-        poses_3d_df_copy['timestamp'] == initial_timestamp,
-        'keypoint_coordinates_3d'
-    ].values.tolist()
-    initial_poses_3d = dict(zip(initial_pose_3d_ids, initial_keypoint_coordinates_3d))
-    pose_tracks_3d = PoseTracks3D(
-        timestamp=initial_timestamp,
-        poses_3d=initial_poses_3d,
-        centroid_position_initial_sd=centroid_position_initial_sd,
-        centroid_velocity_initial_sd=centroid_velocity_initial_sd,
-        reference_delta_t_seconds=reference_delta_t_seconds,
-        reference_velocity_drift=reference_velocity_drift,
-        position_observation_sd=position_observation_sd
-    )
-    if progress_bar:
-        if notebook:
-            timestamp_iterator = tqdm.notebook.tqdm(timestamps[1:])
-        else:
-            timestamp_iterator = tqdm.tqdm(timestamps[1:])
-    else:
-        timestamp_iterator = timestamps[1:]
-    for current_timestamp in timestamp_iterator:
-        current_pose_3d_ids = poses_3d_df_copy.loc[
-            poses_3d_df_copy['timestamp'] == current_timestamp
-        ].index.values.tolist()
-        current_keypoint_coordinates_3d = poses_3d_df_copy.loc[
-            poses_3d_df_copy['timestamp'] == current_timestamp,
-            'keypoint_coordinates_3d'
-        ].values.tolist()
-        current_poses_3d = dict(zip(current_pose_3d_ids, current_keypoint_coordinates_3d))
-        pose_tracks_3d.update(
-            timestamp=current_timestamp,
-            poses_3d=current_poses_3d
-        )
-    for pose_track_3d_id, pose_track_3d in pose_tracks_3d.tracks().items():
-        poses_3d_df_copy.loc[pose_track_3d.pose_3d_ids, 'pose_track_3d_id'] = pose_track_3d_id
-    generate_tracks_time = time.time() - generate_tracks_start
-    logging.info(
-        'Generated pose tracks for %.3f seconds of 3D pose data in %.3f seconds (ratio of %.3f)',
-        num_seconds,
-        generate_tracks_time,
-        generate_tracks_time/num_seconds
-    )
-    return poses_3d_df_copy, pose_tracks_3d
+# def generate_pose_tracks_3d(
+#     poses_3d_df,
+#     max_match_distance=1.0,
+#     max_iterations_since_last_match=20,
+#     centroid_position_initial_sd=1.0,
+#     centroid_velocity_initial_sd=1.0,
+#     reference_delta_t_seconds=1.0,
+#     reference_velocity_drift=0.30,
+#     position_observation_sd=0.5,
+#     progress_bar=False,
+#     notebook=False
+# ):
+#     num_seconds = (poses_3d_df['timestamp'].max() - poses_3d_df['timestamp'].min()).total_seconds()
+#     generate_tracks_start = time.time()
+#     logging.info(
+#         'Generating pose tracks for %.3f seconds of 3D pose data',
+#         num_seconds
+#     )
+#     poses_3d_df_copy = poses_3d_df.copy()
+#     poses_3d_df_copy['pose_track_3d_id'] = None
+#     timestamps = np.sort(poses_3d_df['timestamp'].unique())
+#     initial_timestamp = timestamps[0]
+#     initial_pose_3d_ids = poses_3d_df_copy.loc[
+#         poses_3d_df_copy['timestamp'] == initial_timestamp
+#     ].index.values.tolist()
+#     initial_keypoint_coordinates_3d = poses_3d_df_copy.loc[
+#         poses_3d_df_copy['timestamp'] == initial_timestamp,
+#         'keypoint_coordinates_3d'
+#     ].values.tolist()
+#     initial_poses_3d = dict(zip(initial_pose_3d_ids, initial_keypoint_coordinates_3d))
+#     pose_tracks_3d = PoseTracks3D(
+#         timestamp=initial_timestamp,
+#         poses_3d=initial_poses_3d,
+#         centroid_position_initial_sd=centroid_position_initial_sd,
+#         centroid_velocity_initial_sd=centroid_velocity_initial_sd,
+#         reference_delta_t_seconds=reference_delta_t_seconds,
+#         reference_velocity_drift=reference_velocity_drift,
+#         position_observation_sd=position_observation_sd
+#     )
+#     if progress_bar:
+#         if notebook:
+#             timestamp_iterator = tqdm.notebook.tqdm(timestamps[1:])
+#         else:
+#             timestamp_iterator = tqdm.tqdm(timestamps[1:])
+#     else:
+#         timestamp_iterator = timestamps[1:]
+#     for current_timestamp in timestamp_iterator:
+#         current_pose_3d_ids = poses_3d_df_copy.loc[
+#             poses_3d_df_copy['timestamp'] == current_timestamp
+#         ].index.values.tolist()
+#         current_keypoint_coordinates_3d = poses_3d_df_copy.loc[
+#             poses_3d_df_copy['timestamp'] == current_timestamp,
+#             'keypoint_coordinates_3d'
+#         ].values.tolist()
+#         current_poses_3d = dict(zip(current_pose_3d_ids, current_keypoint_coordinates_3d))
+#         pose_tracks_3d.update(
+#             timestamp=current_timestamp,
+#             poses_3d=current_poses_3d
+#         )
+#     for pose_track_3d_id, pose_track_3d in pose_tracks_3d.tracks().items():
+#         poses_3d_df_copy.loc[pose_track_3d.pose_3d_ids, 'pose_track_3d_id'] = pose_track_3d_id
+#     generate_tracks_time = time.time() - generate_tracks_start
+#     logging.info(
+#         'Generated pose tracks for %.3f seconds of 3D pose data in %.3f seconds (ratio of %.3f)',
+#         num_seconds,
+#         generate_tracks_time,
+#         generate_tracks_time/num_seconds
+#     )
+#     return poses_3d_df_copy, pose_tracks_3d
 
 def update_pose_tracks_3d(
     poses_3d_df,
@@ -126,11 +126,12 @@ def update_pose_tracks_3d(
     return pose_tracks_3d
 
 def interpolate_pose_tracks_3d(
-    poses_3d_with_tracks_df
+    poses_3d_with_tracks_df,
+    pose_track_3d_id_column_name='pose_track_3d_id'
 ):
     poses_3d_with_tracks_interpolated = (
         poses_3d_with_tracks_df
-        .groupby('pose_track_3d_id')
+        .groupby(pose_track_3d_id_column_name)
         .apply(interpolate_track)
         .reset_index()
     )
@@ -164,9 +165,10 @@ def interpolate_track(pose_track_3d_df):
     return pose_track_3d_df_interpolated
 
 def add_short_track_labels(
-    poses_3d_with_tracks_df
+    poses_3d_with_tracks_df,
+    pose_track_3d_id_column_name='pose_track_3d_id'
 ):
-    pose_track_3d_id_index = poses_3d_with_tracks_df.groupby('pose_track_3d_id').apply(lambda x: x['timestamp'].min()).sort_values().index
+    pose_track_3d_id_index = poses_3d_with_tracks_df.groupby(pose_track_3d_id_column_name).apply(lambda x: x['timestamp'].min()).sort_values().index
     track_label_lookup = pd.DataFrame(
         range(1, len(pose_track_3d_id_index)+1),
         columns=['pose_track_3d_id_short'],
@@ -240,10 +242,18 @@ class PoseTracks3D:
 
     def extract_pose_tracks_3d(
         self,
-        poses_3d_df
+        poses_3d_df,
+        pose_3d_id_column_name='pose_3d_id',
+        pose_track_3d_id_column_name='pose_track_3d_id'
     ):
         input_index_name = poses_3d_df.index.name
-        poses_3d_with_tracks_df = poses_3d_df.join(self.output_df(), how='inner')
+        poses_3d_with_tracks_df = poses_3d_df.join(
+            self.output_df(
+                pose_3d_id_column_name=pose_3d_id_column_name,
+                pose_track_3d_id_column_name=pose_track_3d_id_column_name
+            ),
+            how='inner'
+        )
         poses_3d_with_tracks_df.index.name = input_index_name
         return poses_3d_with_tracks_df
 
@@ -251,8 +261,17 @@ class PoseTracks3D:
         output = {pose_track_3d_id: pose_track_3d.output() for pose_track_3d_id, pose_track_3d in self.tracks().items()}
         return output
 
-    def output_df(self):
-        df = pd.concat([pose_track_3d.output_df() for pose_track_3d in self.tracks().values()])
+    def output_df(
+        self,
+        pose_3d_id_column_name='pose_3d_id',
+        pose_track_3d_id_column_name='pose_track_3d_id'
+    ):
+        df = pd.concat(
+            [pose_track_3d.output_df(
+                pose_3d_id_column_name=pose_3d_id_column_name,
+                pose_track_3d_id_column_name=pose_track_3d_id_column_name
+            ) for pose_track_3d in self.tracks().values()]
+        )
         return df
 
     def tracks(self):
@@ -469,8 +488,15 @@ class PoseTrack3D:
         }
         return output
 
-    def output_df(self):
-        df = pd.DataFrame([{'pose_id': pose_id, 'pose_track_3d_id_local': self.pose_track_3d_id} for pose_id in self.pose_3d_ids]).set_index('pose_id')
+    def output_df(
+        self,
+        pose_3d_id_column_name='pose_3d_id',
+        pose_track_3d_id_column_name='pose_track_3d_id'
+    ):
+        df = pd.DataFrame([
+            {pose_3d_id_column_name: pose_id, pose_track_3d_id_column_name: self.pose_track_3d_id}
+            for pose_id in self.pose_3d_ids
+        ]).set_index(pose_3d_id_column_name)
         return df
 
     def plot_trajectory(
