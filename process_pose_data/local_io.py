@@ -6,6 +6,7 @@ from uuid import uuid4
 import datetime
 import os
 import glob
+import pickle
 import re
 import json
 import math
@@ -237,6 +238,70 @@ def delete_3d_pose_data_local(
         '{}_{}.pkl'.format(poses_3d_file_name_stem, inference_id_local)
     )
     for path in glob.iglob(glob_pattern):
+        os.remove(path)
+
+def write_3d_pose_track_data_local(
+    pose_tracks_3d,
+    base_dir,
+    environment_id,
+    inference_id_local,
+    pose_tracks_3d_directory_name='pose_tracks_3d',
+    pose_tracks_3d_file_name_stem='pose_tracks_3d'
+):
+    directory = os.path.join(
+        base_dir,
+        environment_id,
+        pose_tracks_3d_directory_name
+    )
+    filename = '{}_{}.pkl'.format(
+        pose_tracks_3d_file_name_stem,
+        inference_id_local
+    )
+    path = os.path.join(
+        directory,
+        filename
+    )
+    os.makedirs(directory, exist_ok=True)
+    with open(path, 'wb') as fp:
+        pickle.dump(pose_tracks_3d, fp)
+
+def fetch_3d_pose_track_data_local(
+    base_dir,
+    environment_id,
+    inference_id_local,
+    pose_tracks_3d_directory_name='pose_tracks_3d',
+    pose_tracks_3d_file_name_stem='pose_tracks_3d'
+):
+    path=os.path.join(
+        base_dir,
+        environment_id,
+        pose_tracks_3d_directory_name,
+        '{}_{}.pkl'.format(
+            pose_tracks_3d_file_name_stem,
+            inference_id_local
+        )
+    )
+    with open(path, 'rb') as fp:
+        pose_tracks_3d=pickle.load(fp)
+    return pose_tracks_3d
+
+def delete_3d_pose_track_data_local(
+    base_dir,
+    environment_id,
+    inference_id_local,
+    pose_tracks_3d_directory_name='pose_tracks_3d',
+    pose_tracks_3d_file_name_stem='pose_tracks_3d'
+):
+    path=os.path.join(
+        base_dir,
+        environment_id,
+        pose_tracks_3d_directory_name,
+        '{}_{}.pkl'.format(
+            pose_tracks_3d_file_name_stem,
+            inference_id_local
+        )
+    )
+    if os.path.exists(path):
         os.remove(path)
 
 def write_pose_reconstruction_3d_metadata_local(
