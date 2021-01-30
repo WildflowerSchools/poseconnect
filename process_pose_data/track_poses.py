@@ -170,44 +170,6 @@ class PoseTracks3D:
                 poses_3d=current_poses_3d
             )
 
-    def extract_pose_tracks_3d(
-        self,
-        poses_3d_df,
-        pose_3d_id_column_name='pose_3d_id',
-        pose_track_3d_id_column_name='pose_track_3d_id'
-    ):
-        input_index_name = poses_3d_df.index.name
-        poses_3d_with_tracks_df = poses_3d_df.join(
-            self.output_df(
-                pose_3d_id_column_name=pose_3d_id_column_name,
-                pose_track_3d_id_column_name=pose_track_3d_id_column_name
-            ),
-            how='inner'
-        )
-        poses_3d_with_tracks_df.index.name = input_index_name
-        return poses_3d_with_tracks_df
-
-    def output(self):
-        output = {pose_track_3d_id: pose_track_3d.output() for pose_track_3d_id, pose_track_3d in self.tracks().items()}
-        return output
-
-    def output_df(
-        self,
-        pose_3d_id_column_name='pose_3d_id',
-        pose_track_3d_id_column_name='pose_track_3d_id'
-    ):
-        df = pd.concat(
-            [pose_track_3d.output_df(
-                pose_3d_id_column_name=pose_3d_id_column_name,
-                pose_track_3d_id_column_name=pose_track_3d_id_column_name
-            ) for pose_track_3d in self.tracks().values()]
-        )
-        return df
-
-    def tracks(self):
-        return {**self.active_tracks, **self.inactive_tracks}
-
-
     def update(
         self,
         timestamp,
@@ -292,6 +254,43 @@ class PoseTracks3D:
             set(zip(best_track_for_each_pose.values, best_track_for_each_pose.index))
         )
         return matches
+
+    def extract_pose_tracks_3d(
+        self,
+        poses_3d_df,
+        pose_3d_id_column_name='pose_3d_id',
+        pose_track_3d_id_column_name='pose_track_3d_id'
+    ):
+        input_index_name = poses_3d_df.index.name
+        poses_3d_with_tracks_df = poses_3d_df.join(
+            self.output_df(
+                pose_3d_id_column_name=pose_3d_id_column_name,
+                pose_track_3d_id_column_name=pose_track_3d_id_column_name
+            ),
+            how='inner'
+        )
+        poses_3d_with_tracks_df.index.name = input_index_name
+        return poses_3d_with_tracks_df
+
+    def output(self):
+        output = {pose_track_3d_id: pose_track_3d.output() for pose_track_3d_id, pose_track_3d in self.tracks().items()}
+        return output
+
+    def output_df(
+        self,
+        pose_3d_id_column_name='pose_3d_id',
+        pose_track_3d_id_column_name='pose_track_3d_id'
+    ):
+        df = pd.concat(
+            [pose_track_3d.output_df(
+                pose_3d_id_column_name=pose_3d_id_column_name,
+                pose_track_3d_id_column_name=pose_track_3d_id_column_name
+            ) for pose_track_3d in self.tracks().values()]
+        )
+        return df
+
+    def tracks(self):
+        return {**self.active_tracks, **self.inactive_tracks}
 
     def plot_trajectories(
         self,
