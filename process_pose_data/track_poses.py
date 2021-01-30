@@ -7,6 +7,7 @@ from uuid import uuid4
 import logging
 import time
 import itertools
+import copy
 
 logger = logging.getLogger(__name__)
 
@@ -255,6 +256,26 @@ class PoseTracks3D:
         )
         return matches
 
+    def filter(
+        self,
+        num_poses_min=11,
+        inplace=False
+    ):
+        if not inplace:
+            new_pose_tracks_3d = copy.deepcopy(self)
+        else:
+            new_pose_tracks_3d = self
+        new_pose_tracks_3d.active_tracks = dict(filter(
+            lambda key_value_tuple: key_value_tuple[1].num_poses() >= num_poses_min,
+            new_pose_tracks_3d.active_tracks.items()
+        ))
+        new_pose_tracks_3dinactive_tracks = dict(filter(
+            lambda key_value_tuple: key_value_tuple[1].num_poses() >= num_poses_min,
+            new_pose_tracks_3d.inactive_tracks.items()
+        ))
+        if not inplace:
+            return new_pose_tracks_3d
+
     def extract_pose_tracks_3d(
         self,
         poses_3d_df,
@@ -397,6 +418,11 @@ class PoseTrack3D:
         self.centroid_distribution_trajectory['observed_centroid'][-1] = centroid_position
         self.centroid_distribution_trajectory['mean'][-1] = self.centroid_distribution.mean
         self.centroid_distribution_trajectory['covariance'][-1] = self.centroid_distribution.covariance
+
+    def num_poses(
+        self
+    ):
+        return(len(self.pose_3d_ids))
 
     def centroid_distribution_trajectory_df(self):
         df = pd.DataFrame({
