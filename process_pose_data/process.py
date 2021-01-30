@@ -522,6 +522,41 @@ def generate_pose_reconstruction_3d_metadata(
     }
     return pose_reconstruction_3d_metadata
 
+def generate_pose_tracking_3d_metadata(
+    start,
+    end,
+    environment_id,
+    pose_reconstruction_3d_inference_id,
+    max_match_distance=None,
+    max_iterations_since_last_match=None,
+    centroid_position_initial_sd=None,
+    centroid_velocity_initial_sd=None,
+    reference_delta_t_seconds=None,
+    reference_velocity_drift=None,
+    position_observation_sd=None
+):
+    logger.info('Generating inference execution object')
+    inference_execution = generate_pose_tracking_3d_inference_execution(
+        environment_id,
+        start,
+        end
+    )
+    pose_tracking_3d_metadata = {
+        'inference_execution': inference_execution,
+        'start': start,
+        'end': end,
+        'environment_id': environment_id,
+        'pose_reconstruction_3d_inference_id': pose_reconstruction_3d_inference_id,
+        'max_match_distance': max_match_distance,
+        'max_iterations_since_last_match': max_iterations_since_last_match,
+        'centroid_position_initial_sd': centroid_position_initial_sd,
+        'centroid_velocity_initial_sd': centroid_velocity_initial_sd,
+        'reference_delta_t_seconds': reference_delta_t_seconds,
+        'reference_velocity_drift': reference_velocity_drift,
+        'position_observation_sd': position_observation_sd
+    }
+    return pose_tracking_3d_metadata
+
 def generate_pose_reconstruction_3d_inference_execution(
     environment_id,
     start,
@@ -536,6 +571,32 @@ def generate_pose_reconstruction_3d_inference_execution(
         end.isoformat()
     )
     inference_execution_model = 'process_pose_data.process.reconstruct_poses_3d_alphapose_local_by_time_segment'
+    inference_execution_version = '2.4.0'
+    inference_execution = {
+        'inference_id_local': inference_id_local,
+        'name': inference_execution_name,
+        'notes': inference_execution_notes,
+        'model': inference_execution_model,
+        'version': inference_execution_version,
+        'execution_start': inference_execution_start,
+
+    }
+    return inference_execution
+
+def generate_pose_tracking_3d_inference_execution(
+    environment_id,
+    start,
+    end,
+):
+    inference_id_local = uuid4().hex
+    inference_execution_start = datetime.datetime.now(tz=datetime.timezone.utc)
+    inference_execution_name = 'Build 3D pose tracks from 3D poses'
+    inference_execution_notes = 'Environment: {} Start: {} End: {}'.format(
+        environment_id,
+        start.isoformat(),
+        end.isoformat()
+    )
+    inference_execution_model = 'process_pose_data.process.generate_pose_tracks_3d_local_by_time_segment'
     inference_execution_version = '2.4.0'
     inference_execution = {
         'inference_id_local': inference_id_local,

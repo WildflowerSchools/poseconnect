@@ -246,14 +246,44 @@ def write_pose_reconstruction_3d_metadata_local(
     poses_3d_directory_name='poses_3d',
     pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
 ):
-    inference_id_local = pose_reconstruction_3d_metadata.get('inference_execution').get('inference_id_local')
+    write_metadata_local(
+        metadata=pose_reconstruction_3d_metadata,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=poses_3d_directory_name,
+        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
+    )
+
+def write_pose_tracking_3d_metadata_local(
+    pose_tracking_3d_metadata,
+    base_dir,
+    environment_id,
+    pose_tracks_3d_directory_name='pose_tracks_3d',
+    pose_tracking_3d_metadata_filename_stem='pose_tracking_3d_metadata'
+):
+    write_metadata_local(
+        metadata=pose_tracking_3d_metadata,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=pose_tracks_3d_directory_name,
+        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem
+    )
+
+def write_metadata_local(
+    metadata,
+    base_dir,
+    environment_id,
+    output_subdirectory_name,
+    metadata_filename_stem
+):
+    inference_id_local = metadata.get('inference_execution').get('inference_id_local')
     metadata_directory = os.path.join(
         base_dir,
         environment_id,
-        poses_3d_directory_name
+        output_subdirectory_name
     )
     metadata_filename = '{}_{}.json'.format(
-        pose_reconstruction_3d_metadata_filename_stem,
+        metadata_filename_stem,
         inference_id_local
     )
     metadata_path = os.path.join(
@@ -262,7 +292,7 @@ def write_pose_reconstruction_3d_metadata_local(
     )
     os.makedirs(metadata_directory, exist_ok=True)
     with open(metadata_path, 'w') as fp:
-        json.dump(pose_reconstruction_3d_metadata, fp, cls=CustomJSONEncoder, indent=2)
+        json.dump(metadata, fp, cls=CustomJSONEncoder, indent=2)
 
 def read_pose_reconstruction_3d_metadata_local(
     inference_id_local,
@@ -271,21 +301,13 @@ def read_pose_reconstruction_3d_metadata_local(
     poses_3d_directory_name='poses_3d',
     pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
 ):
-    metadata_directory = os.path.join(
-        base_dir,
-        environment_id,
-        poses_3d_directory_name
+    pose_reconstruction_3d_metadata = read_metadata_local(
+        inference_id_local=inference_id_local,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=poses_3d_directory_name,
+        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
     )
-    metadata_filename = '{}_{}.json'.format(
-        pose_reconstruction_3d_metadata_filename_stem,
-        inference_id_local
-    )
-    metadata_path = os.path.join(
-        metadata_directory,
-        metadata_filename
-    )
-    with open(metadata_path, 'r') as fp:
-        pose_reconstruction_3d_metadata=json.load(fp)
     pose_reconstruction_3d_metadata['start'] = datetime.datetime.fromisoformat(
         pose_reconstruction_3d_metadata.get('start')
     )
@@ -313,6 +335,55 @@ def read_pose_reconstruction_3d_metadata_local(
     )
     return pose_reconstruction_3d_metadata
 
+def read_pose_tracking_3d_metadata_local(
+    inference_id_local,
+    base_dir,
+    environment_id,
+    pose_tracks_3d_directory_name='pose_tracks_3d',
+    pose_tracking_3d_metadata_filename_stem='pose_tracking_3d_metadata'
+):
+    pose_tracking_3d_metadata = read_metadata_local(
+        inference_id_local=inference_id_local,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=pose_tracks_3d_directory_name,
+        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem
+    )
+    pose_tracking_3d_metadata['start'] = datetime.datetime.fromisoformat(
+        pose_tracking_3d_metadata.get('start')
+    )
+    pose_tracking_3d_metadata['end'] = datetime.datetime.fromisoformat(
+        pose_tracking_3d_metadata.get('end')
+    )
+    pose_tracking_3d_metadata['inference_execution']['execution_start'] = datetime.datetime.fromisoformat(
+        pose_tracking_3d_metadata.get('inference_execution').get('execution_start')
+    )
+    return pose_tracking_3d_metadata
+
+def read_metadata_local(
+    inference_id_local,
+    base_dir,
+    environment_id,
+    output_subdirectory_name,
+    metadata_filename_stem
+):
+    metadata_directory = os.path.join(
+        base_dir,
+        environment_id,
+        output_subdirectory_name
+    )
+    metadata_filename = '{}_{}.json'.format(
+        metadata_filename_stem,
+        inference_id_local
+    )
+    metadata_path = os.path.join(
+        metadata_directory,
+        metadata_filename
+    )
+    with open(metadata_path, 'r') as fp:
+        metadata=json.load(fp)
+    return metadata
+
 def delete_pose_reconstruction_3d_metadata_local(
     inference_id_local,
     base_dir,
@@ -320,12 +391,42 @@ def delete_pose_reconstruction_3d_metadata_local(
     poses_3d_directory_name='poses_3d',
     pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
 ):
+    delete_metadata_local(
+        inference_id_local=inference_id_local,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=poses_3d_directory_name,
+        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
+    )
+
+def delete_pose_tracking_3d_metadata_local(
+    inference_id_local,
+    base_dir,
+    environment_id,
+    pose_tracks_3d_directory_name='pose_tracks_3d',
+    pose_tracking_3d_metadata_filename_stem='pose_tracking_3d_metadata'
+):
+    delete_metadata_local(
+        inference_id_local=inference_id_local,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=pose_tracks_3d_directory_name,
+        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem
+    )
+
+def delete_metadata_local(
+    inference_id_local,
+    base_dir,
+    environment_id,
+    output_subdirectory_name,
+    metadata_filename_stem
+):
     metadata_path = os.path.join(
         base_dir,
         environment_id,
-        poses_3d_directory_name,
+        output_subdirectory_name,
         '{}_{}.json'.format(
-            pose_reconstruction_3d_metadata_filename_stem,
+            metadata_filename_stem,
             inference_id_local
         )
     )
