@@ -25,6 +25,7 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
     base_dir,
     environment_id,
     time_segment_start,
+    alphapose_subdirectory='prepared',
     file_name='alphapose-results.json',
     json_format='cmu'
 ):
@@ -39,6 +40,7 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
         hour=time_segment_start_utc.hour,
         minute=time_segment_start_utc.minute,
         second=time_segment_start_utc.second,
+        alphapose_subdirectory=alphapose_subdirectory,
         file_name=file_name,
         json_format=json_format
     )
@@ -54,6 +56,7 @@ def fetch_2d_pose_data_alphapose_local(
     hour=None,
     minute=None,
     second=None,
+    alphapose_subdirectory='prepared',
     file_name='alphapose-results.json',
     json_format='cmu'
 ):
@@ -67,10 +70,12 @@ def fetch_2d_pose_data_alphapose_local(
         hour=hour,
         minute=minute,
         second=second,
+        alphapose_subdirectory=alphapose_subdirectory,
         file_name=file_name
     )
     re_pattern = alphapose_data_file_re_pattern(
         base_dir=base_dir,
+        alphapose_subdirectory=alphapose_subdirectory,
         file_name=file_name
     )
     data_list = list()
@@ -154,6 +159,7 @@ def write_3d_pose_data_local_time_segment(
     environment_id,
     time_segment_start,
     inference_id_local,
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
@@ -161,6 +167,7 @@ def write_3d_pose_data_local_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         time_segment_start=time_segment_start,
+        pose_processing_subdirectory=pose_processing_subdirectory,
         poses_3d_directory_name=poses_3d_directory_name
     )
     file_name = '{}_{}.pkl'.format(
@@ -180,6 +187,7 @@ def fetch_3d_pose_data_local(
     base_dir,
     environment_id,
     inference_id_local,
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
@@ -194,6 +202,7 @@ def fetch_3d_pose_data_local(
             base_dir=base_dir,
             environment_id=environment_id,
             inference_id_local=inference_id_local,
+            pose_processing_subdirectory=pose_processing_subdirectory,
             poses_3d_directory_name=poses_3d_directory_name,
             poses_3d_file_name_stem=poses_3d_file_name_stem
         )
@@ -206,6 +215,7 @@ def fetch_3d_pose_data_local_time_segment(
     base_dir,
     environment_id,
     inference_id_local,
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
@@ -214,6 +224,7 @@ def fetch_3d_pose_data_local_time_segment(
         environment_id=environment_id,
         inference_id_local=inference_id_local,
         time_segment_start=time_segment_start,
+        pose_processing_subdirectory=pose_processing_subdirectory,
         poses_3d_directory_name=poses_3d_directory_name,
         poses_3d_file_name_stem=poses_3d_file_name_stem
     )
@@ -224,11 +235,13 @@ def delete_3d_pose_data_local(
     base_dir,
     environment_id,
     inference_id_local,
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
     glob_pattern = os.path.join(
         base_dir,
+        pose_processing_subdirectory,
         environment_id,
         poses_3d_directory_name,
         '*',
@@ -245,11 +258,13 @@ def write_3d_pose_track_data_local(
     base_dir,
     environment_id,
     inference_id_local,
+    pose_processing_subdirectory='pose_processing',
     pose_tracks_3d_directory_name='pose_tracks_3d',
     pose_tracks_3d_file_name_stem='pose_tracks_3d'
 ):
     directory = os.path.join(
         base_dir,
+        pose_processing_subdirectory,
         environment_id,
         pose_tracks_3d_directory_name
     )
@@ -269,11 +284,13 @@ def fetch_3d_pose_track_data_local(
     base_dir,
     environment_id,
     inference_id_local,
+    pose_processing_subdirectory='pose_processing',
     pose_tracks_3d_directory_name='pose_tracks_3d',
     pose_tracks_3d_file_name_stem='pose_tracks_3d'
 ):
     path=os.path.join(
         base_dir,
+        pose_processing_subdirectory,
         environment_id,
         pose_tracks_3d_directory_name,
         '{}_{}.pkl'.format(
@@ -289,11 +306,13 @@ def delete_3d_pose_track_data_local(
     base_dir,
     environment_id,
     inference_id_local,
+    pose_processing_subdirectory='pose_processing',
     pose_tracks_3d_directory_name='pose_tracks_3d',
     pose_tracks_3d_file_name_stem='pose_tracks_3d'
 ):
     path=os.path.join(
         base_dir,
+        pose_processing_subdirectory,
         environment_id,
         pose_tracks_3d_directory_name,
         '{}_{}.pkl'.format(
@@ -308,6 +327,7 @@ def write_pose_reconstruction_3d_metadata_local(
     pose_reconstruction_3d_metadata,
     base_dir,
     environment_id,
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
 ):
@@ -316,13 +336,15 @@ def write_pose_reconstruction_3d_metadata_local(
         base_dir=base_dir,
         environment_id=environment_id,
         output_subdirectory_name=poses_3d_directory_name,
-        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
+        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
 
 def write_pose_tracking_3d_metadata_local(
     pose_tracking_3d_metadata,
     base_dir,
     environment_id,
+    pose_processing_subdirectory='pose_processing',
     pose_tracks_3d_directory_name='pose_tracks_3d',
     pose_tracking_3d_metadata_filename_stem='pose_tracking_3d_metadata'
 ):
@@ -331,7 +353,8 @@ def write_pose_tracking_3d_metadata_local(
         base_dir=base_dir,
         environment_id=environment_id,
         output_subdirectory_name=pose_tracks_3d_directory_name,
-        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem
+        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
 
 def write_metadata_local(
@@ -339,11 +362,13 @@ def write_metadata_local(
     base_dir,
     environment_id,
     output_subdirectory_name,
-    metadata_filename_stem
+    metadata_filename_stem,
+    pose_processing_subdirectory='pose_processing'
 ):
     inference_id_local = metadata.get('inference_execution').get('inference_id_local')
     metadata_directory = os.path.join(
         base_dir,
+        pose_processing_subdirectory,
         environment_id,
         output_subdirectory_name
     )
@@ -363,6 +388,7 @@ def read_pose_reconstruction_3d_metadata_local(
     inference_id_local,
     base_dir,
     environment_id,
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
 ):
@@ -371,7 +397,8 @@ def read_pose_reconstruction_3d_metadata_local(
         base_dir=base_dir,
         environment_id=environment_id,
         output_subdirectory_name=poses_3d_directory_name,
-        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
+        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     pose_reconstruction_3d_metadata['start'] = datetime.datetime.fromisoformat(
         pose_reconstruction_3d_metadata.get('start')
@@ -404,6 +431,7 @@ def read_pose_tracking_3d_metadata_local(
     inference_id_local,
     base_dir,
     environment_id,
+    pose_processing_subdirectory='pose_processing',
     pose_tracks_3d_directory_name='pose_tracks_3d',
     pose_tracking_3d_metadata_filename_stem='pose_tracking_3d_metadata'
 ):
@@ -412,7 +440,8 @@ def read_pose_tracking_3d_metadata_local(
         base_dir=base_dir,
         environment_id=environment_id,
         output_subdirectory_name=pose_tracks_3d_directory_name,
-        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem
+        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     pose_tracking_3d_metadata['start'] = datetime.datetime.fromisoformat(
         pose_tracking_3d_metadata.get('start')
@@ -430,10 +459,12 @@ def read_metadata_local(
     base_dir,
     environment_id,
     output_subdirectory_name,
-    metadata_filename_stem
+    metadata_filename_stem,
+    pose_processing_subdirectory='pose_processing'
 ):
     metadata_directory = os.path.join(
         base_dir,
+        pose_processing_subdirectory,
         environment_id,
         output_subdirectory_name
     )
@@ -453,6 +484,7 @@ def delete_pose_reconstruction_3d_metadata_local(
     inference_id_local,
     base_dir,
     environment_id,
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
 ):
@@ -461,13 +493,15 @@ def delete_pose_reconstruction_3d_metadata_local(
         base_dir=base_dir,
         environment_id=environment_id,
         output_subdirectory_name=poses_3d_directory_name,
-        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
+        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
 
 def delete_pose_tracking_3d_metadata_local(
     inference_id_local,
     base_dir,
     environment_id,
+    pose_processing_subdirectory='pose_processing',
     pose_tracks_3d_directory_name='pose_tracks_3d',
     pose_tracking_3d_metadata_filename_stem='pose_tracking_3d_metadata'
 ):
@@ -476,7 +510,8 @@ def delete_pose_tracking_3d_metadata_local(
         base_dir=base_dir,
         environment_id=environment_id,
         output_subdirectory_name=pose_tracks_3d_directory_name,
-        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem
+        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
 
 def delete_metadata_local(
@@ -484,10 +519,12 @@ def delete_metadata_local(
     base_dir,
     environment_id,
     output_subdirectory_name,
-    metadata_filename_stem
+    metadata_filename_stem,
+    pose_processing_subdirectory='pose_processing'
 ):
     metadata_path = os.path.join(
         base_dir,
+        pose_processing_subdirectory,
         environment_id,
         output_subdirectory_name,
         '{}_{}.json'.format(
@@ -508,9 +545,11 @@ def alphapose_data_file_glob_pattern(
     hour=None,
     minute=None,
     second=None,
+    alphapose_subdirectory='prepared',
     file_name='alphapose-results.json'
 ):
     base_dir_string = base_dir
+    alphapose_subdirectory_string = alphapose_subdirectory
     if environment_id is not None:
         environment_id_string = environment_id
     else:
@@ -545,6 +584,7 @@ def alphapose_data_file_glob_pattern(
         second_string = '??'
     glob_pattern = os.path.join(
         base_dir_string,
+        alphapose_subdirectory_string,
         environment_id_string,
         camera_assignment_id_string,
         year_string,
@@ -557,10 +597,12 @@ def alphapose_data_file_glob_pattern(
 
 def alphapose_data_file_re_pattern(
     base_dir,
+    alphapose_subdirectory='prepared',
     file_name='alphapose-results.json'
 ):
     re_pattern = os.path.join(
         base_dir,
+        alphapose_subdirectory,
         '(?P<environment_id>.+)',
         '(?P<assignment_id>.+)',
         '(?P<year_string>[0-9]{4})',
@@ -576,6 +618,7 @@ def pose_3d_data_path_time_segment(
     environment_id,
     inference_id_local,
     time_segment_start,
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
@@ -583,6 +626,7 @@ def pose_3d_data_path_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         time_segment_start=time_segment_start,
+        pose_processing_subdirectory=pose_processing_subdirectory,
         poses_3d_directory_name=poses_3d_directory_name
     )
     file_name='{}_{}.pkl'.format(
@@ -599,11 +643,13 @@ def pose_3d_data_directory_path_time_segment(
     base_dir,
     environment_id,
     time_segment_start,
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d'
 ):
     time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
     path = os.path.join(
         base_dir,
+        pose_processing_subdirectory,
         environment_id,
         poses_3d_directory_name,
         '{:04d}'.format(time_segment_start_utc.year),

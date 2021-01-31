@@ -29,8 +29,10 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     audience=None,
     client_id=None,
     client_secret=None,
+    alphapose_subdirectory='prepared',
     poses_2d_file_name='alphapose-results.json',
     poses_2d_json_format='cmu',
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d',
     pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata',
@@ -57,8 +59,10 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     if end.tzinfo is None:
         logger.info('Specified end is timezone-naive. Assuming UTC')
         end=end.replace(tzinfo=datetime.timezone.utc)
-    logger.info('Reconstructing 3D poses from local 2D pose data. Base directory: {}. Environment ID: {}. Start: {}. End: {}'.format(
+    logger.info('Reconstructing 3D poses from local 2D pose data. Base directory: {}. Alphapose data subdirectory: {}. Pose processing data subdirectory: {}. Environment ID: {}. Start: {}. End: {}'.format(
         base_dir,
+        alphapose_subdirectory,
+        pose_processing_subdirectory,
         environment_id,
         start,
         end
@@ -106,6 +110,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         pose_reconstruction_3d_metadata=pose_reconstruction_3d_metadata,
         base_dir=base_dir,
         environment_id=environment_id,
+        pose_processing_subdirectory=pose_processing_subdirectory,
         poses_3d_directory_name=poses_3d_directory_name,
         pose_reconstruction_3d_metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
     )
@@ -127,8 +132,10 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         inference_id_local=inference_id_local,
+        alphapose_subdirectory=alphapose_subdirectory,
         poses_2d_file_name=poses_2d_file_name,
         poses_2d_json_format=poses_2d_json_format,
+        pose_processing_subdirectory=pose_processing_subdirectory,
         poses_3d_directory_name=poses_3d_directory_name,
         poses_3d_file_name_stem=poses_3d_file_name_stem,
         camera_device_id_lookup=camera_device_id_lookup,
@@ -186,8 +193,10 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
     base_dir,
     environment_id,
     inference_id_local,
+    alphapose_subdirectory='prepared',
     poses_2d_file_name='alphapose-results.json',
     poses_2d_json_format='cmu',
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d',
     camera_device_id_lookup=None,
@@ -222,6 +231,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         base_dir=base_dir,
         environment_id=environment_id,
         time_segment_start=time_segment_start,
+        alphapose_subdirectory=alphapose_subdirectory,
         file_name=poses_2d_file_name,
         json_format=poses_2d_json_format
     )
@@ -273,6 +283,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         environment_id=environment_id,
         time_segment_start=time_segment_start,
         inference_id_local=inference_id_local,
+        pose_processing_subdirectory=pose_processing_subdirectory,
         poses_3d_directory_name=poses_3d_directory_name,
         poses_3d_file_name_stem=poses_3d_file_name_stem
     )
@@ -281,6 +292,7 @@ def upload_3d_poses_honeycomb(
     inference_id_local,
     base_dir,
     environment_id,
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d',
     pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata',
@@ -298,6 +310,7 @@ def upload_3d_poses_honeycomb(
         inference_id_local=inference_id_local,
         base_dir=base_dir,
         environment_id=environment_id,
+        pose_processing_subdirectory=pose_processing_subdirectory,
         poses_3d_directory_name=poses_3d_directory_name,
         pose_reconstruction_3d_metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
     )
@@ -332,6 +345,7 @@ def upload_3d_poses_honeycomb(
             base_dir=base_dir,
             environment_id=environment_id,
             inference_id_local=inference_id_local,
+            pose_processing_subdirectory=pose_processing_subdirectory,
             poses_3d_directory_name=poses_3d_directory_name,
             poses_3d_file_name_stem=poses_3d_file_name_stem
         )
@@ -356,6 +370,7 @@ def delete_reconstruct_3d_poses_output(
     base_dir,
     environment_id,
     inference_id_local,
+    pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d',
     pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata',
@@ -372,6 +387,7 @@ def delete_reconstruct_3d_poses_output(
         base_dir=base_dir,
         environment_id=environment_id,
         inference_id_local=inference_id_local,
+        pose_processing_subdirectory=pose_processing_subdirectory,
         poses_3d_directory_name=poses_3d_directory_name,
         poses_3d_file_name_stem=poses_3d_file_name_stem
     )
@@ -380,6 +396,7 @@ def delete_reconstruct_3d_poses_output(
         inference_id_local=inference_id_local,
         base_dir=base_dir,
         environment_id=environment_id,
+        pose_processing_subdirectory=pose_processing_subdirectory,
         poses_3d_directory_name=poses_3d_directory_name,
         pose_reconstruction_3d_metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
     )
