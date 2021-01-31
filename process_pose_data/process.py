@@ -1,6 +1,7 @@
 import process_pose_data.local_io
 import process_pose_data.honeycomb_io
 import process_pose_data.analyze
+import process_pose_data.track_poses
 import tqdm
 from uuid import uuid4
 import multiprocessing
@@ -287,6 +288,152 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         poses_3d_directory_name=poses_3d_directory_name,
         poses_3d_file_name_stem=poses_3d_file_name_stem
     )
+
+def generate_pose_tracks_3d_local_by_time_segment(
+    start,
+    end,
+    base_dir,
+    environment_id,
+    pose_reconstruction_3d_inference_id,
+    max_match_distance=1.0,
+    max_iterations_since_last_match=20,
+    centroid_position_initial_sd=1.0,
+    centroid_velocity_initial_sd=1.0,
+    reference_delta_t_seconds=1.0,
+    reference_velocity_drift=0.30,
+    position_observation_sd=0.5,
+    num_poses_per_track_min=11,
+    pose_processing_subdirectory='pose_processing',
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d',
+    pose_tracks_3d_directory_name='pose_tracks_3d',
+    pose_tracks_3d_file_name_stem='pose_tracks_3d',
+    pose_tracking_3d_metadata_filename_stem='pose_tracking_3d_metadata',
+    progress_bar=False,
+    notebook=False
+):
+    if start.tzinfo is None:
+        logger.info('Specified start is timezone-naive. Assuming UTC')
+        start=start.replace(tzinfo=datetime.timezone.utc)
+    if end.tzinfo is None:
+        logger.info('Specified end is timezone-naive. Assuming UTC')
+        end=end.replace(tzinfo=datetime.timezone.utc)
+    logger.info('Generating 3D pose tracks from local 3D pose data. Base directory: {}. Pose processing data subdirectory: {}. Environment ID: {}. Start: {}. End: {}'.format(
+        base_dir,
+        pose_processing_subdirectory,
+        environment_id,
+        start,
+        end
+    ))
+    logger.info('Generating metadata')
+    pose_tracking_3d_metadata = generate_pose_tracking_3d_metadata(
+        start=start,
+        end=end,
+        environment_id=environment_id,
+        pose_reconstruction_3d_inference_id=pose_reconstruction_3d_inference_id,
+        max_match_distance=max_match_distance,
+        max_iterations_since_last_match=max_iterations_since_last_match,
+        centroid_position_initial_sd=centroid_position_initial_sd,
+        centroid_velocity_initial_sd=None,
+        reference_delta_t_seconds=reference_delta_t_seconds,
+        reference_velocity_drift=reference_velocity_drift,
+        position_observation_sd=position_observation_sd
+    )
+    pose_tracking_3d_inference_id_local = pose_tracking_3d_metadata.get('inference_execution').get('inference_id_local')
+    logger.info('Writing inference metadata to local file')
+    process_pose_data.local_io.write_pose_tracking_3d_metadata_local(
+        pose_tracking_3d_metadata=pose_tracking_3d_metadata,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        pose_processing_subdirectory=pose_processing_subdirectory,
+        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
+        pose_tracking_3d_metadata_filename_stem=pose_tracking_3d_metadata_filename_stem
+    )
+    logger.info('Generating list of time segments')
+    time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
+        start=start,
+        end=end
+    )
+    num_time_segments = len(time_segment_start_list)
+    num_minutes = (end - start).seconds/60
+    logger.info('Tracking 3D poses for {} time segments spanning {:.3f} minutes: {} to {}'.format(
+        num_time_segments,
+        num_minutes,
+        time_segment_start_list[0].isoformat(),
+        time_segment_start_list[-1].isoformat()
+    ))
+    # generate_pose_tracks_3d_local_time_segment_partial = functools.partial(
+    #     generate_pose_tracks_3d_local_time_segment,
+    #     base_dir=base_dir,
+    #     environment_id=environment_id,
+    #     pose_reconstruction_3d_inference_id=pose_reconstruction_3d_inference_id,
+    #     max_match_distance=max_match_distance,
+    #     max_iterations_since_last_match=max_iterations_since_last_match,
+    #     centroid_position_initial_sd=centroid_position_initial_sd,
+    #     centroid_velocity_initial_sd=centroid_velocity_initial_sd,
+    #     reference_delta_t_seconds=reference_delta_t_seconds,
+    #     reference_velocity_drift=reference_velocity_drift,
+    #     position_observation_sd=position_observation_sd,
+    #     pose_processing_subdirectory=pose_processing_subdirectory,
+    #     poses_3d_directory_name=poses_3d_directory_name,
+    #     poses_3d_file_name_stem=poses_3d_file_name_stem,
+    #     pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
+    #     pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem,
+    #     pose_tracking_3d_metadata_filename_stem=pose_tracking_3d_metadata_filename_stem
+    # )
+    processing_start = time.time()
+    processing_time = time.time() - processing_start
+    pose_tracks_3d = None
+    if progress_bar:
+        if notebook:
+            time_segment_start_iterator = tqdm.notebook.tqdm(time_segment_start_list)
+        else:
+            time_segment_start_iterator = tqdm.tqdm(time_segment_start_list)
+    else:
+        time_segment_start_iterator = time_segment_start_list
+    for time_segment_start in time_segment_start_iterator:
+        poses_3d_df = process_pose_data.local_io.fetch_3d_pose_data_local_time_segment(
+            time_segment_start=time_segment_start,
+            base_dir=base_dir,
+            environment_id=environment_id,
+            inference_id_local=pose_reconstruction_3d_inference_id,
+            pose_processing_subdirectory=pose_processing_subdirectory,
+            poses_3d_directory_name=poses_3d_directory_name,
+            poses_3d_file_name_stem=poses_3d_file_name_stem
+        )
+        pose_tracks_3d =  process_pose_data.track_poses.update_pose_tracks_3d(
+            poses_3d_df=poses_3d_df,
+            pose_tracks_3d=pose_tracks_3d,
+            max_match_distance=max_match_distance,
+            max_iterations_since_last_match=max_iterations_since_last_match,
+            centroid_position_initial_sd=centroid_position_initial_sd,
+            centroid_velocity_initial_sd=centroid_velocity_initial_sd,
+            reference_delta_t_seconds=reference_delta_t_seconds,
+            reference_velocity_drift=reference_velocity_drift,
+            position_observation_sd=position_observation_sd,
+            progress_bar=False,
+            notebook=False
+        )
+    if num_poses_per_track_min is not None:
+        pose_tracks_3d.filter(
+            num_poses_min=num_poses_per_track_min,
+            inplace=True
+        )
+    process_pose_data.local_io.write_3d_pose_track_data_local(
+        pose_tracks_3d=pose_tracks_3d,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        inference_id_local=pose_tracking_3d_inference_id_local,
+        pose_processing_subdirectory=pose_processing_subdirectory,
+        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
+        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
+    )
+    logger.info('Processed {:.3f} minutes of 3D poses in {:.3f} minutes (ratio of {:.3f})'.format(
+        num_minutes,
+        processing_time/60,
+        (processing_time/60)/num_minutes
+    ))
+    return pose_tracking_3d_inference_id_local
 
 def upload_3d_poses_honeycomb(
     inference_id_local,
