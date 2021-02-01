@@ -218,6 +218,7 @@ def fetch_3d_pose_data_local(
     base_dir,
     environment_id,
     inference_id_local,
+    pose_3d_ids=None,
     pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
@@ -233,6 +234,7 @@ def fetch_3d_pose_data_local(
             base_dir=base_dir,
             environment_id=environment_id,
             inference_id_local=inference_id_local,
+            pose_3d_ids=pose_3d_ids,
             pose_processing_subdirectory=pose_processing_subdirectory,
             poses_3d_directory_name=poses_3d_directory_name,
             poses_3d_file_name_stem=poses_3d_file_name_stem
@@ -246,6 +248,7 @@ def fetch_3d_pose_data_local_time_segment(
     base_dir,
     environment_id,
     inference_id_local,
+    pose_3d_ids=None,
     pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
@@ -284,6 +287,10 @@ def fetch_3d_pose_data_local_time_segment(
         poses_3d_df_time_segment = pd.concat(poses_3d_dfs_time_segment).sort_values('timestamp')
     else:
         raise ValueError("Specified inference ID must be of type str, list, tuple, or set")
+    if pose_3d_ids is not None:
+        poses_3d_df_time_segment = poses_3d_df_time_segment.reindex(
+            poses_3d_df_time_segment.index.intersection(pose_3d_ids)
+        )
     return poses_3d_df_time_segment
 
 def delete_3d_pose_data_local(
