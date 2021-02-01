@@ -127,7 +127,7 @@ def interpolate_pose_track(pose_track_3d_df):
     poses_3d_new_df = poses_3d_interpolated_df.reindex(new_time_index)
     pose_3d_ids_new = [uuid4().hex for _ in range(len(poses_3d_new_df))]
     poses_3d_new_df['pose_3d_id_local'] = pose_3d_ids_new
-    poses_3d_new_df.set_index('pose_3d_id_local', drop=False)
+    poses_3d_new_df = poses_3d_new_df.reset_index().set_index('pose_3d_id_local')
     return poses_3d_new_df
 
 def add_short_track_labels(
