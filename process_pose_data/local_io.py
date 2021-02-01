@@ -263,7 +263,67 @@ def fetch_3d_pose_data_local_time_segment(
         poses_3d_directory_name=poses_3d_directory_name,
         poses_3d_file_name_stem=poses_3d_file_name_stem
     )
-    poses_3d_df_time_segment = pd.read_pickle(path)
+    if os.path.exists(path):
+        poses_3d_df_time_segment = pd.read_pickle(path)
+    else:
+        poses_3d_df_time_segment = pd.DataFrame()
+    return poses_3d_df_time_segment
+
+def fetch_3d_pose_data_local_multiple_inference_ids(
+    start,
+    end,
+    base_dir,
+    environment_id,
+    inference_ids_local,
+    pose_processing_subdirectory='pose_processing',
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d'
+):
+    time_segment_start_list = generate_time_segment_start_list(
+        start,
+        end
+    )
+    poses_3d_df_list = list()
+    for time_segment_start in time_segment_start_list:
+        poses_3d_df_time_segment = fetch_3d_pose_data_local_multiple_inference_ids_time_segment(
+            time_segment_start,
+            base_dir=base_dir,
+            environment_id=environment_id,
+            inference_ids_local=inference_ids_local,
+            pose_processing_subdirectory=pose_processing_subdirectory,
+            poses_3d_directory_name=poses_3d_directory_name,
+            poses_3d_file_name_stem=poses_3d_file_name_stem
+        )
+        poses_3d_df_list.append(poses_3d_df_time_segment)
+    poses_3d_df = pd.concat(poses_3d_df_list)
+    return poses_3d_df
+
+def fetch_3d_pose_data_local_multiple_inference_ids_time_segment(
+    time_segment_start,
+    base_dir,
+    environment_id,
+    inference_ids_local,
+    pose_processing_subdirectory='pose_processing',
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d'
+):
+    poses_3d_dfs_time_segment=list()
+    for inference_id_local in inference_ids_local:
+        path=pose_3d_data_path_time_segment(
+            base_dir=base_dir,
+            environment_id=environment_id,
+            inference_id_local=inference_id_local,
+            time_segment_start=time_segment_start,
+            pose_processing_subdirectory=pose_processing_subdirectory,
+            poses_3d_directory_name=poses_3d_directory_name,
+            poses_3d_file_name_stem=poses_3d_file_name_stem
+        )
+        if os.path.exists(path):
+            poses_3d_df_time_segment_id = pd.read_pickle(path)
+        else:
+            poses_3d_df_time_segment_id = pd.DataFrame()
+        poses_3d_dfs_time_segment.append(poses_3d_df_time_segment_id)
+    poses_3d_df_time_segment = pd.concat(poses_3d_dfs_time_segment).sort_values('timestamp')
     return poses_3d_df_time_segment
 
 def delete_3d_pose_data_local(
