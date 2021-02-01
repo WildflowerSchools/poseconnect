@@ -153,6 +153,41 @@ def fetch_2d_pose_data_alphapose_local(
     df.sort_values(['timestamp', 'assignment_id'], inplace=True)
     return df
 
+def write_3d_pose_data_local(
+    poses_3d_df,
+    base_dir,
+    environment_id,
+    inference_id_local,
+    pose_processing_subdirectory='pose_processing',
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d'
+):
+    start = pd.to_datetime(poses_3d_df['timestamp'].min()).to_pydatetime()
+    end = pd.to_datetime(poses_3d_df['timestamp'].max()).to_pydatetime()
+    time_segment_start_list = generate_time_segment_start_list(
+        start,
+        end
+    )
+    for time_segment_start in time_segment_start_list:
+        poses_3d_time_segment_df = poses_3d_df.loc[
+            (poses_3d_df['timestamp'] >= time_segment_start) &
+            (poses_3d_df['timestamp'] < time_segment_start + datetime.timedelta(seconds=10))
+        ]
+        logger.info('Writing {} poses to file at time segment start {}'.format(
+            len(poses_3d_time_segment_df),
+            time_segment_start.isoformat()
+        ))
+        write_3d_pose_data_local_time_segment(
+            poses_3d_df=poses_3d_time_segment_df,
+            base_dir=base_dir,
+            environment_id=environment_id,
+            time_segment_start=time_segment_start,
+            inference_id_local=inference_id_local,
+            pose_processing_subdirectory=pose_processing_subdirectory,
+            poses_3d_directory_name=poses_3d_directory_name,
+            poses_3d_file_name_stem=poses_3d_file_name_stem
+        )
+
 def write_3d_pose_data_local_time_segment(
     poses_3d_df,
     base_dir,
@@ -707,6 +742,6 @@ def generate_time_segment_start_list(
         second=10*(start_utc.second // 10),
         tzinfo=start_utc.tzinfo
     )
-    num_time_segments = math.ceil((end_utc - start_utc_floor).seconds / 10.0)
+    num_time_segments = math.ceil((end_utc - start_utc_floor).total_seconds()  / 10.0)
     time_segment_start_list = [start_utc_floor + i*datetime.timedelta(seconds=10) for i in range(num_time_segments)]
     return time_segment_start_list
