@@ -173,10 +173,6 @@ def write_3d_pose_data_local(
             (poses_3d_df['timestamp'] >= time_segment_start) &
             (poses_3d_df['timestamp'] < time_segment_start + datetime.timedelta(seconds=10))
         ]
-        logger.info('Writing {} poses to file at time segment start {}'.format(
-            len(poses_3d_time_segment_df),
-            time_segment_start.isoformat()
-        ))
         write_3d_pose_data_local_time_segment(
             poses_3d_df=poses_3d_time_segment_df,
             base_dir=base_dir,
