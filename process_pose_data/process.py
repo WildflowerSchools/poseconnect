@@ -420,7 +420,7 @@ def generate_pose_tracks_3d_local_by_time_segment(
             inplace=True
         )
     process_pose_data.local_io.write_3d_pose_track_data_local(
-        pose_tracks_3d=pose_tracks_3d,
+        pose_tracks_3d=pose_tracks_3d.output(),
         base_dir=base_dir,
         environment_id=environment_id,
         inference_id_local=pose_tracking_3d_inference_id_local,

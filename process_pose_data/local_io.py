@@ -346,7 +346,7 @@ def write_3d_pose_track_data_local(
     )
     os.makedirs(directory, exist_ok=True)
     with open(path, 'wb') as fp:
-        pickle.dump(pose_tracks_3d.output(), fp)
+        pickle.dump(pose_tracks_3d, fp)
 
 def fetch_3d_pose_track_data_local(
     base_dir,
