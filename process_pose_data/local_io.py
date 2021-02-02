@@ -158,6 +158,7 @@ def write_3d_pose_data_local(
     base_dir,
     environment_id,
     inference_id_local,
+    append=False,
     pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
@@ -179,6 +180,7 @@ def write_3d_pose_data_local(
             environment_id=environment_id,
             time_segment_start=time_segment_start,
             inference_id_local=inference_id_local,
+            append=append,
             pose_processing_subdirectory=pose_processing_subdirectory,
             poses_3d_directory_name=poses_3d_directory_name,
             poses_3d_file_name_stem=poses_3d_file_name_stem
@@ -190,6 +192,7 @@ def write_3d_pose_data_local_time_segment(
     environment_id,
     time_segment_start,
     inference_id_local,
+    append=False,
     pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
@@ -210,6 +213,9 @@ def write_3d_pose_data_local_time_segment(
         directory_path,
         file_name
     )
+    if append and os.path.exists(file_path):
+        existing_poses_3d_df = pd.read_pickle(file_path)
+        poses_3d_df = pd.concat((existing_poses_3d_df, poses_3d_df)).sort_values('timestamp')
     poses_3d_df.to_pickle(file_path)
 
 def fetch_3d_pose_data_local(

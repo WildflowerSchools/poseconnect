@@ -115,13 +115,13 @@ def interpolate_pose_track(pose_track_3d_df):
         np.stack(pose_track_3d_df['keypoint_coordinates_3d']).reshape((old_num_poses, -1)),
         index=old_time_index
     )
-    keypoint_flattened_interpolated_df = keypoints_flattened_df.reindex(combined_time_index).interpolate(method='time')
-    keypoints_flattened_interpolated_array = keypoint_flattened_interpolated_df.values
-    keypoints_interpolated_array = keypoints_flattened_interpolated_array.reshape((new_num_poses, -1, 3))
+    keypoints_flattened_interpolated_df = keypoints_flattened_df.reindex(combined_time_index).interpolate(method='time')
+    keypoints_flattened_interpolated_array = keypoints_flattened_interpolated_df.values
+    keypoints_interpolated_array = keypoints_flattened_interpolated_array.reshape((combined_num_poses, -1, 3))
     keypoints_interpolated_array_unstacked = [keypoints_interpolated_array[i] for i in range(keypoints_interpolated_array.shape[0])]
     poses_3d_interpolated_df = pd.Series(
         keypoints_interpolated_array_unstacked,
-        index=new_time_index,
+        index=combined_time_index,
         name='keypoint_coordinates_3d'
     ).to_frame()
     poses_3d_new_df = poses_3d_interpolated_df.reindex(new_time_index)
