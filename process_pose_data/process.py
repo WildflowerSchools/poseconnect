@@ -107,13 +107,13 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     camera_calibrations = pose_reconstruction_3d_metadata.get('camera_calibrations')
     pose_3d_limits = pose_reconstruction_3d_metadata.get('pose_3d_limits')
     logger.info('Writing inference metadata to local file')
-    process_pose_data.local_io.write_pose_reconstruction_3d_metadata_local(
-        pose_reconstruction_3d_metadata=pose_reconstruction_3d_metadata,
+    process_pose_data.local_io.write_metadata_local(
+        metadata=pose_reconstruction_3d_metadata,
         base_dir=base_dir,
         environment_id=environment_id,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        poses_3d_directory_name=poses_3d_directory_name,
-        pose_reconstruction_3d_metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
+        output_subdirectory_name=poses_3d_directory_name,
+        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     logger.info('Generating list of time segments')
     time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
@@ -341,13 +341,13 @@ def generate_pose_tracks_3d_local_by_time_segment(
     )
     pose_tracking_3d_inference_id_local = pose_tracking_3d_metadata.get('inference_execution').get('inference_id_local')
     logger.info('Writing inference metadata to local file')
-    process_pose_data.local_io.write_pose_tracking_3d_metadata_local(
-        pose_tracking_3d_metadata=pose_tracking_3d_metadata,
+    process_pose_data.local_io.write_metadata_local(
+        metadata=pose_tracking_3d_metadata,
         base_dir=base_dir,
         environment_id=environment_id,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
-        pose_tracking_3d_metadata_filename_stem=pose_tracking_3d_metadata_filename_stem
+        output_subdirectory_name=pose_tracks_3d_directory_name,
+        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     logger.info('Generating list of time segments')
     time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
@@ -451,13 +451,13 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     pose_tracking_3d_inference_id_local = pose_track_3d_interpolation_metadata['pose_tracking_3d_inference_id']
     pose_track_3d_interpolation_inference_id_local = pose_track_3d_interpolation_metadata.get('inference_execution').get('inference_id_local')
     logger.info('Writing inference metadata to local file')
-    process_pose_data.local_io.write_pose_track_3d_interpolation_metadata_local(
-        pose_track_3d_interpolation_metadata=pose_track_3d_interpolation_metadata,
+    process_pose_data.local_io.write_metadata_local(
+        metadata=pose_track_3d_interpolation_metadata,
         base_dir=base_dir,
         environment_id=environment_id,
+        output_subdirectory_name=pose_track_3d_interpolation_directory_name,
+        metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
         pose_processing_subdirectory=pose_processing_subdirectory,
-        pose_track_3d_interpolation_directory_name=pose_track_3d_interpolation_directory_name,
-        pose_track_3d_interpolation_metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem
     )
     pose_tracks_3d = process_pose_data.local_io.fetch_3d_pose_track_data_local(
         base_dir=base_dir,
@@ -639,13 +639,13 @@ def delete_reconstruct_3d_poses_output(
         poses_3d_file_name_stem=poses_3d_file_name_stem
     )
     logger.info('Deleting local inference metadata')
-    process_pose_data.local_io.delete_pose_reconstruction_3d_metadata_local(
+    process_pose_data.local_io.delete_metadata_local(
         inference_id_local=inference_id_local,
         base_dir=base_dir,
         environment_id=environment_id,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        poses_3d_directory_name=poses_3d_directory_name,
-        pose_reconstruction_3d_metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem
+        output_subdirectory_name=poses_3d_directory_name,
+        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     logger.info('Deleting Honeycomb 3D pose data')
     raise ValueError('We need a way of fetching Honeycomb inference ID before deleting 3D pose data from Honeycomb')
@@ -834,13 +834,13 @@ def generate_pose_track_3d_interpolation_metadata(
         environment_id
     )
     logger.info('Fetching metadata from pose tracking stage')
-    pose_tracking_3d_metadata = process_pose_data.read_pose_tracking_3d_metadata_local(
+    pose_tracking_3d_metadata = process_pose_data.read_metadata_local(
         inference_id_local=pose_tracking_3d_inference_id,
         base_dir=base_dir,
         environment_id=environment_id,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
-        pose_tracking_3d_metadata_filename_stem=pose_tracking_3d_metadata_filename_stem
+        output_subdirectory_name=pose_tracks_3d_directory_name,
+        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     pose_reconstruction_3d_inference_id = pose_tracking_3d_metadata['pose_reconstruction_3d_inference_id']
     pose_track_3d_interpolation_metadata = {

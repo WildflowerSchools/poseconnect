@@ -391,57 +391,6 @@ def delete_3d_pose_track_data_local(
     if os.path.exists(path):
         os.remove(path)
 
-def write_pose_reconstruction_3d_metadata_local(
-    pose_reconstruction_3d_metadata,
-    base_dir,
-    environment_id,
-    pose_processing_subdirectory='pose_processing',
-    poses_3d_directory_name='poses_3d',
-    pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
-):
-    write_metadata_local(
-        metadata=pose_reconstruction_3d_metadata,
-        base_dir=base_dir,
-        environment_id=environment_id,
-        output_subdirectory_name=poses_3d_directory_name,
-        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
-        pose_processing_subdirectory=pose_processing_subdirectory
-    )
-
-def write_pose_tracking_3d_metadata_local(
-    pose_tracking_3d_metadata,
-    base_dir,
-    environment_id,
-    pose_processing_subdirectory='pose_processing',
-    pose_tracks_3d_directory_name='pose_tracks_3d',
-    pose_tracking_3d_metadata_filename_stem='pose_tracking_3d_metadata'
-):
-    write_metadata_local(
-        metadata=pose_tracking_3d_metadata,
-        base_dir=base_dir,
-        environment_id=environment_id,
-        output_subdirectory_name=pose_tracks_3d_directory_name,
-        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
-        pose_processing_subdirectory=pose_processing_subdirectory
-    )
-
-def write_pose_track_3d_interpolation_metadata_local(
-    pose_track_3d_interpolation_metadata,
-    base_dir,
-    environment_id,
-    pose_processing_subdirectory='pose_processing',
-    pose_track_3d_interpolation_directory_name='pose_track_3d_interpolation',
-    pose_track_3d_interpolation_metadata_filename_stem='pose_track_3d_interpolation'
-):
-    write_metadata_local(
-        metadata=pose_track_3d_interpolation_metadata,
-        base_dir=base_dir,
-        environment_id=environment_id,
-        output_subdirectory_name=pose_track_3d_interpolation_directory_name,
-        metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
-        pose_processing_subdirectory=pose_processing_subdirectory
-    )
-
 def write_metadata_local(
     metadata,
     base_dir,
@@ -457,7 +406,7 @@ def write_metadata_local(
         environment_id,
         output_subdirectory_name
     )
-    metadata_filename = '{}_{}.json'.format(
+    metadata_filename = '{}_{}.pkl'.format(
         metadata_filename_stem,
         inference_id_local
     )
@@ -466,99 +415,8 @@ def write_metadata_local(
         metadata_filename
     )
     os.makedirs(metadata_directory, exist_ok=True)
-    with open(metadata_path, 'w') as fp:
-        json.dump(metadata, fp, cls=CustomJSONEncoder, indent=2)
-
-def read_pose_reconstruction_3d_metadata_local(
-    inference_id_local,
-    base_dir,
-    environment_id,
-    pose_processing_subdirectory='pose_processing',
-    poses_3d_directory_name='poses_3d',
-    pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
-):
-    pose_reconstruction_3d_metadata = read_metadata_local(
-        inference_id_local=inference_id_local,
-        base_dir=base_dir,
-        environment_id=environment_id,
-        output_subdirectory_name=poses_3d_directory_name,
-        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
-        pose_processing_subdirectory=pose_processing_subdirectory
-    )
-    pose_reconstruction_3d_metadata['start'] = datetime.datetime.fromisoformat(
-        pose_reconstruction_3d_metadata.get('start')
-    )
-    pose_reconstruction_3d_metadata['end'] = datetime.datetime.fromisoformat(
-        pose_reconstruction_3d_metadata.get('end')
-    )
-    pose_reconstruction_3d_metadata['inference_execution']['execution_start'] = datetime.datetime.fromisoformat(
-        pose_reconstruction_3d_metadata.get('inference_execution').get('execution_start')
-    )
-    for camera_id in pose_reconstruction_3d_metadata.get('camera_calibrations').keys():
-        pose_reconstruction_3d_metadata['camera_calibrations'][camera_id]['camera_matrix']=np.asarray(
-            pose_reconstruction_3d_metadata.get('camera_calibrations').get(camera_id).get('camera_matrix')
-        )
-        pose_reconstruction_3d_metadata['camera_calibrations'][camera_id]['distortion_coefficients']=np.asarray(
-            pose_reconstruction_3d_metadata.get('camera_calibrations').get(camera_id).get('distortion_coefficients')
-        )
-        pose_reconstruction_3d_metadata['camera_calibrations'][camera_id]['rotation_vector']=np.asarray(
-            pose_reconstruction_3d_metadata.get('camera_calibrations').get(camera_id).get('rotation_vector')
-        )
-        pose_reconstruction_3d_metadata['camera_calibrations'][camera_id]['translation_vector']=np.asarray(
-            pose_reconstruction_3d_metadata.get('camera_calibrations').get(camera_id).get('translation_vector')
-        )
-    pose_reconstruction_3d_metadata['pose_3d_limits']=np.asarray(
-        pose_reconstruction_3d_metadata.get('pose_3d_limits')
-    )
-    return pose_reconstruction_3d_metadata
-
-def read_pose_tracking_3d_metadata_local(
-    inference_id_local,
-    base_dir,
-    environment_id,
-    pose_processing_subdirectory='pose_processing',
-    pose_tracks_3d_directory_name='pose_tracks_3d',
-    pose_tracking_3d_metadata_filename_stem='pose_tracking_3d_metadata'
-):
-    pose_tracking_3d_metadata = read_metadata_local(
-        inference_id_local=inference_id_local,
-        base_dir=base_dir,
-        environment_id=environment_id,
-        output_subdirectory_name=pose_tracks_3d_directory_name,
-        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
-        pose_processing_subdirectory=pose_processing_subdirectory
-    )
-    pose_tracking_3d_metadata['start'] = datetime.datetime.fromisoformat(
-        pose_tracking_3d_metadata.get('start')
-    )
-    pose_tracking_3d_metadata['end'] = datetime.datetime.fromisoformat(
-        pose_tracking_3d_metadata.get('end')
-    )
-    pose_tracking_3d_metadata['inference_execution']['execution_start'] = datetime.datetime.fromisoformat(
-        pose_tracking_3d_metadata.get('inference_execution').get('execution_start')
-    )
-    return pose_tracking_3d_metadata
-
-def read_pose_track_3d_interpolation_metadata_local(
-    inference_id_local,
-    base_dir,
-    environment_id,
-    pose_processing_subdirectory='pose_processing',
-    pose_track_3d_interpolation_directory_name='pose_track_3d_interpolation',
-    pose_track_3d_interpolation_metadata_filename_stem='pose_track_3d_interpolation_metadata'
-):
-    pose_track_3d_interpolation_metadata = read_metadata_local(
-        inference_id_local=inference_id_local,
-        base_dir=base_dir,
-        environment_id=environment_id,
-        output_subdirectory_name=pose_track_3d_interpolation_directory_name,
-        metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
-        pose_processing_subdirectory=pose_processing_subdirectory
-    )
-    pose_track_3d_interpolation_metadata['inference_execution']['execution_start'] = datetime.datetime.fromisoformat(
-        pose_track_3d_interpolation_metadata.get('inference_execution').get('execution_start')
-    )
-    return pose_track_3d_interpolation_metadata
+    with open(metadata_path, 'wb') as fp:
+        pickle.dump(metadata, fp)
 
 def read_metadata_local(
     inference_id_local,
@@ -574,7 +432,7 @@ def read_metadata_local(
         environment_id,
         output_subdirectory_name
     )
-    metadata_filename = '{}_{}.json'.format(
+    metadata_filename = '{}_{}.pkl'.format(
         metadata_filename_stem,
         inference_id_local
     )
@@ -582,43 +440,9 @@ def read_metadata_local(
         metadata_directory,
         metadata_filename
     )
-    with open(metadata_path, 'r') as fp:
-        metadata=json.load(fp)
+    with open(metadata_path, 'rb') as fp:
+        metadata=pickle.load(fp)
     return metadata
-
-def delete_pose_reconstruction_3d_metadata_local(
-    inference_id_local,
-    base_dir,
-    environment_id,
-    pose_processing_subdirectory='pose_processing',
-    poses_3d_directory_name='poses_3d',
-    pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata'
-):
-    delete_metadata_local(
-        inference_id_local=inference_id_local,
-        base_dir=base_dir,
-        environment_id=environment_id,
-        output_subdirectory_name=poses_3d_directory_name,
-        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
-        pose_processing_subdirectory=pose_processing_subdirectory
-    )
-
-def delete_pose_tracking_3d_metadata_local(
-    inference_id_local,
-    base_dir,
-    environment_id,
-    pose_processing_subdirectory='pose_processing',
-    pose_tracks_3d_directory_name='pose_tracks_3d',
-    pose_tracking_3d_metadata_filename_stem='pose_tracking_3d_metadata'
-):
-    delete_metadata_local(
-        inference_id_local=inference_id_local,
-        base_dir=base_dir,
-        environment_id=environment_id,
-        output_subdirectory_name=pose_tracks_3d_directory_name,
-        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
-        pose_processing_subdirectory=pose_processing_subdirectory
-    )
 
 def delete_metadata_local(
     inference_id_local,
@@ -633,7 +457,7 @@ def delete_metadata_local(
         pose_processing_subdirectory,
         environment_id,
         output_subdirectory_name,
-        '{}_{}.json'.format(
+        '{}_{}.pkl'.format(
             metadata_filename_stem,
             inference_id_local
         )
