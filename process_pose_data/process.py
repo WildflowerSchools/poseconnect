@@ -362,27 +362,7 @@ def generate_pose_tracks_3d_local_by_time_segment(
         time_segment_start_list[0].isoformat(),
         time_segment_start_list[-1].isoformat()
     ))
-    # generate_pose_tracks_3d_local_time_segment_partial = functools.partial(
-    #     generate_pose_tracks_3d_local_time_segment,
-    #     base_dir=base_dir,
-    #     environment_id=environment_id,
-    #     pose_reconstruction_3d_inference_id=pose_reconstruction_3d_inference_id,
-    #     max_match_distance=max_match_distance,
-    #     max_iterations_since_last_match=max_iterations_since_last_match,
-    #     centroid_position_initial_sd=centroid_position_initial_sd,
-    #     centroid_velocity_initial_sd=centroid_velocity_initial_sd,
-    #     reference_delta_t_seconds=reference_delta_t_seconds,
-    #     reference_velocity_drift=reference_velocity_drift,
-    #     position_observation_sd=position_observation_sd,
-    #     pose_processing_subdirectory=pose_processing_subdirectory,
-    #     poses_3d_directory_name=poses_3d_directory_name,
-    #     poses_3d_file_name_stem=poses_3d_file_name_stem,
-    #     pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
-    #     pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem,
-    #     pose_tracking_3d_metadata_filename_stem=pose_tracking_3d_metadata_filename_stem
-    # )
     processing_start = time.time()
-    processing_time = time.time() - processing_start
     pose_tracks_3d = None
     if progress_bar:
         if notebook:
@@ -430,6 +410,7 @@ def generate_pose_tracks_3d_local_by_time_segment(
         pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
         pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
     )
+    processing_time = time.time() - processing_start
     logger.info('Processed {:.3f} minutes of 3D poses in {:.3f} minutes (ratio of {:.3f})'.format(
         num_minutes,
         processing_time/60,
