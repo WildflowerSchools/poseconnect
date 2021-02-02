@@ -24,6 +24,8 @@ def update_pose_tracks_3d(
     progress_bar=False,
     notebook=False
 ):
+    if len(poses_3d_df) == 0:
+        return pose_tracks_3d
     if pose_tracks_3d is None:
         initial_timestamp = poses_3d_df['timestamp'].min()
         initial_pose_3d_ids = poses_3d_df.loc[

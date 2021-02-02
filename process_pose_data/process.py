@@ -401,6 +401,8 @@ def generate_pose_tracks_3d_local_by_time_segment(
             poses_3d_directory_name=poses_3d_directory_name,
             poses_3d_file_name_stem=poses_3d_file_name_stem
         )
+        if len(poses_3d_df) == 0:
+            continue
         pose_tracks_3d =  process_pose_data.track_poses.update_pose_tracks_3d(
             poses_3d_df=poses_3d_df,
             pose_tracks_3d=pose_tracks_3d,
