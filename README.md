@@ -4,8 +4,6 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Ensure that we are writing native Python `datetime` objects in pickled dictionary output, not `pandas` `Timestamp` objects
-* Clean up ID naming in `track_poses` (when to append `_local`)
 * Diagnose missing CUWB data in analysis of 19:48-19:55 UTC on Jan 21
 * Diagnose floating pose in output from 19:48-19:55 UTC on Jan 21 and from earlier test night
 * Add ability to write locally generated object IDs to Honeycomb

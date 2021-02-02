@@ -471,7 +471,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     num_pose_tracks = len(pose_tracks_3d)
     pose_tracks_start = min([pose_track_3d['start'] for pose_track_3d in pose_tracks_3d.values()])
     pose_tracks_end = max([pose_track_3d['end'] for pose_track_3d in pose_tracks_3d.values()])
-    num_poses = sum([len(pose_track_3d['pose_ids']) for pose_track_3d in pose_tracks_3d.values()])
+    num_poses = sum([len(pose_track_3d['pose_3d_ids']) for pose_track_3d in pose_tracks_3d.values()])
     num_minutes = (pose_tracks_end - pose_tracks_start).total_seconds()/60
     logger.info('Interpolating {} 3D pose tracks spanning {} poses and {:.3f} minutes: {} to {}'.format(
         num_pose_tracks,
@@ -492,7 +492,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     for pose_track_3d_id, pose_track_3d in pose_track_iterator:
         pose_track_start = pose_track_3d['start']
         pose_track_end = pose_track_3d['end']
-        pose_3d_ids = pose_track_3d['pose_ids']
+        pose_3d_ids = pose_track_3d['pose_3d_ids']
         poses_3d_in_track_df = process_pose_data.fetch_3d_pose_data_local(
             start=pose_track_start,
             end=pose_track_end,
@@ -518,7 +518,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
         pose_tracks_3d_new[pose_track_3d_id] = {
             'start': pd.to_datetime(poses_3d_new_df['timestamp'].min()).to_pydatetime(),
             'end': pd.to_datetime(poses_3d_new_df['timestamp'].max()).to_pydatetime(),
-            'pose_ids': poses_3d_new_df.index.tolist()
+            'pose_3d_ids': poses_3d_new_df.index.tolist()
         }
     process_pose_data.write_3d_pose_track_data_local(
         pose_tracks_3d=pose_tracks_3d_new,

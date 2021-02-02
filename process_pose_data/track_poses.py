@@ -437,7 +437,7 @@ class PoseTrack3D:
         output = {
             'start': pd.to_datetime(self.initial_timestamp).to_pydatetime(),
             'end': pd.to_datetime(self.latest_timestamp).to_pydatetime(),
-            'pose_ids': self.pose_3d_ids
+            'pose_3d_ids': self.pose_3d_ids
         }
         return output
 
