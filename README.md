@@ -4,6 +4,8 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Fix up processing time calculation in `generate_pose_tracks_3d_local_by_time_segment()`
+* Remove commented-out code in `generate_pose_tracks_3d_local_by_time_segment()`
 * Ensure that we are writing native Python `datetime` objects in pickled dictionary output, not `pandas` `Timestamp` objects
 * Write pickled objects rather than JSON objects (to avoid serialization/deserialization problems)
 * Take advantage of eliminating serialization/deserialization to unify `read` operations in `local_io`

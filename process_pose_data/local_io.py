@@ -425,6 +425,23 @@ def write_pose_tracking_3d_metadata_local(
         pose_processing_subdirectory=pose_processing_subdirectory
     )
 
+def write_pose_track_3d_interpolation_metadata_local(
+    pose_track_3d_interpolation_metadata,
+    base_dir,
+    environment_id,
+    pose_processing_subdirectory='pose_processing',
+    pose_track_3d_interpolation_directory_name='pose_track_3d_interpolation',
+    pose_track_3d_interpolation_metadata_filename_stem='pose_track_3d_interpolation'
+):
+    write_metadata_local(
+        metadata=pose_track_3d_interpolation_metadata,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=pose_track_3d_interpolation_directory_name,
+        metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+
 def write_metadata_local(
     metadata,
     base_dir,
@@ -521,6 +538,27 @@ def read_pose_tracking_3d_metadata_local(
         pose_tracking_3d_metadata.get('inference_execution').get('execution_start')
     )
     return pose_tracking_3d_metadata
+
+def read_pose_track_3d_interpolation_metadata_local(
+    inference_id_local,
+    base_dir,
+    environment_id,
+    pose_processing_subdirectory='pose_processing',
+    pose_track_3d_interpolation_directory_name='pose_track_3d_interpolation',
+    pose_track_3d_interpolation_metadata_filename_stem='pose_track_3d_interpolation_metadata'
+):
+    pose_track_3d_interpolation_metadata = read_metadata_local(
+        inference_id_local=inference_id_local,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=pose_track_3d_interpolation_directory_name,
+        metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    pose_track_3d_interpolation_metadata['inference_execution']['execution_start'] = datetime.datetime.fromisoformat(
+        pose_track_3d_interpolation_metadata.get('inference_execution').get('execution_start')
+    )
+    return pose_track_3d_interpolation_metadata
 
 def read_metadata_local(
     inference_id_local,
