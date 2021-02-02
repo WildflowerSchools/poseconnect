@@ -2,6 +2,7 @@ import process_pose_data.local_io
 import process_pose_data.honeycomb_io
 import process_pose_data.analyze
 import process_pose_data.track_poses
+import pandas as pd
 import tqdm
 from uuid import uuid4
 import multiprocessing
@@ -121,7 +122,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         end=end
     )
     num_time_segments = len(time_segment_start_list)
-    num_minutes = (end - start).seconds/60
+    num_minutes = (end - start).total_seconds()/60
     logger.info('Reconstructing 3D poses for {} time segments spanning {:.3f} minutes: {} to {}'.format(
         num_time_segments,
         num_minutes,
@@ -355,7 +356,7 @@ def generate_pose_tracks_3d_local_by_time_segment(
         end=end
     )
     num_time_segments = len(time_segment_start_list)
-    num_minutes = (end - start).seconds/60
+    num_minutes = (end - start).total_seconds()/60
     logger.info('Tracking 3D poses for {} time segments spanning {:.3f} minutes: {} to {}'.format(
         num_time_segments,
         num_minutes,
@@ -515,8 +516,8 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
             poses_3d_file_name_stem=poses_3d_file_name_stem
         )
         pose_tracks_3d_new[pose_track_3d_id] = {
-            'start': poses_3d_new_df['timestamp'].min(),
-            'end': poses_3d_new_df['timestamp'].max(),
+            'start': pd.to_datetime(poses_3d_new_df['timestamp'].min()).to_pydatetime(),
+            'end': pd.to_datetime(poses_3d_new_df['timestamp'].max()).to_pydatetime(),
             'pose_ids': poses_3d_new_df.index.tolist()
         }
     process_pose_data.write_3d_pose_track_data_local(
@@ -570,7 +571,7 @@ def upload_3d_poses_honeycomb(
         end=end
     )
     num_time_segments = len(time_segment_start_list)
-    num_minutes = (end - start).seconds/60
+    num_minutes = (end - start).total_seconds()/60
     logger.info('Uploading 3D poses to Honeycomb for {} time segments spanning {:.3f} minutes: {} to {}'.format(
         num_time_segments,
         num_minutes,

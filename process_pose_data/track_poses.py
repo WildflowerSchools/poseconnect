@@ -58,45 +58,6 @@ def update_pose_tracks_3d(
         )
     return pose_tracks_3d
 
-# def interpolate_pose_tracks_3d(
-#     poses_3d_with_tracks_df,
-#     pose_track_3d_id_column_name='pose_track_3d_id'
-# ):
-#     poses_3d_with_tracks_interpolated = (
-#         poses_3d_with_tracks_df
-#         .groupby(pose_track_3d_id_column_name)
-#         .apply(pose_track_with_interpolation)
-#         .reset_index()
-#     )
-#     return poses_3d_with_tracks_interpolated
-#
-# def pose_track_with_interpolation(pose_track_3d_df):
-#     pose_track_3d_df = pose_track_3d_df.copy()
-#     pose_track_3d_df.dropna(subset=['keypoint_coordinates_3d'])
-#     pose_track_3d_df.sort_values('timestamp', inplace=True)
-#     old_num_poses = len(pose_track_3d_df)
-#     old_index = pd.DatetimeIndex(pose_track_3d_df['timestamp'])
-#     new_index = pd.date_range(
-#         start=pose_track_3d_df['timestamp'].min(),
-#         end=pose_track_3d_df['timestamp'].max(),
-#         freq='100ms',
-#         name='timestamp'
-#     )
-#     new_num_poses = len(new_index)
-#     keypoint_df = pd.DataFrame(
-#         np.stack(pose_track_3d_df['keypoint_coordinates_3d']).reshape((old_num_poses, -1)),
-#         index=old_index
-#     )
-#     keypoint_df_interpolated = keypoint_df.reindex(new_index).interpolate(method='time')
-#     keypoint_array = keypoint_df_interpolated.values.reshape((new_num_poses, -1, 3))
-#     keypoint_array_unstacked = [keypoint_array[i] for i in range(keypoint_array.shape[0])]
-#     pose_track_3d_df_interpolated = pd.Series(
-#         keypoint_array_unstacked,
-#         index=new_index,
-#         name='keypoint_coordinates_3d'
-#     ).to_frame()
-#     return pose_track_3d_df_interpolated
-
 def interpolate_pose_track(pose_track_3d_df):
     if pose_track_3d_df['timestamp'].duplicated().any():
         raise ValueError('Pose data for single pose track contains duplicate timestamps')
@@ -474,8 +435,8 @@ class PoseTrack3D:
 
     def output(self):
         output = {
-            'start': self.initial_timestamp,
-            'end': self.latest_timestamp,
+            'start': pd.to_datetime(self.initial_timestamp).to_pydatetime(),
+            'end': pd.to_datetime(self.latest_timestamp).to_pydatetime(),
             'pose_ids': self.pose_3d_ids
         }
         return output
