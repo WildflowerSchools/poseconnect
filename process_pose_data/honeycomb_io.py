@@ -1859,6 +1859,12 @@ def fetch_person_tag_info(
             start_time=start,
             end_time=end
         )
+        if len(assignment['assigned']['entity_assignments']) > 1:
+            raise ValueError('UWB tag {} has multiple entity assignments in the specified period ({} to {})'.format(
+                assignment.get('assigned', {}).get('name'),
+                start.isoformat(),
+                end.isoformat()
+            ))
     result = list(filter(
         lambda assignment: len(assignment.get('assigned', {}).get('entity_assignments')) == 1,
         result
