@@ -1677,6 +1677,80 @@ def write_pose_tracks_3d(
         raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
     return pose_track_3d_ids
 
+def fetch_uwb_data_data_id(
+    data_id,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result=client.request(
+        request_type='query',
+        request_name='getDatapoint',
+        arguments={
+            'data_id': {
+                'type': 'ID!',
+                'value': data_id
+            }
+        },
+        return_object = [
+            {'source': [
+                {'... on Assignment': [
+                    'assignment_id'
+                ]}
+            ]},
+            {'file': [
+                'data'
+            ]}
+        ]
+    )
+    assignment_id=result.get('source', {}).get('assignment_id')
+    parsed_blob = client.parse_data_blob(result.get('file', {}).get('data'))
+    df = pd.DataFrame(parsed_blob)
+    original_columns = df.columns.tolist()
+    df['assignment_id'] = assignment_id
+    new_columns = ['assignment_id'] + original_columns
+    df = df.reindex(columns=new_columns)
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
+    if df['timestamp'].isna().any():
+        logger.warn('Returned UWB data is missing some timestamp data')
+    df.dropna(subset=['timestamp'], inplace=True)
+    return df
+
+def extract_position_data(
+    df
+):
+    if len(df) == 0:
+        return df
+    df = df.loc[df['type'] == 'position'].copy()
+    df['x_position'] = df['x'] / 1000.0
+    df['y_position'] = df['y'] / 1000.0
+    df['z_position'] = df['z'] / 1000.0
+    df['anchor_count'] = pd.to_numeric(df['anchor_count']).astype('Int64')
+    df['quality'] = pd.to_numeric(df['quality']).astype('Int64')
+    df = df.reindex(columns=[
+        'assignment_id',
+        'timestamp',
+        'object_id',
+        'serial_number',
+        'x_position',
+        'y_position',
+        'z_position',
+        'anchor_count',
+        'quality'
+    ])
+    return df
+
 def fetch_uwb_data_ids(
     datapoint_timestamp_min,
     datapoint_timestamp_max,
