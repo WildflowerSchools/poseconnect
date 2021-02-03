@@ -1818,7 +1818,6 @@ def fetch_person_tag_info(
                 'device_id',
                 'device_type',
                 'name',
-                'serial_number',
                 'tag_id',
                 {'entity_assignments': [
                     'start',
@@ -1874,16 +1873,22 @@ def fetch_person_tag_info(
             'assignment_id': assignment.get('assignment_id'),
             'device_id': assignment.get('assigned', {}).get('device_id'),
             'device_name': assignment.get('assigned', {}).get('name'),
-            'serial_number': assignment.get('assigned', {}).get('serial_number'),
             'tag_id': assignment.get('assigned', {}).get('tag_id'),
             'person_id': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('person_id'),
             'person_type': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('person_type'),
             'person_name': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('name'),
             'short_name': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('short_name')
         })
-
     df = pd.DataFrame(data_list)
+    df.set_index('assignment_id', inplace=True)
     return df
+
+def add_person_tag_info(
+    uwb_data_df,
+    person_tag_info_df
+):
+    uwb_data_df = uwb_data_df.join(person_tag_info_df, on='assignment_id')
+    return uwb_data_df
 
 def generate_client(
     client=None,
