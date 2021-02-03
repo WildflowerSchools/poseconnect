@@ -93,6 +93,20 @@ def interpolate_pose_track(pose_track_3d_df):
     poses_3d_new_df = poses_3d_new_df.reset_index().set_index('pose_3d_id_local')
     return poses_3d_new_df
 
+def convert_pose_tracks_3d_to_df(
+    pose_tracks_3d
+):
+    pose_3d_ids_with_tracks_df_list = list()
+    for pose_track_3d_id, pose_track_3d in pose_tracks_3d.items():
+        pose_3d_ids_with_tracks_single_track_df = pd.DataFrame(
+            {'pose_track_3d_id': pose_track_3d_id},
+            index=pose_track_3d['pose_3d_ids']
+        )
+        pose_3d_ids_with_tracks_single_track_df.index.name='pose_3d_id'
+        pose_3d_ids_with_tracks_df_list.append(pose_3d_ids_with_tracks_single_track_df)
+    pose_3d_ids_with_tracks_df = pd.concat(pose_3d_ids_with_tracks_df_list)
+    return pose_3d_ids_with_tracks_df
+
 def add_short_track_labels(
     poses_3d_with_tracks_df,
     pose_track_3d_id_column_name='pose_track_3d_id'
