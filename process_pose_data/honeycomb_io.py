@@ -1677,6 +1677,140 @@ def write_pose_tracks_3d(
         raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
     return pose_track_3d_ids
 
+def fetch_uwb_data_ids(
+    datapoint_timestamp_min,
+    datapoint_timestamp_max,
+    assignment_ids,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    query_list = [
+        {'field': 'timestamp', 'operator': 'GTE', 'value': datapoint_timestamp_min},
+        {'field': 'timestamp', 'operator': 'LTE', 'value': datapoint_timestamp_max},
+        {'field': 'source', 'operator': 'IN', 'values': assignment_ids}
+    ]
+    return_data = [
+        'data_id'
+    ]
+    id_field_name='data_id'
+    result = search_objects(
+        request_name='searchDatapoints',
+        query_list=query_list,
+        return_data=return_data,
+        id_field_name=id_field_name,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    data_ids = [datum.get('data_id') for datum in result]
+    return data_ids
+
+def fetch_person_tag_info(
+    start,
+    end,
+    environment_id,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    query_list = [
+        {'field': 'environment', 'operator': 'EQ', 'value': environment_id},
+        {'field': 'start', 'operator': 'LTE', 'value': end},
+        {'operator': 'OR', 'children': [
+            {'field': 'end', 'operator': 'ISNULL'},
+            {'field': 'end', 'operator': 'GTE', 'value': start},
+        ]},
+        {'field': 'assigned_type', 'operator': 'EQ', 'value': 'DEVICE'}
+    ]
+    return_data = [
+        'assignment_id',
+        'start',
+        'end',
+        {'assigned': [
+            {'... on Device': [
+                'device_id',
+                'device_type',
+                'name',
+                'serial_number',
+                'tag_id',
+                {'entity_assignments': [
+                    'start',
+                    'end',
+                    'entity_type',
+                    {'entity': [
+                        {'...on Person': [
+                            'person_id',
+                            'person_type',
+                            'name',
+                            'short_name'
+                        ]}
+                    ]}
+                ]}
+            ]}
+        ]}
+    ]
+    id_field_name='assignment_id'
+    result = search_objects(
+        request_name='searchAssignments',
+        query_list=query_list,
+        return_data=return_data,
+        id_field_name=id_field_name,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result = list(filter(
+        lambda assignment: assignment.get('assigned', {}).get('device_type') == 'UWBTAG',
+        result
+    ))
+    for assignment in result:
+        assignment['assigned']['entity_assignments'] = minimal_honeycomb.filter_assignments(
+            assignments=assignment['assigned']['entity_assignments'],
+            start_time=start,
+            end_time=end
+        )
+    result = list(filter(
+        lambda assignment: len(assignment.get('assigned', {}).get('entity_assignments')) == 1,
+        result
+    ))
+    result = list(filter(
+        lambda assignment: assignment.get('assigned', {}).get('entity_assignments')[0].get('entity_type') == 'PERSON',
+        result
+    ))
+    data_list=list()
+    for assignment in result:
+        data_list.append({
+            'assignment_id': assignment.get('assignment_id'),
+            'device_id': assignment.get('assigned', {}).get('device_id'),
+            'device_name': assignment.get('assigned', {}).get('name'),
+            'serial_number': assignment.get('assigned', {}).get('serial_number'),
+            'tag_id': assignment.get('assigned', {}).get('tag_id'),
+            'person_id': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('person_id'),
+            'person_type': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('person_type'),
+            'person_name': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('name'),
+            'short_name': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('short_name')
+        })
+
+    df = pd.DataFrame(data_list)
+    return df
+
 def generate_client(
     client=None,
     uri=None,
