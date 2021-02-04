@@ -506,6 +506,8 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
             poses_3d_file_name_stem=poses_3d_file_name_stem
         )
         poses_3d_new_df = process_pose_data.interpolate_pose_track(poses_3d_in_track_df)
+        if len(poses_3d_new_df) == 0:
+            continue
         process_pose_data.write_3d_pose_data_local(
             poses_3d_df=poses_3d_new_df,
             base_dir=base_dir,
