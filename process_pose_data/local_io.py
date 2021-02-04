@@ -497,6 +497,53 @@ def fetch_position_data_local_time_segment(
         raise ValueError("Specified inference ID must be of type str, list, tuple, or set")
     return position_data_df_time_segment
 
+def write_pose_track_3d_identification_data_local(
+    pose_track_identification_df,
+    base_dir,
+    environment_id,
+    inference_id_local,
+    pose_processing_subdirectory='pose_processing',
+    pose_track_3d_identification_directory_name='pose_track_3d_identification',
+    pose_track_3d_identification_file_name_stem='pose_track_3d_identification'
+):
+    directory = os.path.join(
+        base_dir,
+        pose_processing_subdirectory,
+        environment_id,
+        pose_track_3d_identification_directory_name
+    )
+    filename = '{}_{}.pkl'.format(
+        pose_track_3d_identification_file_name_stem,
+        inference_id_local
+    )
+    path = os.path.join(
+        directory,
+        filename
+    )
+    os.makedirs(directory, exist_ok=True)
+    pose_track_identification_df.to_pickle(path)
+
+def fetch_pose_track_3d_identification_data_local(
+    base_dir,
+    environment_id,
+    inference_id_local,
+    pose_processing_subdirectory='pose_processing',
+    pose_track_3d_identification_directory_name='pose_track_3d_identification',
+    pose_track_3d_identification_file_name_stem='pose_track_3d_identification'
+):
+    path=os.path.join(
+        base_dir,
+        pose_processing_subdirectory,
+        environment_id,
+        pose_track_3d_identification_directory_name,
+        '{}_{}.pkl'.format(
+            pose_track_3d_identification_file_name_stem,
+            inference_id_local
+        )
+    )
+    pose_track_identification_df = pd.read_pickle(path)
+    return pose_track_identification_df
+
 def write_metadata_local(
     metadata,
     base_dir,

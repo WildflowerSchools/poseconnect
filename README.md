@@ -6,6 +6,8 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 * Make processing function for identifying tracks
 * Make functions for fetching poses with pose track IDs, person IDs
+* Boil all local IO operations down to read/write by time segment or not by time segment
+* Consider getting rid of all distinctions between local and remote IDs in naming
 * Fix up overlay functions so they cope if overlay already exists
 * Fix up video overlay function to flexibly handle different kinds of output (poses, poses with track labels, poses with person info)
 * Make video overlay function use multiple cores
