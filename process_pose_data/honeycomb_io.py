@@ -1704,6 +1704,7 @@ def fetch_uwb_data_data_id(
             }
         },
         return_object = [
+            'timestamp',
             {'source': [
                 {'... on Assignment': [
                     'assignment_id'
@@ -1714,6 +1715,7 @@ def fetch_uwb_data_data_id(
             ]}
         ]
     )
+    datapoint_timestamp=minimal_honeycomb.from_honeycomb_datetime(result.get('timestamp'))
     assignment_id=result.get('source', {}).get('assignment_id')
     parsed_blob = client.parse_data_blob(result.get('file', {}).get('data'))
     df = pd.DataFrame(parsed_blob)
@@ -1724,7 +1726,16 @@ def fetch_uwb_data_data_id(
     df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     if df['timestamp'].isna().any():
         logger.warn('Returned UWB data is missing some timestamp data')
-    df.dropna(subset=['timestamp'], inplace=True)
+    df = df.dropna(subset=['timestamp']).reset_index(drop=True)
+    logger.info('Datapoint {} with timestamp {} yielded {} observations from {} to {}. Serial numbers: {}. Types: {}'.format(
+        data_id,
+        datapoint_timestamp.isoformat(),
+        len(df),
+        df['timestamp'].min().isoformat(),
+        df['timestamp'].max().isoformat(),
+        df['serial_number'].value_counts().to_dict(),
+        df['type'].value_counts().to_dict()
+    ))
     return df
 
 def extract_position_data(
@@ -1732,12 +1743,13 @@ def extract_position_data(
 ):
     if len(df) == 0:
         return df
-    df = df.loc[df['type'] == 'position'].copy()
-    df['x_position'] = df['x'] / 1000.0
-    df['y_position'] = df['y'] / 1000.0
-    df['z_position'] = df['z'] / 1000.0
-    df['anchor_count'] = pd.to_numeric(df['anchor_count']).astype('Int64')
-    df['quality'] = pd.to_numeric(df['quality']).astype('Int64')
+    df = df.loc[df['type'] == 'position'].copy().reset_index(drop=True)
+    if len(df) != 0:
+        df['x_position'] = df['x'] / 1000.0
+        df['y_position'] = df['y'] / 1000.0
+        df['z_position'] = df['z'] / 1000.0
+        df['anchor_count'] = pd.to_numeric(df['anchor_count']).astype('Int64')
+        df['quality'] = pd.to_numeric(df['quality']).astype('Int64')
     df = df.reindex(columns=[
         'assignment_id',
         'timestamp',

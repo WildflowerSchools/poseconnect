@@ -21,22 +21,64 @@ def generate_track_identification(
     )
     return identification_df
 
+# def resample_uwb_data(
+#     uwb_data_df
+# ):
+#     uwb_data_resampled_df = (
+#         uwb_data_df
+#         .set_index('timestamp')
+#         .groupby('person_id')
+#         .apply(resample_uwb_data_person)
+#         .reset_index()
+#     )
+#     return uwb_data_resampled_df
+#
+# def resample_uwb_data_person(
+#     uwb_data_person_df
+# ):
+#     uwb_data_person_df = uwb_data_person_df.drop(columns='person_id')
+#     old_index = uwb_data_person_df.index
+#     new_index = pd.date_range(
+#         start = old_index.min().ceil('100ms'),
+#         end = old_index.max().floor('100ms'),
+#         freq = '100ms',
+#         name='timestamp'
+#     )
+#     combined_index = old_index.union(new_index).sort_values()
+#     uwb_data_person_combined_index_df = uwb_data_person_df.reindex(combined_index)
+#     uwb_data_person_combined_index_interpolated_df = uwb_data_person_combined_index_df.interpolate(method='time')
+#     uwb_data_person_new_index_interpolated_df = uwb_data_person_combined_index_interpolated_df.reindex(new_index)
+#     return uwb_data_person_new_index_interpolated_df
+
 def resample_uwb_data(
-    uwb_data_df
+    uwb_data_df,
+    id_field_names=['person_id'],
+    interpolation_field_names = ['x_position', 'y_position', 'z_position'],
+    timestamp_field_name='timestamp'
 ):
+    if len(uwb_data_df) == 0:
+        return uwb_data_df
     uwb_data_resampled_df = (
         uwb_data_df
-        .set_index('timestamp')
-        .groupby('person_id')
-        .apply(resample_uwb_data_person)
         .reset_index()
+        .set_index(timestamp_field_name)
+        .groupby(id_field_names)
+        .apply(
+            lambda group_df: resample_uwb_data_person(
+                uwb_data_person_df=group_df,
+                interpolation_field_names=interpolation_field_names
+            )
+        )
+        .reset_index()
+        .reindex(columns = [timestamp_field_name] + id_field_names + interpolation_field_names)
     )
     return uwb_data_resampled_df
 
 def resample_uwb_data_person(
-    uwb_data_person_df
+    uwb_data_person_df,
+    interpolation_field_names = ['x_position', 'y_position', 'z_position']
 ):
-    uwb_data_person_df = uwb_data_person_df.drop(columns='person_id')
+    uwb_data_person_df = uwb_data_person_df.reindex(columns=interpolation_field_names)
     old_index = uwb_data_person_df.index
     new_index = pd.date_range(
         start = old_index.min().ceil('100ms'),
@@ -45,10 +87,10 @@ def resample_uwb_data_person(
         name='timestamp'
     )
     combined_index = old_index.union(new_index).sort_values()
-    uwb_data_person_combined_index_df = uwb_data_person_df.reindex(combined_index)
-    uwb_data_person_combined_index_interpolated_df = uwb_data_person_combined_index_df.interpolate(method='time')
-    uwb_data_person_new_index_interpolated_df = uwb_data_person_combined_index_interpolated_df.reindex(new_index)
-    return uwb_data_person_new_index_interpolated_df
+    uwb_data_person_df = uwb_data_person_df.reindex(combined_index)
+    uwb_data_person_df = uwb_data_person_df.interpolate(method='time')
+    uwb_data_person_df = uwb_data_person_df.reindex(new_index)
+    return uwb_data_person_df
 
 def extract_sensor_position_data(
     poses_3d_with_tracks_df,

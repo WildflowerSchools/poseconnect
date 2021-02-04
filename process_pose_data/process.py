@@ -2,6 +2,7 @@ import process_pose_data.local_io
 import process_pose_data.honeycomb_io
 import process_pose_data.analyze
 import process_pose_data.track_poses
+import process_pose_data.identify
 import pandas as pd
 import tqdm
 from uuid import uuid4
@@ -536,6 +537,180 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     ))
     return pose_track_3d_interpolation_inference_id_local
 
+def download_position_data_by_datapoint(
+    datapoint_timestamp_min,
+    datapoint_timestamp_max,
+    start,
+    end,
+    base_dir,
+    environment_id,
+    pose_processing_subdirectory='pose_processing',
+    position_data_directory_name='position_data',
+    position_data_file_name_stem='position_data',
+    download_position_data_metadata_filename_stem='download_position_data_metadata',
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None,
+    progress_bar=False,
+    notebook=False
+):
+    if datapoint_timestamp_min.tzinfo is None:
+        logger.info('Specified minimum datapoint timestamp is timezone-naive. Assuming UTC')
+        datapoint_timestamp_min=datapoint_timestamp_min.replace(tzinfo=datetime.timezone.utc)
+    if datapoint_timestamp_max.tzinfo is None:
+        logger.info('Specified maximum datapoint timestamp is timezone-naive. Assuming UTC')
+        datapoint_timestamp_max=datapoint_timestamp_max.replace(tzinfo=datetime.timezone.utc)
+    if start.tzinfo is None:
+        logger.info('Specified start is timezone-naive. Assuming UTC')
+        start=start.replace(tzinfo=datetime.timezone.utc)
+    if end.tzinfo is None:
+        logger.info('Specified end is timezone-naive. Assuming UTC')
+        end=end.replace(tzinfo=datetime.timezone.utc)
+    logger.info('Downloading person position data from Honeycomb. Base directory: {}. Pose processing data subdirectory: {}. Environment ID: {}. Start: {}. End: {}'.format(
+        base_dir,
+        pose_processing_subdirectory,
+        environment_id,
+        start,
+        end
+    ))
+    processing_start = time.time()
+    logger.info('Generating metadata')
+    download_position_data_metadata = generate_download_position_data_metadata(
+        datapoint_timestamp_min=datapoint_timestamp_min,
+        datapoint_timestamp_max=datapoint_timestamp_max,
+        start=start,
+        end=end,
+        environment_id=environment_id
+    )
+    download_position_data_inference_id_local = download_position_data_metadata.get('inference_execution').get('inference_id_local')
+    logger.info('Writing inference metadata to local file')
+    process_pose_data.local_io.write_metadata_local(
+        metadata=download_position_data_metadata,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=position_data_directory_name,
+        metadata_filename_stem=download_position_data_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    logger.info('Generating list of time segments')
+    time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
+        start=start,
+        end=end
+    )
+    num_time_segments = len(time_segment_start_list)
+    num_minutes = (end - start).total_seconds()/60
+    logger.info('Downloading position data for {} time segments spanning {:.3f} minutes: {} to {}'.format(
+        num_time_segments,
+        num_minutes,
+        time_segment_start_list[0].isoformat(),
+        time_segment_start_list[-1].isoformat()
+    ))
+    logger.info('Fetching person tag info from Honeycomb for specified environment and time span')
+    person_tag_info_df = process_pose_data.honeycomb_io.fetch_person_tag_info(
+        start=start,
+        end=end,
+        environment_id=environment_id,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    assignment_ids = person_tag_info_df.index.tolist()
+    logger.info('Found {} tags for specified environment and time span'.format(
+        len(assignment_ids)
+    ))
+    logger.info('Fetching UWB datapoint IDs for these tags and specified datapoint timestamp min/max')
+    data_ids = process_pose_data.honeycomb_io.fetch_uwb_data_ids(
+        datapoint_timestamp_min=datapoint_timestamp_min,
+        datapoint_timestamp_max=datapoint_timestamp_max,
+        assignment_ids=assignment_ids,
+        chunk_size=chunk_size,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
+    )
+    logger.info('Found {} UWB datapoint IDs for these tags and specified datapoint timestamp min/max'.format(
+        len(data_ids)
+    ))
+    logger.info('Fetching position data from each of these UWB datapoints and writing to local files')
+    if progress_bar:
+        if notebook:
+            data_id_iterator = tqdm.notebook.tqdm(data_ids)
+        else:
+            data_id_iterator = tqdm.tqdm(data_ids)
+    else:
+        data_id_iterator = data_ids
+    for data_id in data_id_iterator:
+        position_data_df = process_pose_data.honeycomb_io.fetch_uwb_data_data_id(
+            data_id=data_id,
+            client=None,
+            uri=None,
+            token_uri=None,
+            audience=None,
+            client_id=None,
+            client_secret=None
+        )
+        if len(position_data_df) == 0:
+            continue
+        position_data_df = process_pose_data.honeycomb_io.extract_position_data(
+            df=position_data_df
+        )
+        if len(position_data_df) == 0:
+            continue
+        position_data_df = process_pose_data.identify.resample_uwb_data(
+            uwb_data_df=position_data_df,
+            id_field_names=[
+                'assignment_id',
+                'object_id',
+                'serial_number',
+            ],
+            interpolation_field_names=[
+                'x_position',
+                'y_position',
+                'z_position'
+            ],
+            timestamp_field_name='timestamp'
+        )
+        position_data_df = process_pose_data.honeycomb_io.add_person_tag_info(
+            uwb_data_df=position_data_df,
+            person_tag_info_df=person_tag_info_df
+        )
+        for time_segment_start in time_segment_start_list:
+            position_data_time_segment_df = position_data_df.loc[
+                (position_data_df['timestamp'] >= time_segment_start) &
+                (position_data_df['timestamp'] < time_segment_start + datetime.timedelta(seconds=10))
+            ].reset_index(drop=True)
+            if len(position_data_time_segment_df) == 0:
+                continue
+            process_pose_data.local_io.write_position_data_local_time_segment(
+                position_data_df=position_data_time_segment_df,
+                base_dir=base_dir,
+                environment_id=environment_id,
+                time_segment_start=time_segment_start,
+                inference_id_local=download_position_data_inference_id_local,
+                append=True,
+                pose_processing_subdirectory=pose_processing_subdirectory,
+                position_data_directory_name=position_data_directory_name,
+                position_data_file_name_stem=position_data_file_name_stem
+            )
+    processing_time = time.time() - processing_start
+    logger.info('Downloaded {:.3f} minutes of position data in {:.3f} minutes (ratio of {:.3f})'.format(
+        num_minutes,
+        processing_time/60,
+        (processing_time/60)/num_minutes
+    ))
+    return download_position_data_inference_id_local
+
 def upload_3d_poses_honeycomb(
     inference_id_local,
     base_dir,
@@ -852,6 +1027,27 @@ def generate_pose_track_3d_interpolation_metadata(
     }
     return pose_track_3d_interpolation_metadata
 
+def generate_download_position_data_metadata(
+    datapoint_timestamp_min,
+    datapoint_timestamp_max,
+    start,
+    end,
+    environment_id
+):
+    logger.info('Generating inference execution object')
+    inference_execution = generate_download_position_data_inference_execution(
+        environment_id
+    )
+    download_position_data_metadata = {
+        'inference_execution': inference_execution,
+        'datapoint_timestamp_min': datapoint_timestamp_min,
+        'datapoint_timestamp_max': datapoint_timestamp_max,
+        'start': start,
+        'end': end,
+        'environment_id': environment_id,
+    }
+    return download_position_data_metadata
+
 def generate_pose_reconstruction_3d_inference_execution(
     environment_id,
     start,
@@ -914,6 +1110,28 @@ def generate_pose_track_3d_interpolation_inference_execution(
         environment_id
     )
     inference_execution_model = 'process_pose_data.process.interpolate_pose_tracks_3d_local_by_pose_track'
+    inference_execution_version = '2.4.0'
+    inference_execution = {
+        'inference_id_local': inference_id_local,
+        'name': inference_execution_name,
+        'notes': inference_execution_notes,
+        'model': inference_execution_model,
+        'version': inference_execution_version,
+        'execution_start': inference_execution_start,
+
+    }
+    return inference_execution
+
+def generate_download_position_data_inference_execution(
+    environment_id
+):
+    inference_id_local = uuid4().hex
+    inference_execution_start = datetime.datetime.now(tz=datetime.timezone.utc)
+    inference_execution_name = 'Download UWB position data'
+    inference_execution_notes = 'Environment: {}'.format(
+        environment_id
+    )
+    inference_execution_model = 'process_pose_data.process.download_position_data_by_datapoint'
     inference_execution_version = '2.4.0'
     inference_execution = {
         'inference_id_local': inference_id_local,

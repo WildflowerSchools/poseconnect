@@ -391,6 +391,112 @@ def delete_3d_pose_track_data_local(
     if os.path.exists(path):
         os.remove(path)
 
+def write_position_data_local_time_segment(
+    position_data_df,
+    base_dir,
+    environment_id,
+    time_segment_start,
+    inference_id_local,
+    append=False,
+    pose_processing_subdirectory='pose_processing',
+    position_data_directory_name='position_data',
+    position_data_file_name_stem='position_data'
+):
+    directory_path = position_data_directory_path_time_segment(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        time_segment_start=time_segment_start,
+        pose_processing_subdirectory=pose_processing_subdirectory,
+        position_data_directory_name=position_data_directory_name
+    )
+    file_name = '{}_{}.pkl'.format(
+        position_data_file_name_stem,
+        inference_id_local
+    )
+    os.makedirs(directory_path, exist_ok=True)
+    file_path = os.path.join(
+        directory_path,
+        file_name
+    )
+    if append and os.path.exists(file_path):
+        existing_position_data_df = pd.read_pickle(file_path)
+        position_data_df = pd.concat((existing_position_data_df, position_data_df)).sort_values('timestamp').reset_index(drop=True)
+    position_data_df.to_pickle(file_path)
+
+def fetch_position_data_local(
+    start,
+    end,
+    base_dir,
+    environment_id,
+    inference_id_local,
+    pose_processing_subdirectory='pose_processing',
+    position_data_directory_name='position_data',
+    position_data_file_name_stem='position_data'
+):
+    time_segment_start_list = generate_time_segment_start_list(
+        start,
+        end
+    )
+    position_data_df_list = list()
+    for time_segment_start in time_segment_start_list:
+        pposition_data_df_time_segment = fetch_position_data_local_time_segment(
+            time_segment_start,
+            base_dir=base_dir,
+            environment_id=environment_id,
+            inference_id_local=inference_id_local,
+            pose_processing_subdirectory=pose_processing_subdirectory,
+            position_data_directory_name=position_data_directory_name,
+            position_data_file_name_stem=position_data_file_name_stem
+        )
+        position_data_df_list.append(pposition_data_df_time_segment)
+    position_data_df = pd.concat(position_data_df_list)
+    return position_data_df
+
+def fetch_position_data_local_time_segment(
+    time_segment_start,
+    base_dir,
+    environment_id,
+    inference_id_local,
+    pose_processing_subdirectory='pose_processing',
+    position_data_directory_name='position_data',
+    position_data_file_name_stem='position_data'
+):
+    if isinstance(inference_id_local, str):
+        path=position_data_path_time_segment(
+            base_dir=base_dir,
+            environment_id=environment_id,
+            inference_id_local=inference_id_local,
+            time_segment_start=time_segment_start,
+            pose_processing_subdirectory=pose_processing_subdirectory,
+            position_data_directory_name=position_data_directory_name,
+            position_data_file_name_stem=position_data_file_name_stem
+        )
+        if os.path.exists(path):
+            position_data_df_time_segment = pd.read_pickle(path)
+        else:
+            position_data_df_time_segment = pd.DataFrame()
+    elif isinstance(inference_id_local, (list, tuple, set)):
+        position_data_dfs_time_segment=list()
+        for inference_id_local_element in inference_id_local:
+            path=position_data_path_time_segment(
+                base_dir=base_dir,
+                environment_id=environment_id,
+                inference_id_local=inference_id_local_element,
+                time_segment_start=time_segment_start,
+                pose_processing_subdirectory=pose_processing_subdirectory,
+                position_data_directory_name=position_data_directory_name,
+                position_data_file_name_stem=position_data_file_name_stem
+            )
+            if os.path.exists(path):
+                position_data_df_time_segment_id = pd.read_pickle(path)
+            else:
+                position_data_df_time_segment_id = pd.DataFrame()
+            position_data_dfs_time_segment.append(position_data_df_time_segment_id)
+        position_data_df_time_segment = pd.concat(position_data_dfs_time_segment).sort_values('timestamp')
+    else:
+        raise ValueError("Specified inference ID must be of type str, list, tuple, or set")
+    return position_data_df_time_segment
+
 def write_metadata_local(
     metadata,
     base_dir,
@@ -582,6 +688,56 @@ def pose_3d_data_directory_path_time_segment(
         pose_processing_subdirectory,
         environment_id,
         poses_3d_directory_name,
+        '{:04d}'.format(time_segment_start_utc.year),
+        '{:02d}'.format(time_segment_start_utc.month),
+        '{:02d}'.format(time_segment_start_utc.day),
+        '{:02d}-{:02d}-{:02d}'.format(
+            time_segment_start_utc.hour,
+            time_segment_start_utc.minute,
+            time_segment_start_utc.second,
+        )
+    )
+    return path
+
+def position_data_path_time_segment(
+    base_dir,
+    environment_id,
+    inference_id_local,
+    time_segment_start,
+    pose_processing_subdirectory='pose_processing',
+    position_data_directory_name='position_data',
+    position_data_file_name_stem='position_data'
+):
+    directory_path = position_data_directory_path_time_segment(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        time_segment_start=time_segment_start,
+        pose_processing_subdirectory=pose_processing_subdirectory,
+        position_data_directory_name=position_data_directory_name
+    )
+    file_name='{}_{}.pkl'.format(
+        position_data_file_name_stem,
+        inference_id_local
+    )
+    path = os.path.join(
+        directory_path,
+        file_name
+    )
+    return path
+
+def position_data_directory_path_time_segment(
+    base_dir,
+    environment_id,
+    time_segment_start,
+    pose_processing_subdirectory='pose_processing',
+    position_data_directory_name='position_data'
+):
+    time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
+    path = os.path.join(
+        base_dir,
+        pose_processing_subdirectory,
+        environment_id,
+        position_data_directory_name,
         '{:04d}'.format(time_segment_start_utc.year),
         '{:02d}'.format(time_segment_start_utc.month),
         '{:02d}'.format(time_segment_start_utc.day),

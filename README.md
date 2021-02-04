@@ -4,26 +4,33 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Make processing function for identifying tracks
+* Make functions for fetching poses with pose track IDs, person IDs
+* Fix up overlay functions so they cope if overlay already exists
+* Fix up video overlay function to flexibly handle different kinds of output (poses, poses with track labels, poses with person info)
+* Make video overlay function use multiple cores
+* Rewrite `overlay.overlay_video_poses_2d()` to match functionality of `overlay.overlay_video_poses_3d()` (e.g., more flexible specification of videos, concatenation)
+* Extend ability to set output container and code to all overlay functions
+* Add ability to overlay for a time range (batch processing)
+* Loosen checks on overlap between pose data and video data (go ahead as long as there is _some_ overlap)
+* Allow specification of active person tags during identification (so it ignores others)
+* Figure out how to make code source package version number
 * Diagnose missing CUWB data in analysis of 19:48-19:55 UTC on Jan 21
 * Diagnose floating pose in output from 19:48-19:55 UTC on Jan 21 and from earlier test night
-* Add ability to write locally generated object IDs to Honeycomb
-* Create separate workers for 3D pose reconstruction, 3D pose tracking, 3D pose track interpolation, and 3D pose track identification (saving output from each stage locally)
-* Create separate workers for uploading to Honeycomb 3D poses, 3D pose tracks, interpolated 3D pose tracks, 3D pose identification, 3D pose track identification
+* Consider restricting to  _x_ and _y_ position data when identifying tracks (_z_ position data seems noisy)
+* Add additional machinery for checking UWB data integrity (e.g., duplicates)
+* Add omnibus process function that runs the others in sequence
+* Add endpoints for all processing functions
+* Add `poses_2d_json_format` option to `reconstruct_poses_3d` entry point
 * Clean up argument ordering in `reconstruct_poses_3d_alphapose_local_time_segment`
+* Add ability to write locally generated object IDs to Honeycomb
+* Create separate workers for uploading to Honeycomb 3D poses, 3D pose tracks, interpolated 3D pose tracks, 3D pose identification, 3D pose track identification
 * Retool `generate_inference_metadata_reconstruct_3d_poses_alphapose_local` to exclude cameras without calibration data
 * Make function to delete Honeycomb inference executions
 * Make function to delete local inference metadata
 * Make function to delete local 3D pose files
 * Make function for deleting local 3D pose data
-* Fix up overlay functions so they cope if overlay already exists
-* Figure out how to make code source package version number
-* Add `poses_2d_json_format` option to `reconstruct_poses_3d` entry point
-* Parallellize 3D pose overlay function
 * Rewrite all log messages so formatting isn't called if log isn't printed
-* Rewrite `overlay.overlay_video_poses_2d()` to match functionality of `overlay.overlay_video_poses_3d()` (e.g., more flexible specification of videos, concatenation)
-* Extend ability to set output container and code to all overlay functions
-* Loosen checks on overlap between pose data and video data (go ahead as long as there is _some_ overlap)
-* Add ability to overlay for a time range (batch processing)
 * Dockerize pipeline
 * Set up pipeline for Airflow
 * Make functions handle empty poses (all keypoints `NaN`) more gracefully (e.g., `score_pose_pairs()`, `draw_pose_2d()`)
