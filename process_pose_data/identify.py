@@ -126,14 +126,16 @@ def calculate_track_identification(
 
 def identify_poses(
     poses_3d_with_tracks_and_sensor_positions_df,
-    uwb_data_resampled_df
+    uwb_data_resampled_df,
+    active_person_ids=None
 ):
     pose_identification_timestamp_df_list = list()
     for timestamp, poses_3d_with_tracks_and_sensor_positions_timestamp_df in poses_3d_with_tracks_and_sensor_positions_df.groupby('timestamp'):
         uwb_data_resampled_timestamp_df = uwb_data_resampled_df.loc[uwb_data_resampled_df['timestamp'] == timestamp]
         pose_identification_timestamp_df = identify_poses_timestamp(
             poses_3d_with_tracks_and_sensor_positions_timestamp_df=poses_3d_with_tracks_and_sensor_positions_timestamp_df,
-            uwb_data_resampled_timestamp_df=uwb_data_resampled_timestamp_df
+            uwb_data_resampled_timestamp_df=uwb_data_resampled_timestamp_df,
+            active_person_ids=active_person_ids
         )
         pose_identification_timestamp_df_list.append(pose_identification_timestamp_df)
     pose_identification_df = pd.concat(pose_identification_timestamp_df_list)
@@ -141,7 +143,8 @@ def identify_poses(
 
 def identify_poses_timestamp(
     poses_3d_with_tracks_and_sensor_positions_timestamp_df,
-    uwb_data_resampled_timestamp_df
+    uwb_data_resampled_timestamp_df,
+    active_person_ids=None
 ):
     timestamp_poses_3d = None
     if len(poses_3d_with_tracks_and_sensor_positions_timestamp_df) > 0:
@@ -172,6 +175,8 @@ def identify_poses_timestamp(
     num_pose_tracks_3d = len(poses_3d_with_tracks_and_sensor_positions_timestamp_df)
     pose_track_3d_ids = poses_3d_with_tracks_and_sensor_positions_timestamp_df['pose_track_3d_id'].values
     pose_track_3d_positions = poses_3d_with_tracks_and_sensor_positions_timestamp_df.loc[:, ['x_position', 'y_position', 'z_position']].values
+    if active_person_ids is not None:
+        uwb_data_resampled_timestamp_df = uwb_data_resampled_timestamp_df.loc[uwb_data_resampled_timestamp_df['person_id'].isin(active_person_ids)]
     num_persons = len(uwb_data_resampled_timestamp_df)
     person_ids = uwb_data_resampled_timestamp_df['person_id'].values
     uwb_positions = uwb_data_resampled_timestamp_df.loc[:, ['x_position', 'y_position', 'z_position']].values

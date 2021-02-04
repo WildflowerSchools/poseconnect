@@ -719,6 +719,7 @@ def identify_pose_tracks_3d_local_by_segment(
     download_position_data_inference_id,
     pose_track_3d_interpolation_inference_id,
     sensor_position_keypoint_index=10,
+    active_person_ids=None,
     pose_processing_subdirectory='pose_processing',
     position_data_directory_name='position_data',
     position_data_file_name_stem='position_data',
@@ -841,7 +842,8 @@ def identify_pose_tracks_3d_local_by_segment(
         # Identify poses
         pose_identification_time_segment_df = process_pose_data.identify.identify_poses(
             poses_3d_with_tracks_and_sensor_positions_df=poses_3d_with_tracks_and_sensor_positions_time_segment_df,
-            uwb_data_resampled_df=uwb_data_resampled_time_segment_df
+            uwb_data_resampled_df=uwb_data_resampled_time_segment_df,
+            active_person_ids=active_person_ids
         )
         # Add to list
         pose_identification_time_segment_df_list.append(pose_identification_time_segment_df)
