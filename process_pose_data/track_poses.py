@@ -273,6 +273,11 @@ class PoseTracks3D:
         num_poses_min=11,
         inplace=False
     ):
+        print('Fitering pose tracks. num_poses_min= {}. Before filtering, {} active tracks and {} inactive tracks'.format(
+            num_poses_min,
+            len(self.active_tracks),
+            len(self.inactive_tracks)
+        ))
         if not inplace:
             new_pose_tracks_3d = copy.deepcopy(self)
         else:
@@ -284,6 +289,10 @@ class PoseTracks3D:
         new_pose_tracks_3dinactive_tracks = dict(filter(
             lambda key_value_tuple: key_value_tuple[1].num_poses() >= num_poses_min,
             new_pose_tracks_3d.inactive_tracks.items()
+        ))
+        print('After filtering, {} active tracks and {} inactive tracks'.format(
+            len(self.active_tracks),
+            len(self.inactive_tracks)
         ))
         if not inplace:
             return new_pose_tracks_3d
