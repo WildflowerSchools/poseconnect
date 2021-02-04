@@ -286,7 +286,7 @@ class PoseTracks3D:
             lambda key_value_tuple: key_value_tuple[1].num_poses() >= num_poses_min,
             new_pose_tracks_3d.active_tracks.items()
         ))
-        new_pose_tracks_3dinactive_tracks = dict(filter(
+        new_pose_tracks_3d.inactive_tracks = dict(filter(
             lambda key_value_tuple: key_value_tuple[1].num_poses() >= num_poses_min,
             new_pose_tracks_3d.inactive_tracks.items()
         ))
