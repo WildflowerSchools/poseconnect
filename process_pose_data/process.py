@@ -398,11 +398,13 @@ def generate_pose_tracks_3d_local_by_time_segment(
             progress_bar=False,
             notebook=False
         )
+    print({pose_track_3d_id: pose_track_3d.num_poses() for pose_track_3d_id, pose_track_3d in pose_tracks_3d.tracks().values()})
     if num_poses_per_track_min is not None:
         pose_tracks_3d.filter(
             num_poses_min=num_poses_per_track_min,
             inplace=True
         )
+    print({pose_track_3d_id: pose_track_3d.num_poses() for pose_track_3d_id, pose_track_3d in pose_tracks_3d.tracks().values()})
     process_pose_data.local_io.write_3d_pose_track_data_local(
         pose_tracks_3d=pose_tracks_3d.output(),
         base_dir=base_dir,
