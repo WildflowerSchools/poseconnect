@@ -584,7 +584,7 @@ def draw_pose_2d_opencv(
                     color=pose_color,
                     alpha=keypoint_connector_alpha
                 )
-    if pose_label is not None:
+    if pd.notna(pose_label):
         pose_label_anchor = np.nanmean(keypoint_coordinates, axis=0)
         text_box_size, baseline = cv.getTextSize(
             text=str(pose_label),
