@@ -722,6 +722,7 @@ def identify_pose_tracks_3d_local_by_segment(
     pose_track_3d_interpolation_inference_id,
     sensor_position_keypoint_index=10,
     active_person_ids=None,
+    return_match_statistics=False,
     pose_processing_subdirectory='pose_processing',
     position_data_directory_name='position_data',
     position_data_file_name_stem='position_data',
@@ -811,6 +812,8 @@ def identify_pose_tracks_3d_local_by_segment(
     else:
         time_segment_start_iterator = time_segment_start_list
     pose_identification_time_segment_df_list = list()
+    if return_match_statistics:
+        match_statistics_time_segment_df_list = list()
     for time_segment_start in time_segment_start_iterator:
         # Fetch 3D poses with tracks
         poses_3d_time_segment_df = process_pose_data.local_io.fetch_3d_pose_data_local_time_segment(
@@ -842,11 +845,21 @@ def identify_pose_tracks_3d_local_by_segment(
             position_data_file_name_stem=position_data_file_name_stem
         )
         # Identify poses
-        pose_identification_time_segment_df = process_pose_data.identify.identify_poses(
-            poses_3d_with_tracks_and_sensor_positions_df=poses_3d_with_tracks_and_sensor_positions_time_segment_df,
-            uwb_data_resampled_df=uwb_data_resampled_time_segment_df,
-            active_person_ids=active_person_ids
-        )
+        if return_match_statistics:
+            pose_identification_time_segment_df, match_statistics_time_segment_df = process_pose_data.identify.identify_poses(
+                poses_3d_with_tracks_and_sensor_positions_df=poses_3d_with_tracks_and_sensor_positions_time_segment_df,
+                uwb_data_resampled_df=uwb_data_resampled_time_segment_df,
+                active_person_ids=active_person_ids,
+                return_match_statistics=return_match_statistics
+            )
+            match_statistics_time_segment_df_list.append(match_statistics_time_segment_df)
+        else:
+            pose_identification_time_segment_df = process_pose_data.identify.identify_poses(
+                poses_3d_with_tracks_and_sensor_positions_df=poses_3d_with_tracks_and_sensor_positions_time_segment_df,
+                uwb_data_resampled_df=uwb_data_resampled_time_segment_df,
+                active_person_ids=active_person_ids,
+                return_match_statistics=return_match_statistics
+            )
         # Add to list
         pose_identification_time_segment_df_list.append(pose_identification_time_segment_df)
     pose_identification_df = pd.concat(pose_identification_time_segment_df_list)
@@ -868,6 +881,9 @@ def identify_pose_tracks_3d_local_by_segment(
         processing_time/60,
         (processing_time/60)/num_minutes
     ))
+    if return_match_statistics:
+        match_statistics_df = pd.concat(match_statistics_time_segment_df_list)
+        return pose_track_3d_identification_inference_id_local, match_statistics_df
     return pose_track_3d_identification_inference_id_local
 
 def upload_3d_poses_honeycomb(

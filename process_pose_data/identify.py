@@ -127,70 +127,114 @@ def calculate_track_identification(
 def identify_poses(
     poses_3d_with_tracks_and_sensor_positions_df,
     uwb_data_resampled_df,
-    active_person_ids=None
+    active_person_ids=None,
+    return_match_statistics=False
 ):
     pose_identification_timestamp_df_list = list()
+    if return_match_statistics:
+        match_statistics_list = list()
     for timestamp, poses_3d_with_tracks_and_sensor_positions_timestamp_df in poses_3d_with_tracks_and_sensor_positions_df.groupby('timestamp'):
         uwb_data_resampled_timestamp_df = uwb_data_resampled_df.loc[uwb_data_resampled_df['timestamp'] == timestamp]
-        pose_identification_timestamp_df = identify_poses_timestamp(
-            poses_3d_with_tracks_and_sensor_positions_timestamp_df=poses_3d_with_tracks_and_sensor_positions_timestamp_df,
-            uwb_data_resampled_timestamp_df=uwb_data_resampled_timestamp_df,
-            active_person_ids=active_person_ids
-        )
+        if return_match_statistics:
+            pose_identification_timestamp_df, match_statistics = identify_poses_timestamp(
+                poses_3d_with_tracks_and_sensor_positions_timestamp_df=poses_3d_with_tracks_and_sensor_positions_timestamp_df,
+                uwb_data_resampled_timestamp_df=uwb_data_resampled_timestamp_df,
+                active_person_ids=active_person_ids,
+                return_match_statistics=return_match_statistics
+            )
+            match_statistics_list.append([timestamp] + match_statistics)
+        else:
+            pose_identification_timestamp_df = identify_poses_timestamp(
+                poses_3d_with_tracks_and_sensor_positions_timestamp_df=poses_3d_with_tracks_and_sensor_positions_timestamp_df,
+                uwb_data_resampled_timestamp_df=uwb_data_resampled_timestamp_df,
+                active_person_ids=active_person_ids,
+                return_match_statistics=return_match_statistics
+            )
         pose_identification_timestamp_df_list.append(pose_identification_timestamp_df)
     pose_identification_df = pd.concat(pose_identification_timestamp_df_list)
+    if return_match_statistics:
+        match_statistics_df = pd.DataFrame(
+            match_statistics_list,
+            columns=[
+                'timestamp',
+                'num_poses',
+                'num_persons',
+                'num_matches'
+            ]
+        )
+        return pose_identification_df, match_statistics_df
     return pose_identification_df
 
 def identify_poses_timestamp(
     poses_3d_with_tracks_and_sensor_positions_timestamp_df,
     uwb_data_resampled_timestamp_df,
-    active_person_ids=None
+    active_person_ids=None,
+    return_match_statistics=False
 ):
-    timestamp_poses_3d = None
-    if len(poses_3d_with_tracks_and_sensor_positions_timestamp_df) > 0:
+    num_poses = len(poses_3d_with_tracks_and_sensor_positions_timestamp_df)
+    if len(uwb_data_resampled_timestamp_df) > 0:
+        if active_person_ids is not None:
+            uwb_data_resampled_timestamp_df = uwb_data_resampled_timestamp_df.loc[
+                uwb_data_resampled_timestamp_df['person_id'].isin(active_person_ids)
+            ]
+    num_persons = len(uwb_data_resampled_timestamp_df)
+    num_matches = 0
+    if num_poses > 0:
         timestamps = poses_3d_with_tracks_and_sensor_positions_timestamp_df['timestamp'].unique()
         if len(timestamps) > 1:
             raise ValueError('3D pose data contains duplicate timestamps')
         timestamp_poses_3d = timestamps[0]
-    timestamp_uwb_data = None
-    if len(uwb_data_resampled_timestamp_df) > 0:
+    if num_persons > 0:
         timestamps = uwb_data_resampled_timestamp_df['timestamp'].unique()
         if len(timestamps) > 1:
             raise ValueError('UWB data contains duplicate timestamps')
         timestamp_uwb_data = timestamps[0]
-    if timestamp_poses_3d is None and timestamp_uwb_data is None:
+    if num_poses == 0 and num_persons == 0:
         logger.warn('No 3D pose data or UWB data for this (unknown) timestamp')
-    if timestamp_poses_3d is None and timestamp_uwb_data is not None:
+    if num_poses == 0 and num_persons != 0:
         logger.warn('No 3D pose data for timestamp %s', timestamp_uwb_data.isoformat())
-        return pd.DataFrame()
-    if timestamp_uwb_data is None and timestamp_poses_3d is not None:
+    if num_poses != 0 and num_persons == 0:
         logger.warn('No UWB data for timestamp %s', timestamp_poses_3d.isoformat())
-        return pd.DataFrame()
-    if timestamp_poses_3d is not None and timestamp_uwb_data is not None and timestamp_poses_3d != timestamp_uwb_data:
+    if num_poses == 0 or num_persons == 0:
+        if return_match_statistics:
+            match_statistics = [num_poses, num_persons, num_matches]
+            return pd.DataFrame(), match_statistics
+        return pd.DataFrame(), [num_pose_tracks, num_persons, num_matches]
+    if num_poses != 0 and num_persons != 0 and timestamp_poses_3d != timestamp_uwb_data:
         raise ValueError('Timestamp in 3D pose data is {} but timestamp in UWB data is {}'.format(
             timestamp_poses_3d.isoformat(),
             timestamp_uwb_data.isoformat()
         ))
     timestamp = timestamp_poses_3d
-    num_pose_tracks_3d = len(poses_3d_with_tracks_and_sensor_positions_timestamp_df)
     pose_track_3d_ids = poses_3d_with_tracks_and_sensor_positions_timestamp_df['pose_track_3d_id'].values
     pose_track_3d_positions = poses_3d_with_tracks_and_sensor_positions_timestamp_df.loc[:, ['x_position', 'y_position', 'z_position']].values
-    if active_person_ids is not None:
-        uwb_data_resampled_timestamp_df = uwb_data_resampled_timestamp_df.loc[uwb_data_resampled_timestamp_df['person_id'].isin(active_person_ids)]
-    num_persons = len(uwb_data_resampled_timestamp_df)
     person_ids = uwb_data_resampled_timestamp_df['person_id'].values
-    uwb_positions = uwb_data_resampled_timestamp_df.loc[:, ['x_position', 'y_position', 'z_position']].values
-    distance_matrix = np.zeros((num_pose_tracks_3d, num_persons))
-    for i in range(num_pose_tracks_3d):
+    person_positions = uwb_data_resampled_timestamp_df.loc[:, ['x_position', 'y_position', 'z_position']].values
+    distance_matrix = np.zeros((num_poses, num_persons))
+    for i in range(num_poses):
         for j in range(num_persons):
-            distance_matrix[i, j] = np.linalg.norm(pose_track_3d_positions[i] - uwb_positions[j])
+            distance_matrix[i, j] = np.linalg.norm(pose_track_3d_positions[i] - person_positions[j])
     pose_track_3d_indices, person_indices = scipy.optimize.linear_sum_assignment(distance_matrix)
+    num_expected_matches = min(num_poses, num_persons)
+    num_matches = len(pose_track_3d_indices)
+    if num_matches != num_expected_matches:
+        raise ValueError('Matching {} poses and {} persons so expected {} matches but found {} matches. Distance matrix: {}'.format(
+            num_poses,
+            num_persons,
+            num_expected_matches,
+            num_matches,
+            distance_matrix
+        ))
     pose_identification_timestamp_df = pd.DataFrame({
         'timestamp': timestamp,
         'pose_track_3d_id': pose_track_3d_ids[pose_track_3d_indices],
         'person_id': person_ids[person_indices]
     })
+    if return_match_statistics:
+        match_statistics = [num_poses, num_persons, num_matches]
+        return pose_identification_timestamp_df, match_statistics
     return pose_identification_timestamp_df
+
 
 def identify_pose_tracks(
     pose_identification_df
