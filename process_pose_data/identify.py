@@ -246,10 +246,14 @@ def identify_pose_tracks(
             return_counts=True
         )
         person_id = person_ids[np.argmax(person_id_counts)]
+        max_matches = np.max(person_id_counts)
+        total_matches = np.sum(person_id_counts)
         histogram = list(zip(person_ids, person_id_counts))
         pose_track_identification_list.append({
             'pose_track_3d_id': pose_track_3d_id,
             'person_id': person_id,
+            'max_matches': max_matches,
+            'total_matches': total_matches,
             'histogram': histogram
         })
     pose_track_identification_df = pd.DataFrame(pose_track_identification_list)

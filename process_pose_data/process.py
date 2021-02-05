@@ -866,6 +866,8 @@ def identify_pose_tracks_3d_local_by_segment(
     pose_track_identification_df = process_pose_data.identify.identify_pose_tracks(
         pose_identification_df=pose_identification_df
     )
+    num_poses_df = pose_3d_ids_with_tracks_df.groupby('pose_track_3d_id').size().to_frame(name='num_poses')
+    pose_track_identification_df = pose_track_identification_df.join(num_poses_df, on='pose_track_3d_id')
     process_pose_data.local_io.write_pose_track_3d_identification_data_local(
         pose_track_identification_df=pose_track_identification_df,
         base_dir=base_dir,
