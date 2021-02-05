@@ -722,6 +722,7 @@ def identify_pose_tracks_3d_local_by_segment(
     pose_track_3d_interpolation_inference_id,
     sensor_position_keypoint_index=10,
     active_person_ids=None,
+    min_fraction_matched = None,
     return_match_statistics=False,
     pose_processing_subdirectory='pose_processing',
     position_data_directory_name='position_data',
@@ -868,6 +869,9 @@ def identify_pose_tracks_3d_local_by_segment(
     )
     num_poses_df = pose_3d_ids_with_tracks_df.groupby('pose_track_3d_id').size().to_frame(name='num_poses')
     pose_track_identification_df = pose_track_identification_df.join(num_poses_df, on='pose_track_3d_id')
+    pose_track_identification_df['fraction_matched'] = pose_track_identification_df['max_matches']/pose_track_identification_df['num_poses']
+    if min_fraction_matched is not None:
+        pose_track_identification_df = pose_track_identification_df.loc[pose_track_identification_df['fraction_matched'] >= min_fraction_matched]
     process_pose_data.local_io.write_pose_track_3d_identification_data_local(
         pose_track_identification_df=pose_track_identification_df,
         base_dir=base_dir,
