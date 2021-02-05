@@ -722,6 +722,7 @@ def identify_pose_tracks_3d_local_by_segment(
     pose_track_3d_interpolation_inference_id,
     sensor_position_keypoint_index=10,
     active_person_ids=None,
+    ignore_z=False,
     min_fraction_matched = None,
     return_match_statistics=False,
     pose_processing_subdirectory='pose_processing',
@@ -851,6 +852,7 @@ def identify_pose_tracks_3d_local_by_segment(
                 poses_3d_with_tracks_and_sensor_positions_df=poses_3d_with_tracks_and_sensor_positions_time_segment_df,
                 uwb_data_resampled_df=uwb_data_resampled_time_segment_df,
                 active_person_ids=active_person_ids,
+                ignore_z=ignore_z,
                 return_match_statistics=return_match_statistics
             )
             match_statistics_time_segment_df_list.append(match_statistics_time_segment_df)
@@ -859,6 +861,7 @@ def identify_pose_tracks_3d_local_by_segment(
                 poses_3d_with_tracks_and_sensor_positions_df=poses_3d_with_tracks_and_sensor_positions_time_segment_df,
                 uwb_data_resampled_df=uwb_data_resampled_time_segment_df,
                 active_person_ids=active_person_ids,
+                ignore_z=ignore_z,
                 return_match_statistics=return_match_statistics
             )
         # Add to list

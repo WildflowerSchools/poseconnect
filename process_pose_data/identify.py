@@ -128,6 +128,7 @@ def identify_poses(
     poses_3d_with_tracks_and_sensor_positions_df,
     uwb_data_resampled_df,
     active_person_ids=None,
+    ignore_z=False,
     return_match_statistics=False
 ):
     pose_identification_timestamp_df_list = list()
@@ -140,6 +141,7 @@ def identify_poses(
                 poses_3d_with_tracks_and_sensor_positions_timestamp_df=poses_3d_with_tracks_and_sensor_positions_timestamp_df,
                 uwb_data_resampled_timestamp_df=uwb_data_resampled_timestamp_df,
                 active_person_ids=active_person_ids,
+                ignore_z=ignore_z,
                 return_match_statistics=return_match_statistics
             )
             match_statistics_list.append([timestamp] + match_statistics)
@@ -148,6 +150,7 @@ def identify_poses(
                 poses_3d_with_tracks_and_sensor_positions_timestamp_df=poses_3d_with_tracks_and_sensor_positions_timestamp_df,
                 uwb_data_resampled_timestamp_df=uwb_data_resampled_timestamp_df,
                 active_person_ids=active_person_ids,
+                ignore_z=ignore_z,
                 return_match_statistics=return_match_statistics
             )
         pose_identification_timestamp_df_list.append(pose_identification_timestamp_df)
@@ -169,6 +172,7 @@ def identify_poses_timestamp(
     poses_3d_with_tracks_and_sensor_positions_timestamp_df,
     uwb_data_resampled_timestamp_df,
     active_person_ids=None,
+    ignore_z=False,
     return_match_statistics=False
 ):
     num_poses = len(poses_3d_with_tracks_and_sensor_positions_timestamp_df)
@@ -207,9 +211,13 @@ def identify_poses_timestamp(
         ))
     timestamp = timestamp_poses_3d
     pose_track_3d_ids = poses_3d_with_tracks_and_sensor_positions_timestamp_df['pose_track_3d_id'].values
-    pose_track_3d_positions = poses_3d_with_tracks_and_sensor_positions_timestamp_df.loc[:, ['x_position', 'y_position', 'z_position']].values
     person_ids = uwb_data_resampled_timestamp_df['person_id'].values
-    person_positions = uwb_data_resampled_timestamp_df.loc[:, ['x_position', 'y_position', 'z_position']].values
+    if ignore_z:
+        pose_track_3d_positions = poses_3d_with_tracks_and_sensor_positions_timestamp_df.loc[:, ['x_position', 'y_position']].values
+        person_positions = uwb_data_resampled_timestamp_df.loc[:, ['x_position', 'y_position']].values
+    else:
+        pose_track_3d_positions = poses_3d_with_tracks_and_sensor_positions_timestamp_df.loc[:, ['x_position', 'y_position', 'z_position']].values
+        person_positions = uwb_data_resampled_timestamp_df.loc[:, ['x_position', 'y_position', 'z_position']].values
     distance_matrix = np.zeros((num_poses, num_persons))
     for i in range(num_poses):
         for j in range(num_persons):
