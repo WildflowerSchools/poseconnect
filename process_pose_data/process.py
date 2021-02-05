@@ -776,7 +776,7 @@ def identify_pose_tracks_3d_local_by_segment(
     pose_tracks_3d_from_interpolation = process_pose_data.local_io.fetch_3d_pose_track_data_local(
         base_dir=base_dir,
         environment_id=environment_id,
-        inference_id_local=pose_tracking_3d_inference_id_local,
+        inference_id_local=pose_track_3d_interpolation_inference_id,
         pose_processing_subdirectory=pose_processing_subdirectory,
         pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
         pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
