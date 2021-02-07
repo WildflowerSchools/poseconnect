@@ -1908,6 +1908,58 @@ def add_person_tag_info(
     uwb_data_df = uwb_data_df.join(person_tag_info_df, on='assignment_id')
     return uwb_data_df
 
+def fetch_person_info(
+    environment_id,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result = client.bulk_query(
+        request_name='findAssignments',
+        arguments={
+            'environment': {
+                'type': 'ID',
+                'value': environment_id
+            },
+            'assigned_type': {
+                'type': 'AssignableTypeEnum',
+                'value': 'PERSON'
+            },
+        },
+        return_data=[
+            'assignment_id',
+            {'assigned': [
+                {'... on Person': [
+                    'person_id',
+                    'name',
+                    'short_name'
+                ]}
+            ]}
+        ],
+        id_field_name='assignment_id'
+    )
+    data_list = list()
+    for assignment in result:
+        data_list.append({
+            'person_id': assignment.get('assigned', {}).get('person_id'),
+            'name': assignment.get('assigned', {}).get('name'),
+            'short_name': assignment.get('assigned', {}).get('short_name')
+        })
+    person_info_df = pd.DataFrame(data_list)
+    person_info_df.set_index('person_id', inplace=True)
+    return person_info_df
+
 def generate_client(
     client=None,
     uri=None,

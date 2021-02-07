@@ -153,6 +153,61 @@ def fetch_2d_pose_data_alphapose_local(
     df.sort_values(['timestamp', 'assignment_id'], inplace=True)
     return df
 
+def fetch_3d_poses_with_person_info(
+    base_dir,
+    environment_id,
+    pose_track_3d_identification_inference_id_local,
+    start=None,
+    end=None,
+    pose_processing_subdirectory='pose_processing',
+    pose_track_3d_identification_directory_name='pose_track_3d_identification',
+    pose_track_3d_identification_file_name_stem='pose_track_3d_identification',
+    pose_track_3d_identification_metadata_filename_stem='pose_track_3d_identification_metadata',
+    pose_track_3d_interpolation_directory_name='pose_track_3d_interpolation',
+    pose_track_3d_interpolation_metadata_filename_stem='pose_track_3d_interpolation_metadata',
+    pose_tracks_3d_directory_name='pose_tracks_3d',
+    pose_tracks_3d_file_name_stem='pose_tracks_3d',
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d',
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    poses_3d_with_tracks_identified_df = fetch_3d_poses_with_identified_tracks_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        pose_track_3d_identification_inference_id_local=pose_track_3d_identification_inference_id_local,
+        start=start,
+        end=end,
+        pose_processing_subdirectory=pose_processing_subdirectory,
+        pose_track_3d_identification_directory_name=pose_track_3d_identification_directory_name,
+        pose_track_3d_identification_file_name_stem=pose_track_3d_identification_file_name_stem,
+        pose_track_3d_identification_metadata_filename_stem=pose_track_3d_identification_metadata_filename_stem,
+        pose_track_3d_interpolation_directory_name=pose_track_3d_interpolation_directory_name,
+        pose_track_3d_interpolation_metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
+        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
+        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem,
+        poses_3d_directory_name=poses_3d_directory_name,
+        poses_3d_file_name_stem=poses_3d_file_name_stem
+    )
+    person_info_df = process_pose_data.honeycomb_io.fetch_person_info(
+        environment_id=environment_id,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    poses_3d_with_person_info_df = poses_3d_with_tracks_identified_df.join(
+        person_info_df,
+        on='person_id'
+    )
+    return poses_3d_with_person_info_df
+
 def fetch_3d_poses_with_identified_tracks_local(
     base_dir,
     environment_id,
