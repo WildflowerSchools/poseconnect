@@ -153,6 +153,147 @@ def fetch_2d_pose_data_alphapose_local(
     df.sort_values(['timestamp', 'assignment_id'], inplace=True)
     return df
 
+def fetch_3d_poses_with_interpolated_tracks_local(
+    base_dir,
+    environment_id,
+    pose_track_3d_interpolation_inference_id_local,
+    start=None,
+    end=None,
+    pose_processing_subdirectory='pose_processing',
+    pose_track_3d_interpolation_directory_name='pose_track_3d_interpolation',
+    pose_track_3d_interpolation_metadata_filename_stem='pose_track_3d_interpolation_metadata',
+    pose_tracks_3d_directory_name='pose_tracks_3d',
+    pose_tracks_3d_file_name_stem='pose_tracks_3d',
+    pose_tracks_3d_metadata_file_name_stem='pose_tracks_3d_metadata',
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d'
+):
+    pose_track_3d_interpolation_metadata = read_metadata_local(
+        inference_id_local=pose_track_3d_interpolation_inference_id_local,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=pose_track_3d_interpolation_directory_name,
+        metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    if start is None:
+        start = pose_track_3d_interpolation_metadata['start']
+    if end is None:
+        end = pose_track_3d_interpolation_metadata['end']
+    pose_tracking_3d_inference_id_local = pose_track_3d_interpolation_metadata['pose_tracking_3d_inference_id']
+    pose_reconstruction_3d_inference_id_local = pose_track_3d_interpolation_metadata['pose_reconstruction_3d_inference_id']
+    pose_tracks_3d_with_tracks_before_interpolation_df = fetch_3d_poses_with_tracks_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        pose_reconstruction_3d_inference_id=pose_reconstruction_3d_inference_id_local,
+        pose_tracking_3d_inference_id=pose_tracking_3d_inference_id_local,
+        start=start,
+        end=end,
+        pose_processing_subdirectory=pose_processing_subdirectory,
+        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
+        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem,
+        poses_3d_directory_name=poses_3d_directory_name,
+        poses_3d_file_name_stem=poses_3d_file_name_stem
+    )
+    pose_tracks_3d_with_tracks_from_interpolation_df = fetch_3d_poses_with_tracks_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        pose_reconstruction_3d_inference_id=pose_track_3d_interpolation_inference_id_local,
+        pose_tracking_3d_inference_id=pose_track_3d_interpolation_inference_id_local,
+        start=start,
+        end=end,
+        pose_processing_subdirectory=pose_processing_subdirectory,
+        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
+        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem,
+        poses_3d_directory_name=poses_3d_directory_name,
+        poses_3d_file_name_stem=poses_3d_file_name_stem
+    )
+    pose_tracks_3d_with_tracks_df = pd.concat((
+        pose_tracks_3d_with_tracks_before_interpolation_df,
+        pose_tracks_3d_with_tracks_from_interpolation_df
+    )).sort_values(['pose_track_3d_id', 'timestamp'])
+    return pose_tracks_3d_with_tracks_df
+
+def fetch_3d_poses_with_uninterpolated_tracks_local(
+    base_dir,
+    environment_id,
+    pose_tracking_3d_inference_id_local,
+    start=None,
+    end=None,
+    pose_processing_subdirectory='pose_processing',
+    pose_tracks_3d_directory_name='pose_tracks_3d',
+    pose_tracks_3d_file_name_stem='pose_tracks_3d',
+    pose_tracks_3d_metadata_file_name_stem='pose_tracks_3d_metadata',
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d'
+):
+    pose_tracks_3d_metadata = read_metadata_local(
+        inference_id_local=pose_tracking_3d_inference_id_local,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=pose_tracks_3d_directory_name,
+        metadata_filename_stem=pose_tracks_3d_metadata_file_name_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    if start is None:
+        start = pose_tracks_3d_metadata['start']
+    if end is None:
+        end = pose_tracks_3d_metadata['end']
+    pose_reconstruction_3d_inference_id_local = pose_tracks_3d_metadata['pose_reconstruction_3d_inference_id']
+    pose_tracks_3d_with_tracks_df = fetch_3d_poses_with_tracks_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        pose_reconstruction_3d_inference_id=pose_reconstruction_3d_inference_id_local,
+        pose_tracking_3d_inference_id=pose_tracking_3d_inference_id_local,
+        start=start,
+        end=end,
+        pose_processing_subdirectory=pose_processing_subdirectory,
+        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
+        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem,
+        poses_3d_directory_name=poses_3d_directory_name,
+        poses_3d_file_name_stem=poses_3d_file_name_stem
+    )
+    return pose_tracks_3d_with_tracks_df
+
+def fetch_3d_poses_with_tracks_local(
+    base_dir,
+    environment_id,
+    start,
+    end,
+    pose_reconstruction_3d_inference_id,
+    pose_tracking_3d_inference_id,
+    pose_processing_subdirectory='pose_processing',
+    pose_tracks_3d_directory_name='pose_tracks_3d',
+    pose_tracks_3d_file_name_stem='pose_tracks_3d',
+    poses_3d_directory_name='poses_3d',
+    poses_3d_file_name_stem='poses_3d'
+):
+    poses_3d_df = fetch_3d_pose_data_local(
+        start=start,
+        end=end,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        inference_id_local=pose_reconstruction_3d_inference_id,
+        pose_3d_ids=None,
+        pose_processing_subdirectory=pose_processing_subdirectory,
+        poses_3d_directory_name=poses_3d_directory_name,
+        poses_3d_file_name_stem=poses_3d_file_name_stem
+    )
+    pose_tracks_3d = fetch_3d_pose_track_data_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        inference_id_local=pose_tracking_3d_inference_id,
+        pose_processing_subdirectory=pose_processing_subdirectory,
+        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
+        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
+    )
+    pose_tracks_3d_df = convert_pose_tracks_3d_to_df(pose_tracks_3d)
+    pose_tracks_3d_with_tracks_df = poses_3d_df.join(
+        pose_tracks_3d_df,
+        how='inner'
+    )
+    return pose_tracks_3d_with_tracks_df
+
 def write_3d_pose_data_local(
     poses_3d_df,
     base_dir,
@@ -390,6 +531,34 @@ def delete_3d_pose_track_data_local(
     )
     if os.path.exists(path):
         os.remove(path)
+
+def convert_pose_tracks_3d_to_df(
+    pose_tracks_3d
+):
+    pose_3d_ids_with_tracks_df_list = list()
+    for pose_track_3d_id, pose_track_3d in pose_tracks_3d.items():
+        pose_3d_ids_with_tracks_single_track_df = pd.DataFrame(
+            {'pose_track_3d_id': pose_track_3d_id},
+            index=pose_track_3d['pose_3d_ids']
+        )
+        pose_3d_ids_with_tracks_single_track_df.index.name='pose_3d_id'
+        pose_3d_ids_with_tracks_df_list.append(pose_3d_ids_with_tracks_single_track_df)
+    pose_3d_ids_with_tracks_df = pd.concat(pose_3d_ids_with_tracks_df_list)
+    return pose_3d_ids_with_tracks_df
+
+def add_short_track_labels(
+    poses_3d_with_tracks_df,
+    pose_track_3d_id_column_name='pose_track_3d_id'
+):
+    pose_track_3d_id_index = poses_3d_with_tracks_df.groupby(pose_track_3d_id_column_name).apply(lambda x: x['timestamp'].min()).sort_values().index
+    track_label_lookup = pd.DataFrame(
+        range(1, len(pose_track_3d_id_index)+1),
+        columns=['pose_track_3d_id_short'],
+        index=pose_track_3d_id_index
+    )
+    poses_3d_with_tracks_df = poses_3d_with_tracks_df.join(track_label_lookup, on='pose_track_3d_id')
+    return poses_3d_with_tracks_df
+
 
 def write_position_data_local_time_segment(
     position_data_df,

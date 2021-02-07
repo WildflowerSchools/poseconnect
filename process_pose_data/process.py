@@ -784,10 +784,10 @@ def identify_pose_tracks_3d_local_by_segment(
         pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
         pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
     )
-    pose_3d_ids_with_tracks_before_interpolation_df = process_pose_data.track_poses.convert_pose_tracks_3d_to_df(
+    pose_3d_ids_with_tracks_before_interpolation_df = process_pose_data.local_io.convert_pose_tracks_3d_to_df(
         pose_tracks_3d=pose_tracks_3d_before_interpolation
     )
-    pose_3d_ids_with_tracks_from_interpolation_df = process_pose_data.track_poses.convert_pose_tracks_3d_to_df(
+    pose_3d_ids_with_tracks_from_interpolation_df = process_pose_data.local_io.convert_pose_tracks_3d_to_df(
         pose_tracks_3d=pose_tracks_3d_from_interpolation
     )
     pose_3d_ids_with_tracks_df = pd.concat(

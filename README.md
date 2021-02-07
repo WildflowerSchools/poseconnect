@@ -4,8 +4,8 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Make processing function for identifying tracks
-* Make functions for fetching poses with pose track IDs, person IDs
+* Make functions for fetching poses with pose track IDs, person IDs, person data
+* Change argument name from `inference_id_local` to `inference_ids_local` wherever multiple IDs are permitted
 * Boil all local IO operations down to read/write by time segment or not by time segment
 * Consider getting rid of all distinctions between local and remote IDs in naming
 * Fix up overlay functions so they cope if overlay already exists
