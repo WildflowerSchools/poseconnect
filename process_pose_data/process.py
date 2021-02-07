@@ -292,11 +292,11 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
     )
 
 def generate_pose_tracks_3d_local_by_time_segment(
-    start,
-    end,
     base_dir,
     environment_id,
     pose_reconstruction_3d_inference_id,
+    start=None,
+    end=None,
     max_match_distance=1.0,
     max_iterations_since_last_match=20,
     centroid_position_initial_sd=1.0,
@@ -308,12 +308,25 @@ def generate_pose_tracks_3d_local_by_time_segment(
     pose_processing_subdirectory='pose_processing',
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d',
+    pose_reconstruction_3d_metadata_filename_stem='pose_reconstruction_3d_metadata',
     pose_tracks_3d_directory_name='pose_tracks_3d',
     pose_tracks_3d_file_name_stem='pose_tracks_3d',
     pose_tracking_3d_metadata_filename_stem='pose_tracking_3d_metadata',
     progress_bar=False,
     notebook=False
 ):
+    pose_reconstruction_3d_metadata = process_pose_data.local_io.read_metadata_local(
+        inference_id_local=pose_reconstruction_3d_inference_id,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=poses_3d_directory_name,
+        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    if start is None:
+        start = pose_reconstruction_3d_metadata['start']
+    if end is None:
+        end = pose_reconstruction_3d_metadata['end']
     if start.tzinfo is None:
         logger.info('Specified start is timezone-naive. Assuming UTC')
         start=start.replace(tzinfo=datetime.timezone.utc)
@@ -435,6 +448,16 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     progress_bar=False,
     notebook=False
 ):
+    pose_tracking_3d_metadata = process_pose_data.local_io.read_metadata_local(
+        inference_id_local=pose_tracking_3d_inference_id,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=pose_tracks_3d_directory_name,
+        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    start = pose_tracking_3d_metadata['start']
+    end = pose_tracking_3d_metadata['end']
     logger.info('Interpolating 3D pose tracks from local 3D pose track data and local 3D pose data. Base directory: {}. Pose processing data subdirectory: {}. Environment ID: {}.'.format(
         base_dir,
         pose_processing_subdirectory,
@@ -442,6 +465,8 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     ))
     logger.info('Generating metadata')
     pose_track_3d_interpolation_metadata = generate_pose_track_3d_interpolation_metadata(
+        start=start,
+        end=end,
         base_dir=base_dir,
         environment_id=environment_id,
         pose_tracking_3d_inference_id=pose_tracking_3d_inference_id,
@@ -714,8 +739,6 @@ def download_position_data_by_datapoint(
     return download_position_data_inference_id_local
 
 def identify_pose_tracks_3d_local_by_segment(
-    start,
-    end,
     base_dir,
     environment_id,
     download_position_data_inference_id,
@@ -740,6 +763,16 @@ def identify_pose_tracks_3d_local_by_segment(
     progress_bar=False,
     notebook=False
 ):
+    pose_track_3d_interpolation_metadata = process_pose_data.local_io.read_metadata_local(
+        inference_id_local=pose_track_3d_interpolation_inference_id,
+        base_dir=base_dir,
+        environment_id=environment_id,
+        output_subdirectory_name=pose_track_3d_interpolation_directory_name,
+        metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    start = pose_track_3d_interpolation_metadata['start']
+    end = pose_track_3d_interpolation_metadata['end']
     logger.info('Identifying 3D pose tracks from local interpolated 3D pose track data and local UWB position data. Base directory: {}. Pose processing data subdirectory: {}. Environment ID: {}.'.format(
         base_dir,
         pose_processing_subdirectory,
@@ -748,6 +781,8 @@ def identify_pose_tracks_3d_local_by_segment(
     processing_start = time.time()
     logger.info('Generating metadata')
     pose_track_3d_identification_metadata = generate_pose_track_3d_identification_metadata(
+        start=start,
+        end=end,
         base_dir=base_dir,
         environment_id=environment_id,
         pose_track_3d_interpolation_inference_id=pose_track_3d_interpolation_inference_id,
@@ -1182,6 +1217,8 @@ def generate_pose_tracking_3d_metadata(
     return pose_tracking_3d_metadata
 
 def generate_pose_track_3d_interpolation_metadata(
+    start,
+    end,
     base_dir,
     environment_id,
     pose_tracking_3d_inference_id,
@@ -1205,6 +1242,8 @@ def generate_pose_track_3d_interpolation_metadata(
     pose_reconstruction_3d_inference_id = pose_tracking_3d_metadata['pose_reconstruction_3d_inference_id']
     pose_track_3d_interpolation_metadata = {
         'inference_execution': inference_execution,
+        'start': start,
+        'end': end,
         'environment_id': environment_id,
         'pose_tracking_3d_inference_id': pose_tracking_3d_inference_id,
         'pose_reconstruction_3d_inference_id': pose_reconstruction_3d_inference_id,
@@ -1233,6 +1272,8 @@ def generate_download_position_data_metadata(
     return download_position_data_metadata
 
 def generate_pose_track_3d_identification_metadata(
+    start,
+    end,
     base_dir,
     environment_id,
     pose_track_3d_interpolation_inference_id,
@@ -1255,14 +1296,16 @@ def generate_pose_track_3d_identification_metadata(
     )
     pose_reconstruction_3d_inference_id = pose_track_3d_interpolation_metadata['pose_reconstruction_3d_inference_id']
     pose_tracking_3d_inference_id = pose_track_3d_interpolation_metadata['pose_tracking_3d_inference_id']
-    pose_track_3d_interpolation_metadata = {
+    pose_track_3d_identification_metadata = {
+        'start': start,
+        'end': end,
         'inference_execution': inference_execution,
         'environment_id': environment_id,
         'pose_track_3d_interpolation_inference_id': pose_track_3d_interpolation_inference_id,
         'pose_reconstruction_3d_inference_id': pose_reconstruction_3d_inference_id,
         'pose_tracking_3d_inference_id': pose_tracking_3d_inference_id,
     }
-    return pose_track_3d_interpolation_metadata
+    return pose_track_3d_identification_metadata
 
 def generate_pose_reconstruction_3d_inference_execution(
     environment_id,
