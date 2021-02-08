@@ -71,6 +71,57 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         end
     ))
     logger.info('Generating metadata')
+    if camera_assignment_ids is None:
+        logger.info('Camera assignment IDs not specified. Fetching camera assignment IDs from Honeycomb based on environmen and time span')
+        camera_assignment_ids = process_pose_data.honeycomb_io.fetch_camera_assignment_ids_from_environment(
+            start=start,
+            end=end,
+            environment_id=environment_id,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    if camera_device_id_lookup is None:
+        logger.info('Camera device ID lookup table not specified. Fetching camera device ID info from Honeycomb based on camera assignment IDs')
+        camera_device_id_lookup = process_pose_data.honeycomb_io.fetch_camera_device_id_lookup(
+            assignment_ids=camera_assignment_ids,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    camera_device_ids = list(camera_device_id_lookup.values())
+    if camera_calibrations is None:
+        logger.info('Camera calibration parameters not specified. Fetching camera calibration parameters from Honeycomb based on camera device IDs and time span')
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+            camera_ids=camera_device_ids,
+            start=start,
+            end=end,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    if coordinate_space_id is None:
+        coordinate_space_id = extract_coordinate_space_id_from_camera_calibrations(camera_calibrations)
+    if pose_3d_limits is None:
+        logger.info('3D pose spatial limits not specified. Generating default spatial limits based on specified room spatial limits and specified pose model')
+        pose_3d_limits = generate_pose_3d_limits(
+            pose_model_id=pose_model_id,
+            room_x_limits=room_x_limits,
+            room_y_limits=room_y_limits,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
     pose_reconstruction_3d_metadata = generate_pose_reconstruction_3d_metadata(
         start=start,
         end=end,
@@ -80,6 +131,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         room_y_limits=room_y_limits,
         camera_assignment_ids=camera_assignment_ids,
         camera_device_id_lookup=camera_device_id_lookup,
+        camera_device_ids=camera_device_ids,
         camera_calibrations=camera_calibrations,
         coordinate_space_id=coordinate_space_id,
         poses_2d_json_format=poses_2d_json_format,
@@ -94,20 +146,9 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         pose_3d_limits=pose_3d_limits,
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
-        include_track_labels=include_track_labels,
-        client=client,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        include_track_labels=include_track_labels
     )
     inference_id_local = pose_reconstruction_3d_metadata.get('inference_execution').get('inference_id_local')
-    camera_assignment_ids = pose_reconstruction_3d_metadata.get('camera_assignment_ids')
-    camera_device_id_lookup = pose_reconstruction_3d_metadata.get('camera_device_id_lookup')
-    camera_device_ids = pose_reconstruction_3d_metadata.get('camera_device_ids')
-    camera_calibrations = pose_reconstruction_3d_metadata.get('camera_calibrations')
-    pose_3d_limits = pose_reconstruction_3d_metadata.get('pose_3d_limits')
     logger.info('Writing inference metadata to local file')
     process_pose_data.local_io.write_metadata_local(
         metadata=pose_reconstruction_3d_metadata,
@@ -458,6 +499,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     )
     start = pose_tracking_3d_metadata['start']
     end = pose_tracking_3d_metadata['end']
+    pose_reconstruction_3d_inference_id = pose_tracking_3d_metadata['pose_reconstruction_3d_inference_id']
     logger.info('Interpolating 3D pose tracks from local 3D pose track data and local 3D pose data. Base directory: {}. Pose processing data subdirectory: {}. Environment ID: {}.'.format(
         base_dir,
         pose_processing_subdirectory,
@@ -469,14 +511,13 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
         end=end,
         base_dir=base_dir,
         environment_id=environment_id,
+        pose_reconstruction_3d_inference_id=pose_reconstruction_3d_inference_id,
         pose_tracking_3d_inference_id=pose_tracking_3d_inference_id,
         pose_processing_subdirectory=pose_processing_subdirectory,
         pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
         pose_tracking_3d_metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
     )
-    pose_reconstruction_3d_inference_id_local = pose_track_3d_interpolation_metadata['pose_reconstruction_3d_inference_id']
-    pose_tracking_3d_inference_id_local = pose_track_3d_interpolation_metadata['pose_tracking_3d_inference_id']
-    pose_track_3d_interpolation_inference_id_local = pose_track_3d_interpolation_metadata.get('inference_execution').get('inference_id_local')
+    pose_track_3d_interpolation_inference_id = pose_track_3d_interpolation_metadata.get('inference_execution').get('inference_id_local')
     logger.info('Writing inference metadata to local file')
     process_pose_data.local_io.write_metadata_local(
         metadata=pose_track_3d_interpolation_metadata,
@@ -489,7 +530,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     pose_tracks_3d = process_pose_data.local_io.fetch_3d_pose_track_data_local(
         base_dir=base_dir,
         environment_id=environment_id,
-        inference_id_local=pose_tracking_3d_inference_id_local,
+        inference_id_local=pose_tracking_3d_inference_id,
         pose_processing_subdirectory=pose_processing_subdirectory,
         pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
         pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
@@ -524,7 +565,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
             end=pose_track_end,
             base_dir=base_dir,
             environment_id=environment_id,
-            inference_id_local=pose_reconstruction_3d_inference_id_local,
+            inference_id_local=pose_reconstruction_3d_inference_id,
             pose_3d_ids=pose_3d_ids,
             pose_processing_subdirectory=pose_processing_subdirectory,
             poses_3d_directory_name=poses_3d_directory_name,
@@ -537,7 +578,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
             poses_3d_df=poses_3d_new_df,
             base_dir=base_dir,
             environment_id=environment_id,
-            inference_id_local=pose_track_3d_interpolation_inference_id_local,
+            inference_id_local=pose_track_3d_interpolation_inference_id,
             append=True,
             pose_processing_subdirectory=pose_processing_subdirectory,
             poses_3d_directory_name=poses_3d_directory_name,
@@ -552,7 +593,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
         pose_tracks_3d=pose_tracks_3d_new,
         base_dir=base_dir,
         environment_id=environment_id,
-        inference_id_local=pose_track_3d_interpolation_inference_id_local,
+        inference_id_local=pose_track_3d_interpolation_inference_id,
         pose_processing_subdirectory=pose_processing_subdirectory,
         pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
         pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
@@ -562,7 +603,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
         num_pose_tracks,
         processing_time/60
     ))
-    return pose_track_3d_interpolation_inference_id_local
+    return pose_track_3d_interpolation_inference_id
 
 def download_position_data_by_datapoint(
     datapoint_timestamp_min,
@@ -773,6 +814,8 @@ def identify_pose_tracks_3d_local_by_segment(
     )
     start = pose_track_3d_interpolation_metadata['start']
     end = pose_track_3d_interpolation_metadata['end']
+    pose_reconstruction_3d_inference_id = pose_track_3d_interpolation_metadata['pose_reconstruction_3d_inference_id']
+    pose_tracking_3d_inference_id = pose_track_3d_interpolation_metadata['pose_tracking_3d_inference_id']
     logger.info('Identifying 3D pose tracks from local interpolated 3D pose track data and local UWB position data. Base directory: {}. Pose processing data subdirectory: {}. Environment ID: {}.'.format(
         base_dir,
         pose_processing_subdirectory,
@@ -785,6 +828,8 @@ def identify_pose_tracks_3d_local_by_segment(
         end=end,
         base_dir=base_dir,
         environment_id=environment_id,
+        pose_reconstruction_3d_inference_id=pose_reconstruction_3d_inference_id,
+        pose_tracking_3d_inference_id=pose_tracking_3d_inference_id,
         pose_track_3d_interpolation_inference_id=pose_track_3d_interpolation_inference_id,
         pose_processing_subdirectory=pose_processing_subdirectory,
         pose_track_3d_interpolation_directory_name=pose_track_3d_interpolation_directory_name,
@@ -799,14 +844,12 @@ def identify_pose_tracks_3d_local_by_segment(
         metadata_filename_stem=pose_track_3d_identification_metadata_filename_stem,
         pose_processing_subdirectory=pose_processing_subdirectory
     )
-    pose_track_3d_identification_inference_id_local = pose_track_3d_identification_metadata['inference_execution']['inference_id_local']
-    pose_reconstruction_3d_inference_id_local = pose_track_3d_identification_metadata['pose_reconstruction_3d_inference_id']
-    pose_tracking_3d_inference_id_local = pose_track_3d_identification_metadata['pose_tracking_3d_inference_id']
+    pose_track_3d_identification_inference_id = pose_track_3d_identification_metadata['inference_execution']['inference_id_local']
     # Fetch pose track data
     pose_tracks_3d_before_interpolation = process_pose_data.local_io.fetch_3d_pose_track_data_local(
         base_dir=base_dir,
         environment_id=environment_id,
-        inference_id_local=pose_tracking_3d_inference_id_local,
+        inference_id_local=pose_tracking_3d_inference_id,
         pose_processing_subdirectory=pose_processing_subdirectory,
         pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
         pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
@@ -858,7 +901,7 @@ def identify_pose_tracks_3d_local_by_segment(
             base_dir=base_dir,
             environment_id=environment_id,
             inference_id_local=[
-                pose_reconstruction_3d_inference_id_local,
+                pose_reconstruction_3d_inference_id,
                 pose_track_3d_interpolation_inference_id
             ],
             pose_processing_subdirectory=pose_processing_subdirectory,
@@ -914,7 +957,7 @@ def identify_pose_tracks_3d_local_by_segment(
         pose_track_identification_df=pose_track_identification_df,
         base_dir=base_dir,
         environment_id=environment_id,
-        inference_id_local=pose_track_3d_identification_inference_id_local,
+        inference_id_local=pose_track_3d_identification_inference_id,
         pose_processing_subdirectory=pose_processing_subdirectory,
         pose_track_3d_identification_directory_name=pose_track_3d_identification_directory_name,
         pose_track_3d_identification_file_name_stem=pose_track_3d_identification_file_name_stem
@@ -928,7 +971,7 @@ def identify_pose_tracks_3d_local_by_segment(
     if return_match_statistics:
         match_statistics_df = pd.concat(match_statistics_time_segment_df_list)
         return pose_track_3d_identification_inference_id_local, match_statistics_df
-    return pose_track_3d_identification_inference_id_local
+    return pose_track_3d_identification_inference_id
 
 def upload_3d_poses_honeycomb(
     inference_id_local,
@@ -1074,6 +1117,7 @@ def generate_pose_reconstruction_3d_metadata(
     room_y_limits,
     camera_assignment_ids=None,
     camera_device_id_lookup=None,
+    camera_device_ids=None,
     camera_calibrations=None,
     coordinate_space_id=None,
     poses_2d_json_format=None,
@@ -1088,13 +1132,7 @@ def generate_pose_reconstruction_3d_metadata(
     pose_3d_limits=None,
     pose_3d_graph_initial_edge_threshold=None,
     pose_3d_graph_max_dispersion=None,
-    include_track_labels=None,
-    client=None,
-    uri=None,
-    token_uri=None,
-    audience=None,
-    client_id=None,
-    client_secret=None
+    include_track_labels=None
 ):
     logger.info('Generating inference execution object')
     inference_execution = generate_pose_reconstruction_3d_inference_execution(
@@ -1102,57 +1140,6 @@ def generate_pose_reconstruction_3d_metadata(
         start,
         end
     )
-    if camera_assignment_ids is None:
-        logger.info('Camera assignment IDs not specified. Fetching camera assignment IDs from Honeycomb based on environmen and time span')
-        camera_assignment_ids = process_pose_data.honeycomb_io.fetch_camera_assignment_ids_from_environment(
-            start=start,
-            end=end,
-            environment_id=environment_id,
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
-    if camera_device_id_lookup is None:
-        logger.info('Camera device ID lookup table not specified. Fetching camera device ID info from Honeycomb based on camera assignment IDs')
-        camera_device_id_lookup = process_pose_data.honeycomb_io.fetch_camera_device_id_lookup(
-            assignment_ids=camera_assignment_ids,
-            client=client,
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
-    camera_device_ids = list(camera_device_id_lookup.values())
-    if camera_calibrations is None:
-        logger.info('Camera calibration parameters not specified. Fetching camera calibration parameters from Honeycomb based on camera device IDs and time span')
-        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
-            camera_ids=camera_device_ids,
-            start=start,
-            end=end,
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
-    if coordinate_space_id is None:
-        coordinate_space_id = extract_coordinate_space_id_from_camera_calibrations(camera_calibrations)
-    if pose_3d_limits is None:
-        logger.info('3D pose spatial limits not specified. Generating default spatial limits based on specified room spatial limits and specified pose model')
-        pose_3d_limits = generate_pose_3d_limits(
-            pose_model_id=pose_model_id,
-            room_x_limits=room_x_limits,
-            room_y_limits=room_y_limits,
-            client=client,
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
     pose_reconstruction_3d_metadata = {
         'inference_execution': inference_execution,
         'start': start,
@@ -1163,6 +1150,7 @@ def generate_pose_reconstruction_3d_metadata(
         'room_y_limits': room_y_limits,
         'camera_assignment_ids': camera_assignment_ids,
         'camera_device_id_lookup': camera_device_id_lookup,
+        'camera_device_ids': camera_device_ids,
         'camera_calibrations': camera_calibrations,
         'coordinate_space_id': coordinate_space_id,
         'poses_2d_json_format': poses_2d_json_format,
@@ -1221,6 +1209,7 @@ def generate_pose_track_3d_interpolation_metadata(
     end,
     base_dir,
     environment_id,
+    pose_reconstruction_3d_inference_id,
     pose_tracking_3d_inference_id,
     pose_processing_subdirectory='pose_processing',
     pose_tracks_3d_directory_name='pose_tracks_3d',
@@ -1230,16 +1219,6 @@ def generate_pose_track_3d_interpolation_metadata(
     inference_execution = generate_pose_track_3d_interpolation_inference_execution(
         environment_id
     )
-    logger.info('Fetching metadata from pose tracking stage')
-    pose_tracking_3d_metadata = process_pose_data.read_metadata_local(
-        inference_id_local=pose_tracking_3d_inference_id,
-        base_dir=base_dir,
-        environment_id=environment_id,
-        output_subdirectory_name=pose_tracks_3d_directory_name,
-        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
-        pose_processing_subdirectory=pose_processing_subdirectory
-    )
-    pose_reconstruction_3d_inference_id = pose_tracking_3d_metadata['pose_reconstruction_3d_inference_id']
     pose_track_3d_interpolation_metadata = {
         'inference_execution': inference_execution,
         'start': start,
@@ -1276,6 +1255,8 @@ def generate_pose_track_3d_identification_metadata(
     end,
     base_dir,
     environment_id,
+    pose_reconstruction_3d_inference_id,
+    pose_tracking_3d_inference_id,
     pose_track_3d_interpolation_inference_id,
     pose_processing_subdirectory='pose_processing',
     pose_track_3d_interpolation_directory_name='pose_track_3d_interpolation',
@@ -1286,24 +1267,14 @@ def generate_pose_track_3d_identification_metadata(
         environment_id
     )
     logger.info('Fetching metadata from pose track interpolation stage')
-    pose_track_3d_interpolation_metadata = process_pose_data.read_metadata_local(
-        inference_id_local=pose_track_3d_interpolation_inference_id,
-        base_dir=base_dir,
-        environment_id=environment_id,
-        output_subdirectory_name=pose_track_3d_interpolation_directory_name,
-        metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
-        pose_processing_subdirectory=pose_processing_subdirectory
-    )
-    pose_reconstruction_3d_inference_id = pose_track_3d_interpolation_metadata['pose_reconstruction_3d_inference_id']
-    pose_tracking_3d_inference_id = pose_track_3d_interpolation_metadata['pose_tracking_3d_inference_id']
     pose_track_3d_identification_metadata = {
         'start': start,
         'end': end,
         'inference_execution': inference_execution,
         'environment_id': environment_id,
-        'pose_track_3d_interpolation_inference_id': pose_track_3d_interpolation_inference_id,
         'pose_reconstruction_3d_inference_id': pose_reconstruction_3d_inference_id,
         'pose_tracking_3d_inference_id': pose_tracking_3d_inference_id,
+        'pose_track_3d_interpolation_inference_id': pose_track_3d_interpolation_inference_id
     }
     return pose_track_3d_identification_metadata
 
