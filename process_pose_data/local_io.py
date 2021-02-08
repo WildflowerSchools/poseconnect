@@ -225,7 +225,7 @@ def fetch_3d_poses_with_identified_tracks_local(
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
-    pose_track_3d_identification_metadata = read_metadata_local(
+    pose_track_3d_identification_metadata = fetch_metadata_local(
         inference_id_local=pose_track_3d_identification_inference_id_local,
         base_dir=base_dir,
         environment_id=environment_id,
@@ -281,7 +281,7 @@ def fetch_3d_poses_with_interpolated_tracks_local(
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
-    pose_track_3d_interpolation_metadata = read_metadata_local(
+    pose_track_3d_interpolation_metadata = fetch_metadata_local(
         inference_id_local=pose_track_3d_interpolation_inference_id_local,
         base_dir=base_dir,
         environment_id=environment_id,
@@ -340,7 +340,7 @@ def fetch_3d_poses_with_uninterpolated_tracks_local(
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
-    pose_tracks_3d_metadata = read_metadata_local(
+    pose_tracks_3d_metadata = fetch_metadata_local(
         inference_id_local=pose_tracking_3d_inference_id_local,
         base_dir=base_dir,
         environment_id=environment_id,
@@ -853,7 +853,7 @@ def write_metadata_local(
     with open(metadata_path, 'wb') as fp:
         pickle.dump(metadata, fp)
 
-def read_metadata_local(
+def fetch_metadata_local(
     inference_id_local,
     base_dir,
     environment_id,

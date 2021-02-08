@@ -360,7 +360,7 @@ def generate_pose_tracks_3d_local_by_time_segment(
     progress_bar=False,
     notebook=False
 ):
-    pose_reconstruction_3d_metadata = process_pose_data.local_io.read_metadata_local(
+    pose_reconstruction_3d_metadata = process_pose_data.local_io.fetch_metadata_local(
         inference_id_local=pose_reconstruction_3d_inference_id,
         base_dir=base_dir,
         environment_id=environment_id,
@@ -497,7 +497,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     progress_bar=False,
     notebook=False
 ):
-    pose_tracking_3d_metadata = process_pose_data.local_io.read_metadata_local(
+    pose_tracking_3d_metadata = process_pose_data.local_io.fetch_metadata_local(
         inference_id_local=pose_tracking_3d_inference_id,
         base_dir=base_dir,
         environment_id=environment_id,
@@ -814,7 +814,7 @@ def identify_pose_tracks_3d_local_by_segment(
     progress_bar=False,
     notebook=False
 ):
-    pose_track_3d_interpolation_metadata = process_pose_data.local_io.read_metadata_local(
+    pose_track_3d_interpolation_metadata = process_pose_data.local_io.fetch_metadata_local(
         inference_id_local=pose_track_3d_interpolation_inference_id,
         base_dir=base_dir,
         environment_id=environment_id,
