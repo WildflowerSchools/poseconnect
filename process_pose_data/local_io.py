@@ -393,16 +393,18 @@ def fetch_3d_poses_with_tracks_local(
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
-    poses_3d_df = fetch_3d_pose_data_local(
+    poses_3d_df = fetch_data_local_by_time_segment(
         start=start,
         end=end,
         base_dir=base_dir,
+        pipeline_stage='pose_reconstruction_3d',
         environment_id=environment_id,
-        inference_id_local=pose_reconstruction_3d_inference_id,
-        pose_3d_ids=None,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        poses_3d_directory_name=poses_3d_directory_name,
-        poses_3d_file_name_stem=poses_3d_file_name_stem
+        filename_stem='poses_3d',
+        inference_ids=pose_reconstruction_3d_inference_id,
+        data_ids=None,
+        sort_field=None,
+        object_type='dataframe',
+        pose_processing_subdirectory='pose_processing'
     )
     pose_tracks_3d = fetch_3d_pose_track_data_local(
         base_dir=base_dir,
@@ -418,174 +420,6 @@ def fetch_3d_poses_with_tracks_local(
         how='inner'
     )
     return poses_3d_with_tracks_df
-
-def write_3d_pose_data_local(
-    poses_3d_df,
-    base_dir,
-    environment_id,
-    inference_id_local,
-    append=False,
-    pose_processing_subdirectory='pose_processing',
-    poses_3d_directory_name='poses_3d',
-    poses_3d_file_name_stem='poses_3d'
-):
-    start = pd.to_datetime(poses_3d_df['timestamp'].min()).to_pydatetime()
-    end = pd.to_datetime(poses_3d_df['timestamp'].max()).to_pydatetime()
-    time_segment_start_list = generate_time_segment_start_list(
-        start,
-        end
-    )
-    for time_segment_start in time_segment_start_list:
-        poses_3d_time_segment_df = poses_3d_df.loc[
-            (poses_3d_df['timestamp'] >= time_segment_start) &
-            (poses_3d_df['timestamp'] < time_segment_start + datetime.timedelta(seconds=10))
-        ]
-        write_3d_pose_data_local_time_segment(
-            poses_3d_df=poses_3d_time_segment_df,
-            base_dir=base_dir,
-            environment_id=environment_id,
-            time_segment_start=time_segment_start,
-            inference_id_local=inference_id_local,
-            append=append,
-            pose_processing_subdirectory=pose_processing_subdirectory,
-            poses_3d_directory_name=poses_3d_directory_name,
-            poses_3d_file_name_stem=poses_3d_file_name_stem
-        )
-
-def write_3d_pose_data_local_time_segment(
-    poses_3d_df,
-    base_dir,
-    environment_id,
-    time_segment_start,
-    inference_id_local,
-    append=False,
-    pose_processing_subdirectory='pose_processing',
-    poses_3d_directory_name='poses_3d',
-    poses_3d_file_name_stem='poses_3d'
-):
-    directory_path = pose_3d_data_directory_path_time_segment(
-        base_dir=base_dir,
-        environment_id=environment_id,
-        time_segment_start=time_segment_start,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        poses_3d_directory_name=poses_3d_directory_name
-    )
-    file_name = '{}_{}.pkl'.format(
-        poses_3d_file_name_stem,
-        inference_id_local
-    )
-    os.makedirs(directory_path, exist_ok=True)
-    file_path = os.path.join(
-        directory_path,
-        file_name
-    )
-    if append and os.path.exists(file_path):
-        existing_poses_3d_df = pd.read_pickle(file_path)
-        poses_3d_df = pd.concat((existing_poses_3d_df, poses_3d_df)).sort_values('timestamp')
-    poses_3d_df.to_pickle(file_path)
-
-def fetch_3d_pose_data_local(
-    start,
-    end,
-    base_dir,
-    environment_id,
-    inference_id_local,
-    pose_3d_ids=None,
-    pose_processing_subdirectory='pose_processing',
-    poses_3d_directory_name='poses_3d',
-    poses_3d_file_name_stem='poses_3d'
-):
-    time_segment_start_list = generate_time_segment_start_list(
-        start,
-        end
-    )
-    poses_3d_df_list = list()
-    for time_segment_start in time_segment_start_list:
-        poses_3d_df_time_segment = fetch_3d_pose_data_local_time_segment(
-            time_segment_start,
-            base_dir=base_dir,
-            environment_id=environment_id,
-            inference_id_local=inference_id_local,
-            pose_3d_ids=pose_3d_ids,
-            pose_processing_subdirectory=pose_processing_subdirectory,
-            poses_3d_directory_name=poses_3d_directory_name,
-            poses_3d_file_name_stem=poses_3d_file_name_stem
-        )
-        poses_3d_df_list.append(poses_3d_df_time_segment)
-    poses_3d_df = pd.concat(poses_3d_df_list)
-    return poses_3d_df
-
-def fetch_3d_pose_data_local_time_segment(
-    time_segment_start,
-    base_dir,
-    environment_id,
-    inference_id_local,
-    pose_3d_ids=None,
-    pose_processing_subdirectory='pose_processing',
-    poses_3d_directory_name='poses_3d',
-    poses_3d_file_name_stem='poses_3d'
-):
-    if isinstance(inference_id_local, str):
-        path=pose_3d_data_path_time_segment(
-            base_dir=base_dir,
-            environment_id=environment_id,
-            inference_id_local=inference_id_local,
-            time_segment_start=time_segment_start,
-            pose_processing_subdirectory=pose_processing_subdirectory,
-            poses_3d_directory_name=poses_3d_directory_name,
-            poses_3d_file_name_stem=poses_3d_file_name_stem
-        )
-        if os.path.exists(path):
-            poses_3d_df_time_segment = pd.read_pickle(path)
-        else:
-            poses_3d_df_time_segment = pd.DataFrame()
-    elif isinstance(inference_id_local, (list, tuple, set)):
-        poses_3d_dfs_time_segment=list()
-        for inference_id_local_element in inference_id_local:
-            path=pose_3d_data_path_time_segment(
-                base_dir=base_dir,
-                environment_id=environment_id,
-                inference_id_local=inference_id_local_element,
-                time_segment_start=time_segment_start,
-                pose_processing_subdirectory=pose_processing_subdirectory,
-                poses_3d_directory_name=poses_3d_directory_name,
-                poses_3d_file_name_stem=poses_3d_file_name_stem
-            )
-            if os.path.exists(path):
-                poses_3d_df_time_segment_id = pd.read_pickle(path)
-            else:
-                poses_3d_df_time_segment_id = pd.DataFrame()
-            poses_3d_dfs_time_segment.append(poses_3d_df_time_segment_id)
-        poses_3d_df_time_segment = pd.concat(poses_3d_dfs_time_segment).sort_values('timestamp')
-    else:
-        raise ValueError("Specified inference ID must be of type str, list, tuple, or set")
-    if pose_3d_ids is not None:
-        poses_3d_df_time_segment = poses_3d_df_time_segment.reindex(
-            poses_3d_df_time_segment.index.intersection(pose_3d_ids)
-        )
-    return poses_3d_df_time_segment
-
-def delete_3d_pose_data_local(
-    base_dir,
-    environment_id,
-    inference_id_local,
-    pose_processing_subdirectory='pose_processing',
-    poses_3d_directory_name='poses_3d',
-    poses_3d_file_name_stem='poses_3d'
-):
-    glob_pattern = os.path.join(
-        base_dir,
-        pose_processing_subdirectory,
-        environment_id,
-        poses_3d_directory_name,
-        '*',
-        '*',
-        '*',
-        '*',
-        '{}_{}.pkl'.format(poses_3d_file_name_stem, inference_id_local)
-    )
-    for path in glob.iglob(glob_pattern):
-        os.remove(path)
 
 def write_3d_pose_track_data_local(
     pose_tracks_3d,
@@ -857,6 +691,48 @@ def delete_metadata_local(
         pose_processing_subdirectory=pose_processing_subdirectory
     )
 
+def write_data_local_by_time_segment(
+    data_object,
+    base_dir,
+    pipeline_stage,
+    environment_id,
+    filename_stem,
+    inference_id,
+    object_type='dataframe',
+    append=False,
+    sort_field=None,
+    pose_processing_subdirectory='pose_processing'
+):
+    if object_type != 'dataframe':
+        raise ValueError('Writing data by time segment only available for dataframe objects')
+    if 'timestamp' not in data_object.columns.tolist():
+        raise ValueError('Writing data by time segment only available for dataframes with a \'timestamp\' field')
+    start = pd.to_datetime(data_object['timestamp'].min()).to_pydatetime()
+    end = pd.to_datetime(data_object['timestamp'].max()).to_pydatetime()
+    time_segment_start_list = generate_time_segment_start_list(
+        start,
+        end
+    )
+    for time_segment_start in time_segment_start_list:
+        data_object_time_segment = data_object.loc[
+            (data_object['timestamp'] >= time_segment_start) &
+            (data_object['timestamp'] < time_segment_start + datetime.timedelta(seconds=10))
+        ]
+        write_data_local(
+            data_object=data_object_time_segment,
+            base_dir=base_dir,
+            pipeline_stage=pipeline_stage,
+            environment_id=environment_id,
+            filename_stem=filename_stem,
+            inference_id=inference_id,
+            time_segment_start=time_segment_start,
+            object_type=object_type,
+            append=append,
+            sort_field=sort_field,
+            pose_processing_subdirectory=pose_processing_subdirectory
+        )
+
+
 def write_data_local(
     data_object,
     base_dir,
@@ -893,7 +769,7 @@ def write_data_local(
             pipeline_stage=pipeline_stage,
             environment_id=environment_id,
             filename_stem=filename_stem,
-            inference_id=inference_id,
+            inference_ids=inference_id,
             time_segment_start=time_segment_start,
             object_type=object_type,
             pose_processing_subdirectory=pose_processing_subdirectory
@@ -908,6 +784,45 @@ def write_data_local(
             pickle.dump(data_object, fp)
     else:
         raise ValueError('Only allowed object types are \'dataframe\' and \'dict\'')
+
+def fetch_data_local_by_time_segment(
+    start,
+    end,
+    base_dir,
+    pipeline_stage,
+    environment_id,
+    filename_stem,
+    inference_ids,
+    data_ids=None,
+    sort_field=None,
+    object_type='dataframe',
+    pose_processing_subdirectory='pose_processing'
+):
+    if object_type != 'dataframe':
+        raise ValueError('Fetching data by time segment only available for dataframe objects')
+    time_segment_start_list = generate_time_segment_start_list(
+        start,
+        end
+    )
+    data_object_list = list()
+    for time_segment_start in time_segment_start_list:
+        data_object_time_segment = fetch_data_local(
+            base_dir=base_dir,
+            pipeline_stage=pipeline_stage,
+            environment_id=environment_id,
+            filename_stem=filename_stem,
+            inference_ids=inference_ids,
+            data_ids=data_ids,
+            sort_field=sort_field,
+            time_segment_start=time_segment_start,
+            object_type=object_type,
+            pose_processing_subdirectory=pose_processing_subdirectory
+        )
+        data_object_list.append(data_object_time_segment)
+    data_object = pd.concat(data_object_list)
+    if sort_field is not None:
+        data_object.sort_values(sort_field, inplace=True)
+    return data_object
 
 def fetch_data_local(
     base_dir,

@@ -330,15 +330,18 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
     )
     logger.info('Reconstructed 3D poses for time segment starting at {}'.format(time_segment_start.isoformat()))
     logger.info('Writing 3D poses to disk for time segment starting at {}'.format(time_segment_start.isoformat()))
-    process_pose_data.local_io.write_3d_pose_data_local_time_segment(
-        poses_3d_df=poses_3d_local_ids_df,
+    process_pose_data.local_io.write_data_local(
+        data_object=poses_3d_local_ids_df,
         base_dir=base_dir,
+        pipeline_stage='pose_reconstruction_3d',
         environment_id=environment_id,
+        filename_stem='poses_3d',
+        inference_id=inference_id_local,
         time_segment_start=time_segment_start,
-        inference_id_local=inference_id_local,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        poses_3d_directory_name=poses_3d_directory_name,
-        poses_3d_file_name_stem=poses_3d_file_name_stem
+        object_type='dataframe',
+        append=False,
+        sort_field=None,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
 
 def generate_pose_tracks_3d_local_by_time_segment(
@@ -450,14 +453,17 @@ def generate_pose_tracks_3d_local_by_time_segment(
     else:
         time_segment_start_iterator = time_segment_start_list
     for time_segment_start in time_segment_start_iterator:
-        poses_3d_df = process_pose_data.local_io.fetch_3d_pose_data_local_time_segment(
-            time_segment_start=time_segment_start,
+        poses_3d_df = process_pose_data.local_io.fetch_data_local(
             base_dir=base_dir,
+            pipeline_stage='pose_reconstruction_3d',
             environment_id=environment_id,
-            inference_id_local=pose_reconstruction_3d_inference_id,
-            pose_processing_subdirectory=pose_processing_subdirectory,
-            poses_3d_directory_name=poses_3d_directory_name,
-            poses_3d_file_name_stem=poses_3d_file_name_stem
+            filename_stem='poses_3d',
+            inference_ids=pose_reconstruction_3d_inference_id,
+            data_ids=None,
+            sort_field=None,
+            time_segment_start=time_segment_start,
+            object_type='dataframe',
+            pose_processing_subdirectory='pose_processing'
         )
         if len(poses_3d_df) == 0:
             continue
@@ -590,29 +596,33 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
         pose_track_start = pose_track_3d['start']
         pose_track_end = pose_track_3d['end']
         pose_3d_ids = pose_track_3d['pose_3d_ids']
-        poses_3d_in_track_df = process_pose_data.fetch_3d_pose_data_local(
+        poses_3d_in_track_df = process_pose_data.local_io.fetch_data_local_by_time_segment(
             start=pose_track_start,
             end=pose_track_end,
             base_dir=base_dir,
+            pipeline_stage='pose_reconstruction_3d',
             environment_id=environment_id,
-            inference_id_local=pose_reconstruction_3d_inference_id,
-            pose_3d_ids=pose_3d_ids,
-            pose_processing_subdirectory=pose_processing_subdirectory,
-            poses_3d_directory_name=poses_3d_directory_name,
-            poses_3d_file_name_stem=poses_3d_file_name_stem
+            filename_stem='poses_3d',
+            inference_ids=pose_reconstruction_3d_inference_id,
+            data_ids=pose_3d_ids,
+            sort_field=None,
+            object_type='dataframe',
+            pose_processing_subdirectory='pose_processing'
         )
         poses_3d_new_df = process_pose_data.interpolate_pose_track(poses_3d_in_track_df)
         if len(poses_3d_new_df) == 0:
             continue
-        process_pose_data.write_3d_pose_data_local(
-            poses_3d_df=poses_3d_new_df,
+        process_pose_data.local_io.write_data_local_by_time_segment(
+            data_object=poses_3d_new_df,
             base_dir=base_dir,
+            pipeline_stage='pose_reconstruction_3d',
             environment_id=environment_id,
-            inference_id_local=pose_track_3d_interpolation_inference_id,
+            filename_stem='poses_3d',
+            inference_id=pose_track_3d_interpolation_inference_id,
+            object_type='dataframe',
             append=True,
-            pose_processing_subdirectory=pose_processing_subdirectory,
-            poses_3d_directory_name=poses_3d_directory_name,
-            poses_3d_file_name_stem=poses_3d_file_name_stem
+            sort_field=None,
+            pose_processing_subdirectory=pose_processing_subdirectory
         )
         pose_tracks_3d_new[pose_track_3d_id] = {
             'start': pd.to_datetime(poses_3d_new_df['timestamp'].min()).to_pydatetime(),
@@ -947,17 +957,20 @@ def identify_pose_tracks_3d_local_by_segment(
         match_statistics_time_segment_df_list = list()
     for time_segment_start in time_segment_start_iterator:
         # Fetch 3D poses with tracks
-        poses_3d_time_segment_df = process_pose_data.local_io.fetch_3d_pose_data_local_time_segment(
-            time_segment_start=time_segment_start,
+        poses_3d_time_segment_df = process_pose_data.local_io.fetch_data_local(
             base_dir=base_dir,
+            pipeline_stage='pose_reconstruction_3d',
             environment_id=environment_id,
-            inference_id_local=[
+            filename_stem='poses_3d',
+            inference_ids=[
                 pose_reconstruction_3d_inference_id,
                 pose_track_3d_interpolation_inference_id
             ],
-            pose_processing_subdirectory=pose_processing_subdirectory,
-            poses_3d_directory_name=poses_3d_directory_name,
-            poses_3d_file_name_stem=poses_3d_file_name_stem
+            data_ids=None,
+            sort_field=None,
+            time_segment_start=time_segment_start,
+            object_type='dataframe',
+            pose_processing_subdirectory='pose_processing'
         )
         poses_3d_with_tracks_time_segment_df = poses_3d_time_segment_df.join(pose_3d_ids_with_tracks_df, how='inner')
         # Add sensor positions
@@ -1077,14 +1090,17 @@ def upload_3d_poses_honeycomb(
         time_segment_start_iterator = time_segment_start_list
     pose_3d_ids=list()
     for time_segment_start in time_segment_start_iterator:
-        poses_3d_df_time_segment = process_pose_data.local_io.fetch_3d_pose_data_local_time_segment(
-            time_segment_start=time_segment_start,
+        poses_3d_df_time_segment = process_pose_data.local_io.fetch_data_local(
             base_dir=base_dir,
+            pipeline_stage='pose_reconstruction_3d',
             environment_id=environment_id,
-            inference_id_local=inference_id_local,
-            pose_processing_subdirectory=pose_processing_subdirectory,
-            poses_3d_directory_name=poses_3d_directory_name,
-            poses_3d_file_name_stem=poses_3d_file_name_stem
+            filename_stem='poses_3d',
+            inference_ids=inference_id_local,
+            data_ids=None,
+            sort_field=None,
+            time_segment_start=time_segment_start,
+            object_type='dataframe',
+            pose_processing_subdirectory='pose_processing'
         )
         raise ValueError('We need a way of fetching Honeycomb inference ID before writing 3D pose data to Honeycomb')
         pose_3d_ids_time_segment = process_pose_data.honeycomb_io.write_3d_pose_data(
@@ -1121,14 +1137,14 @@ def delete_reconstruct_3d_poses_output(
 ):
     raise NotImplementedError('process_pose_data.process.delete_reconstruct_3d_poses_output() needs to be updated')
     logger.info('Deleting local 3D pose data')
-    process_pose_data.local_io.delete_3d_pose_data_local(
-        base_dir=base_dir,
-        environment_id=environment_id,
-        inference_id_local=inference_id_local,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        poses_3d_directory_name=poses_3d_directory_name,
-        poses_3d_file_name_stem=poses_3d_file_name_stem
-    )
+    # process_pose_data.local_io.delete_3d_pose_data_local(
+    #     base_dir=base_dir,
+    #     environment_id=environment_id,
+    #     inference_id_local=inference_id_local,
+    #     pose_processing_subdirectory=pose_processing_subdirectory,
+    #     poses_3d_directory_name=poses_3d_directory_name,
+    #     poses_3d_file_name_stem=poses_3d_file_name_stem
+    # )
     logger.info('Deleting local inference metadata')
     process_pose_data.local_io.delete_metadata_local(
         inference_id_local=inference_id_local,
