@@ -406,13 +406,17 @@ def fetch_3d_poses_with_tracks_local(
         object_type='dataframe',
         pose_processing_subdirectory='pose_processing'
     )
-    pose_tracks_3d = fetch_3d_pose_track_data_local(
+    pose_tracks_3d = fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_tracking_3d',
         environment_id=environment_id,
-        inference_id_local=pose_tracking_3d_inference_id,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
-        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
+        filename_stem='pose_tracks_3d',
+        inference_ids=pose_tracking_3d_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     pose_tracks_3d_df = convert_pose_tracks_3d_to_df(pose_tracks_3d)
     poses_3d_with_tracks_df = poses_3d_df.join(
@@ -420,76 +424,6 @@ def fetch_3d_poses_with_tracks_local(
         how='inner'
     )
     return poses_3d_with_tracks_df
-
-def write_3d_pose_track_data_local(
-    pose_tracks_3d,
-    base_dir,
-    environment_id,
-    inference_id_local,
-    pose_processing_subdirectory='pose_processing',
-    pose_tracks_3d_directory_name='pose_tracks_3d',
-    pose_tracks_3d_file_name_stem='pose_tracks_3d'
-):
-    directory = os.path.join(
-        base_dir,
-        pose_processing_subdirectory,
-        environment_id,
-        pose_tracks_3d_directory_name
-    )
-    filename = '{}_{}.pkl'.format(
-        pose_tracks_3d_file_name_stem,
-        inference_id_local
-    )
-    path = os.path.join(
-        directory,
-        filename
-    )
-    os.makedirs(directory, exist_ok=True)
-    with open(path, 'wb') as fp:
-        pickle.dump(pose_tracks_3d, fp)
-
-def fetch_3d_pose_track_data_local(
-    base_dir,
-    environment_id,
-    inference_id_local,
-    pose_processing_subdirectory='pose_processing',
-    pose_tracks_3d_directory_name='pose_tracks_3d',
-    pose_tracks_3d_file_name_stem='pose_tracks_3d'
-):
-    path=os.path.join(
-        base_dir,
-        pose_processing_subdirectory,
-        environment_id,
-        pose_tracks_3d_directory_name,
-        '{}_{}.pkl'.format(
-            pose_tracks_3d_file_name_stem,
-            inference_id_local
-        )
-    )
-    with open(path, 'rb') as fp:
-        pose_tracks_3d=pickle.load(fp)
-    return pose_tracks_3d
-
-def delete_3d_pose_track_data_local(
-    base_dir,
-    environment_id,
-    inference_id_local,
-    pose_processing_subdirectory='pose_processing',
-    pose_tracks_3d_directory_name='pose_tracks_3d',
-    pose_tracks_3d_file_name_stem='pose_tracks_3d'
-):
-    path=os.path.join(
-        base_dir,
-        pose_processing_subdirectory,
-        environment_id,
-        pose_tracks_3d_directory_name,
-        '{}_{}.pkl'.format(
-            pose_tracks_3d_file_name_stem,
-            inference_id_local
-        )
-    )
-    if os.path.exists(path):
-        os.remove(path)
 
 def convert_pose_tracks_3d_to_df(
     pose_tracks_3d

@@ -485,14 +485,18 @@ def generate_pose_tracks_3d_local_by_time_segment(
             num_poses_min=num_poses_per_track_min,
             inplace=True
         )
-    process_pose_data.local_io.write_3d_pose_track_data_local(
-        pose_tracks_3d=pose_tracks_3d.output(),
+    process_pose_data.local_io.write_data_local(
+        data_object=pose_tracks_3d.output(),
         base_dir=base_dir,
+        pipeline_stage='pose_tracking_3d',
         environment_id=environment_id,
-        inference_id_local=pose_tracking_3d_inference_id_local,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
-        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
+        filename_stem='pose_tracks_3d',
+        inference_id=pose_tracking_3d_inference_id_local,
+        time_segment_start=None,
+        object_type='dict',
+        append=False,
+        sort_field=None,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     processing_time = time.time() - processing_start
     logger.info('Processed {:.3f} minutes of 3D poses in {:.3f} minutes (ratio of {:.3f})'.format(
@@ -563,13 +567,17 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
         sort_field=None,
         pose_processing_subdirectory=pose_processing_subdirectory
     )
-    pose_tracks_3d = process_pose_data.local_io.fetch_3d_pose_track_data_local(
+    pose_tracks_3d = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_tracking_3d',
         environment_id=environment_id,
-        inference_id_local=pose_tracking_3d_inference_id,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
-        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
+        filename_stem='pose_tracks_3d',
+        inference_ids=pose_tracking_3d_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     num_pose_tracks = len(pose_tracks_3d)
     pose_tracks_start = min([pose_track_3d['start'] for pose_track_3d in pose_tracks_3d.values()])
@@ -629,14 +637,18 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
             'end': pd.to_datetime(poses_3d_new_df['timestamp'].max()).to_pydatetime(),
             'pose_3d_ids': poses_3d_new_df.index.tolist()
         }
-    process_pose_data.write_3d_pose_track_data_local(
-        pose_tracks_3d=pose_tracks_3d_new,
+    process_pose_data.local_io.write_data_local(
+        data_object=pose_tracks_3d_new,
         base_dir=base_dir,
+        pipeline_stage='pose_tracking_3d',
         environment_id=environment_id,
-        inference_id_local=pose_track_3d_interpolation_inference_id,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
-        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
+        filename_stem='pose_tracks_3d',
+        inference_id=pose_track_3d_interpolation_inference_id,
+        time_segment_start=None,
+        object_type='dict',
+        append=False,
+        sort_field=None,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     processing_time = time.time() - processing_start
     logger.info('Processed {} 3D pose tracks in {:.3f} minutes'.format(
@@ -907,21 +919,29 @@ def identify_pose_tracks_3d_local_by_segment(
     )
     pose_track_3d_identification_inference_id = pose_track_3d_identification_metadata['inference_id_local']
     # Fetch pose track data
-    pose_tracks_3d_before_interpolation = process_pose_data.local_io.fetch_3d_pose_track_data_local(
+    pose_tracks_3d_before_interpolation = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_tracking_3d',
         environment_id=environment_id,
-        inference_id_local=pose_tracking_3d_inference_id,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
-        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
+        filename_stem='pose_tracks_3d',
+        inference_ids=pose_tracking_3d_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
-    pose_tracks_3d_from_interpolation = process_pose_data.local_io.fetch_3d_pose_track_data_local(
+    pose_tracks_3d_from_interpolation = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_tracking_3d',
         environment_id=environment_id,
-        inference_id_local=pose_track_3d_interpolation_inference_id,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        pose_tracks_3d_directory_name=pose_tracks_3d_directory_name,
-        pose_tracks_3d_file_name_stem=pose_tracks_3d_file_name_stem
+        filename_stem='pose_tracks_3d',
+        inference_ids=pose_track_3d_interpolation_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     pose_3d_ids_with_tracks_before_interpolation_df = process_pose_data.local_io.convert_pose_tracks_3d_to_df(
         pose_tracks_3d=pose_tracks_3d_before_interpolation
