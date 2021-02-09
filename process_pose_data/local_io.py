@@ -589,8 +589,8 @@ def data_file_path(
     directory_path = os.path.join(
         base_dir,
         pose_processing_subdirectory,
-        environment_id,
-        pipeline_stage
+        pipeline_stage,
+        environment_id
     )
     if time_segment_start is not None:
         time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
