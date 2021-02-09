@@ -154,12 +154,17 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     )
     inference_id_local = pose_reconstruction_3d_metadata.get('inference_id_local')
     logger.info('Writing inference metadata to local file')
-    process_pose_data.local_io.write_metadata_local(
-        metadata=pose_reconstruction_3d_metadata,
+    process_pose_data.local_io.write_data_local(
+        data_object=pose_reconstruction_3d_metadata,
         base_dir=base_dir,
+        pipeline_stage='pose_reconstruction_3d',
         environment_id=environment_id,
-        output_subdirectory_name=poses_3d_directory_name,
-        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
+        filename_stem='pose_reconstruction_3d_metadata',
+        inference_id=pose_reconstruction_3d_metadata['inference_id_local'],
+        time_segment_start=None,
+        object_type='dict',
+        append=False,
+        sort_field=None,
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     logger.info('Generating list of time segments')
@@ -360,12 +365,16 @@ def generate_pose_tracks_3d_local_by_time_segment(
     progress_bar=False,
     notebook=False
 ):
-    pose_reconstruction_3d_metadata = process_pose_data.local_io.fetch_metadata_local(
-        inference_id_local=pose_reconstruction_3d_inference_id,
+    pose_reconstruction_3d_metadata = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_reconstruction_3d',
         environment_id=environment_id,
-        output_subdirectory_name=poses_3d_directory_name,
-        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
+        filename_stem='pose_reconstruction_3d_metadata',
+        inference_ids=pose_reconstruction_3d_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     if start is None:
@@ -405,12 +414,17 @@ def generate_pose_tracks_3d_local_by_time_segment(
     )
     pose_tracking_3d_inference_id_local = pose_tracking_3d_metadata.get('inference_id_local')
     logger.info('Writing inference metadata to local file')
-    process_pose_data.local_io.write_metadata_local(
-        metadata=pose_tracking_3d_metadata,
+    process_pose_data.local_io.write_data_local(
+        data_object=pose_tracking_3d_metadata,
         base_dir=base_dir,
+        pipeline_stage='pose_tracking_3d',
         environment_id=environment_id,
-        output_subdirectory_name=pose_tracks_3d_directory_name,
-        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
+        filename_stem='pose_tracking_3d_metadata',
+        inference_id=pose_tracking_3d_metadata['inference_id_local'],
+        time_segment_start=None,
+        object_type='dict',
+        append=False,
+        sort_field=None,
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     logger.info('Generating list of time segments')
@@ -497,12 +511,16 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     progress_bar=False,
     notebook=False
 ):
-    pose_tracking_3d_metadata = process_pose_data.local_io.fetch_metadata_local(
-        inference_id_local=pose_tracking_3d_inference_id,
+    pose_tracking_3d_metadata = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_tracking_3d',
         environment_id=environment_id,
-        output_subdirectory_name=pose_tracks_3d_directory_name,
-        metadata_filename_stem=pose_tracking_3d_metadata_filename_stem,
+        filename_stem='pose_tracking_3d_metadata',
+        inference_ids=pose_tracking_3d_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     start = pose_tracking_3d_metadata['parameters']['start']
@@ -526,13 +544,18 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     )
     pose_track_3d_interpolation_inference_id = pose_track_3d_interpolation_metadata.get('inference_id_local')
     logger.info('Writing inference metadata to local file')
-    process_pose_data.local_io.write_metadata_local(
-        metadata=pose_track_3d_interpolation_metadata,
+    process_pose_data.local_io.write_data_local(
+        data_object=pose_track_3d_interpolation_metadata,
         base_dir=base_dir,
+        pipeline_stage='pose_track_3d_interpolation',
         environment_id=environment_id,
-        output_subdirectory_name=pose_track_3d_interpolation_directory_name,
-        metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
-        pose_processing_subdirectory=pose_processing_subdirectory,
+        filename_stem='pose_track_3d_interpolation_metadata',
+        inference_id=pose_track_3d_interpolation_metadata['inference_id_local'],
+        time_segment_start=None,
+        object_type='dict',
+        append=False,
+        sort_field=None,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     pose_tracks_3d = process_pose_data.local_io.fetch_3d_pose_track_data_local(
         base_dir=base_dir,
@@ -666,12 +689,17 @@ def download_position_data_by_datapoint(
     )
     download_position_data_inference_id_local = download_position_data_metadata.get('inference_id_local')
     logger.info('Writing inference metadata to local file')
-    process_pose_data.local_io.write_metadata_local(
-        metadata=download_position_data_metadata,
+    process_pose_data.local_io.write_data_local(
+        data_object=download_position_data_metadata,
         base_dir=base_dir,
+        pipeline_stage='download_position_data',
         environment_id=environment_id,
-        output_subdirectory_name=position_data_directory_name,
-        metadata_filename_stem=download_position_data_metadata_filename_stem,
+        filename_stem='download_position_data_metadata',
+        inference_id=download_position_data_metadata['inference_id_local'],
+        time_segment_start=None,
+        object_type='dict',
+        append=False,
+        sort_field=None,
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     logger.info('Generating list of time segments')
@@ -814,12 +842,16 @@ def identify_pose_tracks_3d_local_by_segment(
     progress_bar=False,
     notebook=False
 ):
-    pose_track_3d_interpolation_metadata = process_pose_data.local_io.fetch_metadata_local(
-        inference_id_local=pose_track_3d_interpolation_inference_id,
+    pose_track_3d_interpolation_metadata = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_track_3d_interpolation',
         environment_id=environment_id,
-        output_subdirectory_name=pose_track_3d_interpolation_directory_name,
-        metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
+        filename_stem='pose_track_3d_interpolation_metadata',
+        inference_ids=pose_track_3d_interpolation_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     start = pose_track_3d_interpolation_metadata['parameters']['start']
@@ -850,12 +882,17 @@ def identify_pose_tracks_3d_local_by_segment(
         }
     )
     logger.info('Writing inference metadata to local file')
-    process_pose_data.local_io.write_metadata_local(
-        metadata=pose_track_3d_identification_metadata,
+    process_pose_data.local_io.write_data_local(
+        data_object=pose_track_3d_identification_metadata,
         base_dir=base_dir,
+        pipeline_stage='pose_track_3d_identification',
         environment_id=environment_id,
-        output_subdirectory_name=pose_track_3d_identification_directory_name,
-        metadata_filename_stem=pose_track_3d_identification_metadata_filename_stem,
+        filename_stem='pose_track_3d_identification_metadata',
+        inference_id=pose_track_3d_identification_metadata['inference_id_local'],
+        time_segment_start=None,
+        object_type='dict',
+        append=False,
+        sort_field=None,
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     pose_track_3d_identification_inference_id = pose_track_3d_identification_metadata['inference_id_local']

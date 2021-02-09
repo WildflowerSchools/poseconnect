@@ -225,12 +225,16 @@ def fetch_3d_poses_with_identified_tracks_local(
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
-    pose_track_3d_identification_metadata = fetch_metadata_local(
-        inference_id_local=pose_track_3d_identification_inference_id_local,
+    pose_track_3d_identification_metadata = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_track_3d_identification',
         environment_id=environment_id,
-        output_subdirectory_name=pose_track_3d_identification_directory_name,
-        metadata_filename_stem=pose_track_3d_identification_metadata_filename_stem,
+        filename_stem='pose_track_3d_identification_metadata',
+        inference_ids=pose_track_3d_identification_inference_id_local,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     if start is None:
@@ -281,12 +285,16 @@ def fetch_3d_poses_with_interpolated_tracks_local(
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
-    pose_track_3d_interpolation_metadata = fetch_metadata_local(
-        inference_id_local=pose_track_3d_interpolation_inference_id_local,
+    pose_track_3d_interpolation_metadata = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_track_3d_interpolation',
         environment_id=environment_id,
-        output_subdirectory_name=pose_track_3d_interpolation_directory_name,
-        metadata_filename_stem=pose_track_3d_interpolation_metadata_filename_stem,
+        filename_stem='pose_track_3d_interpolation_metadata',
+        inference_ids=pose_track_3d_interpolation_inference_id_local,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     if start is None:
@@ -340,12 +348,16 @@ def fetch_3d_poses_with_uninterpolated_tracks_local(
     poses_3d_directory_name='poses_3d',
     poses_3d_file_name_stem='poses_3d'
 ):
-    pose_tracks_3d_metadata = fetch_metadata_local(
-        inference_id_local=pose_tracking_3d_inference_id_local,
+    pose_tracks_3d_metadata = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_tracking_3d',
         environment_id=environment_id,
-        output_subdirectory_name=pose_tracks_3d_directory_name,
-        metadata_filename_stem=pose_tracks_3d_metadata_file_name_stem,
+        filename_stem='pose_tracking_3d_metadata',
+        inference_ids=pose_tracking_3d_inference_id_local,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     if start is None:
@@ -826,59 +838,6 @@ def fetch_pose_track_3d_identification_data_local(
     pose_track_identification_df = pd.read_pickle(path)
     return pose_track_identification_df
 
-def write_metadata_local(
-    metadata,
-    base_dir,
-    environment_id,
-    output_subdirectory_name,
-    metadata_filename_stem,
-    pose_processing_subdirectory='pose_processing'
-):
-    inference_id_local = metadata.get('inference_id_local')
-    metadata_directory = os.path.join(
-        base_dir,
-        pose_processing_subdirectory,
-        environment_id,
-        output_subdirectory_name
-    )
-    metadata_filename = '{}_{}.pkl'.format(
-        metadata_filename_stem,
-        inference_id_local
-    )
-    metadata_path = os.path.join(
-        metadata_directory,
-        metadata_filename
-    )
-    os.makedirs(metadata_directory, exist_ok=True)
-    with open(metadata_path, 'wb') as fp:
-        pickle.dump(metadata, fp)
-
-def fetch_metadata_local(
-    inference_id_local,
-    base_dir,
-    environment_id,
-    output_subdirectory_name,
-    metadata_filename_stem,
-    pose_processing_subdirectory='pose_processing'
-):
-    metadata_directory = os.path.join(
-        base_dir,
-        pose_processing_subdirectory,
-        environment_id,
-        output_subdirectory_name
-    )
-    metadata_filename = '{}_{}.pkl'.format(
-        metadata_filename_stem,
-        inference_id_local
-    )
-    metadata_path = os.path.join(
-        metadata_directory,
-        metadata_filename
-    )
-    with open(metadata_path, 'rb') as fp:
-        metadata=pickle.load(fp)
-    return metadata
-
 def delete_metadata_local(
     inference_id_local,
     base_dir,
@@ -887,18 +846,204 @@ def delete_metadata_local(
     metadata_filename_stem,
     pose_processing_subdirectory='pose_processing'
 ):
-    metadata_path = os.path.join(
+    delete_data_local(
+        base_dir=base_dir,
+        pipeline_stage=output_subdirectory_name,
+        environment_id=environment_id,
+        filename_stem=output_subdirectory_name + '_metadata',
+        inference_ids=inference_id_local,
+        time_segment_start=None,
+        object_type='dict',
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+
+def write_data_local(
+    data_object,
+    base_dir,
+    pipeline_stage,
+    environment_id,
+    filename_stem,
+    inference_id,
+    time_segment_start=None,
+    object_type='dataframe',
+    append=False,
+    sort_field=None,
+    pose_processing_subdirectory='pose_processing'
+):
+    directory_path, filename = data_file_path(
+        base_dir=base_dir,
+        pipeline_stage=pipeline_stage,
+        environment_id=environment_id,
+        filename_stem=filename_stem,
+        inference_id=inference_id,
+        time_segment_start=time_segment_start,
+        object_type=object_type,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    os.makedirs(directory_path, exist_ok=True)
+    file_path = os.path.join(
+        directory_path,
+        filename
+    )
+    if append and os.path.exists(file_path):
+        if object_type != 'dataframe':
+            raise ValueError('Append and sort field options only available for dataframe objects')
+        existing_data_object = fetch_data_local(
+            base_dir=base_dir,
+            pipeline_stage=pipeline_stage,
+            environment_id=environment_id,
+            filename_stem=filename_stem,
+            inference_id=inference_id,
+            time_segment_start=time_segment_start,
+            object_type=object_type,
+            pose_processing_subdirectory=pose_processing_subdirectory
+        )
+        data_object = pd.concat((existing_data_object, data_object))
+        if sort_field is not None:
+            data_object.sort_values(sort_field, inplace=True)
+    if object_type == 'dataframe':
+        data_object.to_pickle(file_path)
+    elif object_type == 'dict':
+        with open(file_path, 'wb') as fp:
+            pickle.dump(data_object, fp)
+    else:
+        raise ValueError('Only allowed object types are \'dataframe\' and \'dict\'')
+
+def fetch_data_local(
+    base_dir,
+    pipeline_stage,
+    environment_id,
+    filename_stem,
+    inference_ids,
+    data_ids=None,
+    sort_field=None,
+    time_segment_start=None,
+    object_type='dataframe',
+    pose_processing_subdirectory='pose_processing'
+):
+    if isinstance(inference_ids, str):
+        inference_ids = [inference_ids]
+    elif isinstance(inference_ids, (list, tuple, set)):
+        pass
+    else:
+        raise ValueError('Specified inference IDs must be of type str, list, tuple, or set')
+    if len(inference_ids) == 0:
+        raise ValueError('Must specify at least one inference ID')
+    data_object_list = list()
+    for inference_id in inference_ids:
+        directory_path, filename = data_file_path(
+            base_dir=base_dir,
+            pipeline_stage=pipeline_stage,
+            environment_id=environment_id,
+            filename_stem=filename_stem,
+            inference_id=inference_id,
+            time_segment_start=time_segment_start,
+            object_type=object_type,
+            pose_processing_subdirectory=pose_processing_subdirectory
+        )
+        file_path = os.path.join(
+            directory_path,
+            filename
+        )
+        if object_type == 'dataframe':
+            if os.path.exists(file_path):
+                data_object_item = pd.read_pickle(file_path)
+                if data_ids is not None:
+                    data_object_item = data_object_item.reindex(
+                        data_object_item.index.intersection(data_ids)
+                    )
+            else:
+                data_object_item = pd.DataFrame()
+        elif object_type == 'dict':
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as fp:
+                    data_object_item = pickle.load(fp)
+                if data_ids is not None:
+                    raise ValueError('Specification of data IDs is only available for dataframe objects')
+            else:
+                data_object_item = dict()
+        else:
+            raise ValueError('Only allowed object types are \'dataframe\' and \'dict\'')
+        data_object_list.append(data_object_item)
+    if len(data_object_list) == 1:
+        data_object = data_object_list[0]
+        return data_object
+    else:
+        if object_type != 'dataframe':
+            raise ValueError('Specification of multiple inference IDs is only available for dataframe objects')
+        data_object = pd.concat(data_object_list)
+        if sort_field is not None:
+            data_object.sort_values(sort_field, inplace=True)
+    return data_object
+
+def delete_data_local(
+    base_dir,
+    pipeline_stage,
+    environment_id,
+    filename_stem,
+    inference_ids,
+    time_segment_start=None,
+    object_type='dataframe',
+    pose_processing_subdirectory='pose_processing'
+):
+    if isinstance(inference_ids, str):
+        inference_ids = [inference_ids]
+    elif isinstance(inference_ids, (list, tuple, set)):
+        pass
+    else:
+        raise ValueError('Specified inference IDs must be of type str, list, tuple, or set')
+    for inference_id in inference_ids:
+        directory_path, filename = data_file_path(
+            base_dir=base_dir,
+            pipeline_stage=pipeline_stage,
+            environment_id=environment_id,
+            filename_stem=filename_stem,
+            inference_id=inference_id,
+            time_segment_start=time_segment_start,
+            object_type=object_type,
+            pose_processing_subdirectory=pose_processing_subdirectory
+        )
+        file_path = os.path.join(
+            directory_path,
+            filename
+        )
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+def data_file_path(
+    base_dir,
+    pipeline_stage,
+    environment_id,
+    filename_stem,
+    inference_id,
+    time_segment_start=None,
+    object_type='dataframe',
+    pose_processing_subdirectory='pose_processing'
+):
+    directory_path = os.path.join(
         base_dir,
         pose_processing_subdirectory,
         environment_id,
-        output_subdirectory_name,
-        '{}_{}.pkl'.format(
-            metadata_filename_stem,
-            inference_id_local
-        )
+        pipeline_stage
     )
-    if os.path.exists(metadata_path):
-        os.remove(metadata_path)
+    if time_segment_start is not None:
+        time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
+        directory_path = os.path.join(
+            directory_path,
+            '{:04d}'.format(time_segment_start_utc.year),
+            '{:02d}'.format(time_segment_start_utc.month),
+            '{:02d}'.format(time_segment_start_utc.day),
+            '{:02d}-{:02d}-{:02d}'.format(
+                time_segment_start_utc.hour,
+                time_segment_start_utc.minute,
+                time_segment_start_utc.second,
+            )
+        )
+    filename = '{}_{}.pkl'.format(
+        filename_stem,
+        inference_id
+    )
+    return directory_path, filename
 
 def alphapose_data_file_glob_pattern(
     base_dir,
