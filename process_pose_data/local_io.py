@@ -26,11 +26,11 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
     environment_id,
     time_segment_start,
     alphapose_subdirectory='prepared',
-    file_name='alphapose-results.json',
+    filename='alphapose-results.json',
     json_format='cmu'
 ):
     time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
-    df = fetch_2d_pose_data_alphapose_local(
+    glob_pattern = alphapose_data_file_glob_pattern(
         base_dir=base_dir,
         environment_id=environment_id,
         camera_assignment_id=None,
@@ -41,42 +41,12 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
         minute=time_segment_start_utc.minute,
         second=time_segment_start_utc.second,
         alphapose_subdirectory=alphapose_subdirectory,
-        file_name=file_name,
-        json_format=json_format
-    )
-    return df
-
-def fetch_2d_pose_data_alphapose_local(
-    base_dir,
-    environment_id=None,
-    camera_assignment_id=None,
-    year=None,
-    month=None,
-    day=None,
-    hour=None,
-    minute=None,
-    second=None,
-    alphapose_subdirectory='prepared',
-    file_name='alphapose-results.json',
-    json_format='cmu'
-):
-    glob_pattern = alphapose_data_file_glob_pattern(
-        base_dir=base_dir,
-        environment_id=environment_id,
-        camera_assignment_id=camera_assignment_id,
-        year=year,
-        month=month,
-        day=day,
-        hour=hour,
-        minute=minute,
-        second=second,
-        alphapose_subdirectory=alphapose_subdirectory,
-        file_name=file_name
+        filename=filename
     )
     re_pattern = alphapose_data_file_re_pattern(
         base_dir=base_dir,
         alphapose_subdirectory=alphapose_subdirectory,
-        file_name=file_name
+        filename=filename
     )
     data_list = list()
     for path in glob.iglob(glob_pattern):
@@ -739,7 +709,7 @@ def alphapose_data_file_glob_pattern(
     minute=None,
     second=None,
     alphapose_subdirectory='prepared',
-    file_name='alphapose-results.json'
+    filename='alphapose-results.json'
 ):
     base_dir_string = base_dir
     alphapose_subdirectory_string = alphapose_subdirectory
@@ -784,14 +754,14 @@ def alphapose_data_file_glob_pattern(
         month_string,
         day_string,
         '-'.join([hour_string, minute_string, second_string]),
-        file_name
+        filename
     )
     return glob_pattern
 
 def alphapose_data_file_re_pattern(
     base_dir,
     alphapose_subdirectory='prepared',
-    file_name='alphapose-results.json'
+    filename='alphapose-results.json'
 ):
     re_pattern = os.path.join(
         base_dir,
@@ -802,7 +772,7 @@ def alphapose_data_file_re_pattern(
         '(?P<month_string>[0-9]{2})',
         '(?P<day_string>[0-9]{2})',
         '(?P<hour_string>[0-9]{2})\-(?P<minute_string>[0-9]{2})\-(?P<second_string>[0-9]{2})',
-        file_name
+        filename
     )
     return re_pattern
 

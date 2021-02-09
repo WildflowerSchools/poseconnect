@@ -285,7 +285,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         environment_id=environment_id,
         time_segment_start=time_segment_start,
         alphapose_subdirectory=alphapose_subdirectory,
-        file_name=poses_2d_file_name,
+        filename=poses_2d_file_name,
         json_format=poses_2d_json_format
     )
     if len(poses_2d_df_time_segment) == 0:
