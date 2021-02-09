@@ -820,16 +820,18 @@ def download_position_data_by_datapoint(
             ].reset_index(drop=True)
             if len(position_data_time_segment_df) == 0:
                 continue
-            process_pose_data.local_io.write_position_data_local_time_segment(
-                position_data_df=position_data_time_segment_df,
+            process_pose_data.local_io.write_data_local(
+                data_object=position_data_time_segment_df,
                 base_dir=base_dir,
+                pipeline_stage='download_position_data',
                 environment_id=environment_id,
+                filename_stem='position_data',
+                inference_id=download_position_data_inference_id_local,
                 time_segment_start=time_segment_start,
-                inference_id_local=download_position_data_inference_id_local,
+                object_type='dataframe',
                 append=True,
-                pose_processing_subdirectory=pose_processing_subdirectory,
-                position_data_directory_name=position_data_directory_name,
-                position_data_file_name_stem=position_data_file_name_stem
+                sort_field=None,
+                pose_processing_subdirectory=pose_processing_subdirectory
             )
     processing_time = time.time() - processing_start
     logger.info('Downloaded {:.3f} minutes of position data in {:.3f} minutes (ratio of {:.3f})'.format(
@@ -999,14 +1001,17 @@ def identify_pose_tracks_3d_local_by_segment(
             sensor_position_keypoint_index=sensor_position_keypoint_index
         )
         # Fetch resampled UWB data
-        uwb_data_resampled_time_segment_df = process_pose_data.local_io.fetch_position_data_local_time_segment(
-            time_segment_start=time_segment_start,
+        uwb_data_resampled_time_segment_df = process_pose_data.local_io.fetch_data_local(
             base_dir=base_dir,
+            pipeline_stage='download_position_data',
             environment_id=environment_id,
-            inference_id_local=download_position_data_inference_id,
-            pose_processing_subdirectory=pose_processing_subdirectory,
-            position_data_directory_name=position_data_directory_name,
-            position_data_file_name_stem=position_data_file_name_stem
+            filename_stem='position_data',
+            inference_ids=download_position_data_inference_id,
+            data_ids=None,
+            sort_field=None,
+            time_segment_start=time_segment_start,
+            object_type='dataframe',
+            pose_processing_subdirectory=pose_processing_subdirectory
         )
         # Identify poses
         if return_match_statistics:
@@ -1037,14 +1042,18 @@ def identify_pose_tracks_3d_local_by_segment(
     pose_track_identification_df['fraction_matched'] = pose_track_identification_df['max_matches']/pose_track_identification_df['num_poses']
     if min_fraction_matched is not None:
         pose_track_identification_df = pose_track_identification_df.loc[pose_track_identification_df['fraction_matched'] >= min_fraction_matched]
-    process_pose_data.local_io.write_pose_track_3d_identification_data_local(
-        pose_track_identification_df=pose_track_identification_df,
+    process_pose_data.local_io.write_data_local(
+        data_object=pose_track_identification_df,
         base_dir=base_dir,
+        pipeline_stage='pose_track_3d_identification',
         environment_id=environment_id,
-        inference_id_local=pose_track_3d_identification_inference_id,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        pose_track_3d_identification_directory_name=pose_track_3d_identification_directory_name,
-        pose_track_3d_identification_file_name_stem=pose_track_3d_identification_file_name_stem
+        filename_stem='pose_track_3d_identification',
+        inference_id=pose_track_3d_identification_inference_id,
+        time_segment_start=None,
+        object_type='dataframe',
+        append=False,
+        sort_field=None,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     processing_time = time.time() - processing_start
     logger.info('Identified 3D pose tracks spanning {:.3f} {:.3f} minutes (ratio of {:.3f})'.format(
@@ -1157,21 +1166,15 @@ def delete_reconstruct_3d_poses_output(
 ):
     raise NotImplementedError('process_pose_data.process.delete_reconstruct_3d_poses_output() needs to be updated')
     logger.info('Deleting local 3D pose data')
-    # process_pose_data.local_io.delete_3d_pose_data_local(
-    #     base_dir=base_dir,
-    #     environment_id=environment_id,
-    #     inference_id_local=inference_id_local,
-    #     pose_processing_subdirectory=pose_processing_subdirectory,
-    #     poses_3d_directory_name=poses_3d_directory_name,
-    #     poses_3d_file_name_stem=poses_3d_file_name_stem
-    # )
     logger.info('Deleting local inference metadata')
-    process_pose_data.local_io.delete_metadata_local(
-        inference_id_local=inference_id_local,
+    process_pose_data.local_io.delete_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_reconstruction_3d',
         environment_id=environment_id,
-        output_subdirectory_name=poses_3d_directory_name,
-        metadata_filename_stem=pose_reconstruction_3d_metadata_filename_stem,
+        filename_stem='pose_reconstruction_3d_metadata',
+        inference_ids=inference_id_local,
+        time_segment_start=None,
+        object_type='dict',
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     logger.info('Deleting Honeycomb 3D pose data')

@@ -256,10 +256,17 @@ def fetch_3d_poses_with_identified_tracks_local(
         poses_3d_directory_name=poses_3d_directory_name,
         poses_3d_file_name_stem=poses_3d_file_name_stem
     )
-    pose_track_identification_df = fetch_pose_track_3d_identification_data_local(
+    pose_track_identification_df = fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_track_3d_identification',
         environment_id=environment_id,
-        inference_id_local=pose_track_3d_identification_inference_id_local
+        filename_stem='pose_track_3d_identification',
+        inference_ids=pose_track_3d_identification_inference_id_local,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dataframe',
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     poses_3d_with_tracks_identified_df = (
         poses_3d_with_tracks_df
@@ -424,206 +431,6 @@ def fetch_3d_poses_with_tracks_local(
         how='inner'
     )
     return poses_3d_with_tracks_df
-
-def convert_pose_tracks_3d_to_df(
-    pose_tracks_3d
-):
-    pose_3d_ids_with_tracks_df_list = list()
-    for pose_track_3d_id, pose_track_3d in pose_tracks_3d.items():
-        pose_3d_ids_with_tracks_single_track_df = pd.DataFrame(
-            {'pose_track_3d_id': pose_track_3d_id},
-            index=pose_track_3d['pose_3d_ids']
-        )
-        pose_3d_ids_with_tracks_single_track_df.index.name='pose_3d_id'
-        pose_3d_ids_with_tracks_df_list.append(pose_3d_ids_with_tracks_single_track_df)
-    pose_3d_ids_with_tracks_df = pd.concat(pose_3d_ids_with_tracks_df_list)
-    return pose_3d_ids_with_tracks_df
-
-def add_short_track_labels(
-    poses_3d_with_tracks_df,
-    pose_track_3d_id_column_name='pose_track_3d_id'
-):
-    pose_track_3d_id_index = poses_3d_with_tracks_df.groupby(pose_track_3d_id_column_name).apply(lambda x: x['timestamp'].min()).sort_values().index
-    track_label_lookup = pd.DataFrame(
-        range(1, len(pose_track_3d_id_index)+1),
-        columns=['pose_track_3d_id_short'],
-        index=pose_track_3d_id_index
-    )
-    poses_3d_with_tracks_df = poses_3d_with_tracks_df.join(track_label_lookup, on='pose_track_3d_id')
-    return poses_3d_with_tracks_df
-
-
-def write_position_data_local_time_segment(
-    position_data_df,
-    base_dir,
-    environment_id,
-    time_segment_start,
-    inference_id_local,
-    append=False,
-    pose_processing_subdirectory='pose_processing',
-    position_data_directory_name='position_data',
-    position_data_file_name_stem='position_data'
-):
-    directory_path = position_data_directory_path_time_segment(
-        base_dir=base_dir,
-        environment_id=environment_id,
-        time_segment_start=time_segment_start,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        position_data_directory_name=position_data_directory_name
-    )
-    file_name = '{}_{}.pkl'.format(
-        position_data_file_name_stem,
-        inference_id_local
-    )
-    os.makedirs(directory_path, exist_ok=True)
-    file_path = os.path.join(
-        directory_path,
-        file_name
-    )
-    if append and os.path.exists(file_path):
-        existing_position_data_df = pd.read_pickle(file_path)
-        position_data_df = pd.concat((existing_position_data_df, position_data_df)).sort_values('timestamp').reset_index(drop=True)
-    position_data_df.to_pickle(file_path)
-
-def fetch_position_data_local(
-    start,
-    end,
-    base_dir,
-    environment_id,
-    inference_id_local,
-    pose_processing_subdirectory='pose_processing',
-    position_data_directory_name='position_data',
-    position_data_file_name_stem='position_data'
-):
-    time_segment_start_list = generate_time_segment_start_list(
-        start,
-        end
-    )
-    position_data_df_list = list()
-    for time_segment_start in time_segment_start_list:
-        pposition_data_df_time_segment = fetch_position_data_local_time_segment(
-            time_segment_start,
-            base_dir=base_dir,
-            environment_id=environment_id,
-            inference_id_local=inference_id_local,
-            pose_processing_subdirectory=pose_processing_subdirectory,
-            position_data_directory_name=position_data_directory_name,
-            position_data_file_name_stem=position_data_file_name_stem
-        )
-        position_data_df_list.append(pposition_data_df_time_segment)
-    position_data_df = pd.concat(position_data_df_list)
-    return position_data_df
-
-def fetch_position_data_local_time_segment(
-    time_segment_start,
-    base_dir,
-    environment_id,
-    inference_id_local,
-    pose_processing_subdirectory='pose_processing',
-    position_data_directory_name='position_data',
-    position_data_file_name_stem='position_data'
-):
-    if isinstance(inference_id_local, str):
-        path=position_data_path_time_segment(
-            base_dir=base_dir,
-            environment_id=environment_id,
-            inference_id_local=inference_id_local,
-            time_segment_start=time_segment_start,
-            pose_processing_subdirectory=pose_processing_subdirectory,
-            position_data_directory_name=position_data_directory_name,
-            position_data_file_name_stem=position_data_file_name_stem
-        )
-        if os.path.exists(path):
-            position_data_df_time_segment = pd.read_pickle(path)
-        else:
-            position_data_df_time_segment = pd.DataFrame()
-    elif isinstance(inference_id_local, (list, tuple, set)):
-        position_data_dfs_time_segment=list()
-        for inference_id_local_element in inference_id_local:
-            path=position_data_path_time_segment(
-                base_dir=base_dir,
-                environment_id=environment_id,
-                inference_id_local=inference_id_local_element,
-                time_segment_start=time_segment_start,
-                pose_processing_subdirectory=pose_processing_subdirectory,
-                position_data_directory_name=position_data_directory_name,
-                position_data_file_name_stem=position_data_file_name_stem
-            )
-            if os.path.exists(path):
-                position_data_df_time_segment_id = pd.read_pickle(path)
-            else:
-                position_data_df_time_segment_id = pd.DataFrame()
-            position_data_dfs_time_segment.append(position_data_df_time_segment_id)
-        position_data_df_time_segment = pd.concat(position_data_dfs_time_segment).sort_values('timestamp')
-    else:
-        raise ValueError("Specified inference ID must be of type str, list, tuple, or set")
-    return position_data_df_time_segment
-
-def write_pose_track_3d_identification_data_local(
-    pose_track_identification_df,
-    base_dir,
-    environment_id,
-    inference_id_local,
-    pose_processing_subdirectory='pose_processing',
-    pose_track_3d_identification_directory_name='pose_track_3d_identification',
-    pose_track_3d_identification_file_name_stem='pose_track_3d_identification'
-):
-    directory = os.path.join(
-        base_dir,
-        pose_processing_subdirectory,
-        environment_id,
-        pose_track_3d_identification_directory_name
-    )
-    filename = '{}_{}.pkl'.format(
-        pose_track_3d_identification_file_name_stem,
-        inference_id_local
-    )
-    path = os.path.join(
-        directory,
-        filename
-    )
-    os.makedirs(directory, exist_ok=True)
-    pose_track_identification_df.to_pickle(path)
-
-def fetch_pose_track_3d_identification_data_local(
-    base_dir,
-    environment_id,
-    inference_id_local,
-    pose_processing_subdirectory='pose_processing',
-    pose_track_3d_identification_directory_name='pose_track_3d_identification',
-    pose_track_3d_identification_file_name_stem='pose_track_3d_identification'
-):
-    path=os.path.join(
-        base_dir,
-        pose_processing_subdirectory,
-        environment_id,
-        pose_track_3d_identification_directory_name,
-        '{}_{}.pkl'.format(
-            pose_track_3d_identification_file_name_stem,
-            inference_id_local
-        )
-    )
-    pose_track_identification_df = pd.read_pickle(path)
-    return pose_track_identification_df
-
-def delete_metadata_local(
-    inference_id_local,
-    base_dir,
-    environment_id,
-    output_subdirectory_name,
-    metadata_filename_stem,
-    pose_processing_subdirectory='pose_processing'
-):
-    delete_data_local(
-        base_dir=base_dir,
-        pipeline_stage=output_subdirectory_name,
-        environment_id=environment_id,
-        filename_stem=output_subdirectory_name + '_metadata',
-        inference_ids=inference_id_local,
-        time_segment_start=None,
-        object_type='dict',
-        pose_processing_subdirectory=pose_processing_subdirectory
-    )
 
 def write_data_local_by_time_segment(
     data_object,
@@ -894,6 +701,33 @@ def data_file_path(
     )
     return directory_path, filename
 
+def convert_pose_tracks_3d_to_df(
+    pose_tracks_3d
+):
+    pose_3d_ids_with_tracks_df_list = list()
+    for pose_track_3d_id, pose_track_3d in pose_tracks_3d.items():
+        pose_3d_ids_with_tracks_single_track_df = pd.DataFrame(
+            {'pose_track_3d_id': pose_track_3d_id},
+            index=pose_track_3d['pose_3d_ids']
+        )
+        pose_3d_ids_with_tracks_single_track_df.index.name='pose_3d_id'
+        pose_3d_ids_with_tracks_df_list.append(pose_3d_ids_with_tracks_single_track_df)
+    pose_3d_ids_with_tracks_df = pd.concat(pose_3d_ids_with_tracks_df_list)
+    return pose_3d_ids_with_tracks_df
+
+def add_short_track_labels(
+    poses_3d_with_tracks_df,
+    pose_track_3d_id_column_name='pose_track_3d_id'
+):
+    pose_track_3d_id_index = poses_3d_with_tracks_df.groupby(pose_track_3d_id_column_name).apply(lambda x: x['timestamp'].min()).sort_values().index
+    track_label_lookup = pd.DataFrame(
+        range(1, len(pose_track_3d_id_index)+1),
+        columns=['pose_track_3d_id_short'],
+        index=pose_track_3d_id_index
+    )
+    poses_3d_with_tracks_df = poses_3d_with_tracks_df.join(track_label_lookup, on='pose_track_3d_id')
+    return poses_3d_with_tracks_df
+
 def alphapose_data_file_glob_pattern(
     base_dir,
     environment_id=None,
@@ -971,106 +805,6 @@ def alphapose_data_file_re_pattern(
         file_name
     )
     return re_pattern
-
-def pose_3d_data_path_time_segment(
-    base_dir,
-    environment_id,
-    inference_id_local,
-    time_segment_start,
-    pose_processing_subdirectory='pose_processing',
-    poses_3d_directory_name='poses_3d',
-    poses_3d_file_name_stem='poses_3d'
-):
-    directory_path = pose_3d_data_directory_path_time_segment(
-        base_dir=base_dir,
-        environment_id=environment_id,
-        time_segment_start=time_segment_start,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        poses_3d_directory_name=poses_3d_directory_name
-    )
-    file_name='{}_{}.pkl'.format(
-        poses_3d_file_name_stem,
-        inference_id_local
-    )
-    path = os.path.join(
-        directory_path,
-        file_name
-    )
-    return path
-
-def pose_3d_data_directory_path_time_segment(
-    base_dir,
-    environment_id,
-    time_segment_start,
-    pose_processing_subdirectory='pose_processing',
-    poses_3d_directory_name='poses_3d'
-):
-    time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
-    path = os.path.join(
-        base_dir,
-        pose_processing_subdirectory,
-        environment_id,
-        poses_3d_directory_name,
-        '{:04d}'.format(time_segment_start_utc.year),
-        '{:02d}'.format(time_segment_start_utc.month),
-        '{:02d}'.format(time_segment_start_utc.day),
-        '{:02d}-{:02d}-{:02d}'.format(
-            time_segment_start_utc.hour,
-            time_segment_start_utc.minute,
-            time_segment_start_utc.second,
-        )
-    )
-    return path
-
-def position_data_path_time_segment(
-    base_dir,
-    environment_id,
-    inference_id_local,
-    time_segment_start,
-    pose_processing_subdirectory='pose_processing',
-    position_data_directory_name='position_data',
-    position_data_file_name_stem='position_data'
-):
-    directory_path = position_data_directory_path_time_segment(
-        base_dir=base_dir,
-        environment_id=environment_id,
-        time_segment_start=time_segment_start,
-        pose_processing_subdirectory=pose_processing_subdirectory,
-        position_data_directory_name=position_data_directory_name
-    )
-    file_name='{}_{}.pkl'.format(
-        position_data_file_name_stem,
-        inference_id_local
-    )
-    path = os.path.join(
-        directory_path,
-        file_name
-    )
-    return path
-
-def position_data_directory_path_time_segment(
-    base_dir,
-    environment_id,
-    time_segment_start,
-    pose_processing_subdirectory='pose_processing',
-    position_data_directory_name='position_data'
-):
-    time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
-    path = os.path.join(
-        base_dir,
-        pose_processing_subdirectory,
-        environment_id,
-        position_data_directory_name,
-        '{:04d}'.format(time_segment_start_utc.year),
-        '{:02d}'.format(time_segment_start_utc.month),
-        '{:02d}'.format(time_segment_start_utc.day),
-        '{:02d}-{:02d}-{:02d}'.format(
-            time_segment_start_utc.hour,
-            time_segment_start_utc.minute,
-            time_segment_start_utc.second,
-        )
-    )
-    return path
 
 def convert_assignment_ids_to_camera_device_ids(
     poses_2d_df,
