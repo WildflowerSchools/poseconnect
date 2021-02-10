@@ -11,147 +11,13 @@ import matplotlib.colors
 import seaborn as sns
 import tqdm
 import slugify
+import functools
 import datetime
 import string
 import logging
 import os
 
 logger = logging.getLogger(__name__)
-
-def overlay_video_poses_2d(
-    poses_2d_df,
-    video_start,
-    pose_model_id=None,
-    camera_names=None,
-    camera_calibrations=None,
-    draw_keypoint_connectors=True,
-    keypoint_connectors=None,
-    pose_label=None,
-    pose_color='green',
-    keypoint_radius=3,
-    keypoint_alpha=0.6,
-    keypoint_connector_alpha=0.6,
-    keypoint_connector_linewidth=3,
-    pose_label_color='white',
-    pose_label_background_alpha=0.6,
-    pose_label_font_scale=2.0,
-    pose_label_line_width=2,
-    output_directory='.',
-    output_filename_prefix='poses_2d_overlay',
-    output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
-    output_filename_extension='mp4',
-    output_fourcc_string=None,
-    progress_bar=False,
-    notebook=False
-):
-    camera_ids = poses_2d_df['camera_id'].unique().tolist()
-    if pose_model_id is not None:
-        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
-            pose_model_id
-        )
-        if keypoint_connectors is None:
-            keypoint_connectors = pose_model.get('keypoint_connectors')
-    if camera_names is None:
-        camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
-            camera_ids
-        )
-    if camera_calibrations is None:
-        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
-            camera_ids,
-            start=video_start,
-            end=video_start
-        )
-    for camera_id in camera_ids:
-        camera_name = camera_names[camera_id]
-        camera_calibration = camera_calibrations[camera_id]
-        logger.info('Overlaying poses for {}'.format(camera_name))
-        video_metadata_with_local_paths = video_io.fetch_videos(
-            video_timestamps=[video_start],
-            camera_device_ids=[camera_id],
-        )
-        if len(video_metadata_with_local_paths) > 1:
-            raise ValueError('More than one video found for camera ID {} and video start {}'.format(
-                camera_id,
-                video_start.isoformat()
-            ))
-        input_path = video_metadata_with_local_paths[0]['video_local_path']
-        logger.info('Video input path: {}'.format(input_path))
-        output_path = os.path.join(
-            output_directory,
-            '{}_{}_{}.{}'.format(
-                output_filename_prefix,
-                video_start.strftime(output_filename_datetime_format),
-                slugify.slugify(camera_name),
-                output_filename_extension
-            )
-        )
-        logger.info('Video output path: {}'.format(output_path))
-        if keypoint_connectors is not None:
-            draw_keypoint_connectors = True
-        else:
-            draw_keypoint_connectors = False
-        video_input = cv_utils.VideoInput(
-            input_path=input_path,
-            start_time=video_start
-        )
-        video_start_time = video_input.video_parameters.start_time
-        video_fps = video_input.video_parameters.fps
-        video_frame_count = video_input.video_parameters.frame_count
-        logger.info('Opened video input. Start time: {}. FPS: {}. Frame count: {}'.format(
-            video_start_time.isoformat(),
-            video_fps,
-            video_frame_count
-        ))
-        if video_fps != 10.0:
-            raise ValueError('Overlay function expects 10 FPS but video has {} FPS'.format(video_fps))
-        if pd.to_datetime(video_start_time, utc=True) < poses_2d_df['timestamp'].min():
-            raise ValueError('Video starts at {} but 2D pose data starts at {}'.format(
-                video_start_time.isoformat(),
-                poses_2d_df['timestamp'].min().isoformat()
-            ))
-        video_end_time = video_start_time + datetime.timedelta(milliseconds=(video_frame_count - 1)*100)
-        if pd.to_datetime(video_end_time, utc=True) > poses_2d_df['timestamp'].max():
-            raise ValueError('Video ends at {} but 2D pose data ends at {}'.format(
-                video_end_time.isoformat(),
-                poses_2d_df['timestamp'].max().isoformat()
-            ))
-        video_output_parameters = video_input.video_parameters
-        if output_fourcc_string is not None:
-            video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(output_fourcc_string)
-        video_output = cv_utils.VideoOutput(
-            output_path,
-            video_parameters=video_output_parameters
-        )
-        if progress_bar:
-            if notebook:
-                t = tqdm.tqdm_notebook(total=video_frame_count)
-            else:
-                t = tqdm.tqdm(total=video_frame_count)
-        for frame_index in range(video_frame_count):
-            timestamp = video_start + datetime.timedelta(milliseconds=frame_index*100)
-            timestamp_pandas = pd.to_datetime(timestamp, utc=True)
-            frame = video_input.get_frame()
-            if frame is None:
-                raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
-            for pose_2d_id, row in poses_2d_df.loc[
-                (poses_2d_df['timestamp'] == timestamp_pandas) &
-                (poses_2d_df['camera_id'] == camera_id)
-            ].iterrows():
-                keypoint_coordinates_2d = row['keypoint_coordinates_2d']
-                frame=draw_pose_2d_opencv(
-                    image=frame,
-                    keypoint_coordinates=keypoint_coordinates_2d,
-                    draw_keypoint_connectors=draw_keypoint_connectors,
-                    keypoint_connectors=keypoint_connectors,
-                    keypoint_alpha=keypoint_alpha,
-                    keypoint_connector_alpha=keypoint_connector_alpha,
-                    keypoint_connector_linewidth=keypoint_connector_linewidth,
-                )
-            video_output.write_frame(frame)
-            if progress_bar:
-                t.update()
-        video_input.close()
-        video_output.close()
 
 def overlay_video_poses_3d(
     poses_3d_df,
@@ -177,9 +43,8 @@ def overlay_video_poses_3d(
     video_filename_extension='mp4',
     pose_model_id=None,
     camera_calibrations=None,
-    draw_keypoint_connectors=True,
-    keypoint_connectors=None,
     pose_label_column=None,
+    keypoint_connectors=None,
     pose_color='green',
     keypoint_radius=3,
     keypoint_alpha=0.6,
@@ -257,102 +122,52 @@ def overlay_video_poses_3d(
     for camera_id in camera_ids:
         camera_name = camera_name_dict[camera_id]
         camera_calibration = camera_calibrations[camera_id]
+        project_points_partial = functools.partial(
+            cv_utils.project_points,
+            rotation_vector=camera_calibration['rotation_vector'],
+            translation_vector=camera_calibration['translation_vector'],
+            camera_matrix=camera_calibration['camera_matrix'],
+            distortion_coefficients=camera_calibration['distortion_coefficients'],
+            remove_behind_camera=True,
+            remove_outside_frame=True,
+            image_corners=[
+                [0,0],
+                [camera_calibration['image_width'], camera_calibration['image_height']]
+            ]
+        )
+        poses_df = poses_3d_df.copy()
+        poses_df['keypoint_coordinates_2d'] = poses_df['keypoint_coordinates_3d'].apply(project_points_partial)
         logger.info('Overlaying poses for {}'.format(camera_name))
         video_timestamps = sorted(video_metadata_dict[camera_id].keys())
         output_paths = list()
         for video_timestamp in video_timestamps:
-            logger.info('Overlaying poses for video starting at {}'.format(video_timestamp.isoformat()))
-            input_path = video_metadata_dict[camera_id][video_timestamp]['video_local_path']
-            logger.info('Video input path: {}'.format(input_path))
-            output_path = os.path.join(
-                output_directory,
-                '{}_{}_{}.{}'.format(
-                    output_filename_prefix,
-                    video_timestamp.strftime(output_filename_datetime_format),
-                    slugify.slugify(camera_name),
-                    output_filename_extension
-                )
+            video_local_path = video_metadata_dict[camera_id][video_timestamp]['video_local_path']
+            output_path = overlay_video_poses_camera_time_segment(
+                poses_df=poses_df,
+                video_timestamp=video_timestamp,
+                camera_name=camera_name,
+                video_local_path=video_local_path,
+                pose_label_column=pose_label_column,
+                draw_keypoint_connectors=draw_keypoint_connectors,
+                keypoint_connectors=keypoint_connectors,
+                pose_color=pose_color,
+                keypoint_radius=keypoint_radius,
+                keypoint_alpha=keypoint_alpha,
+                keypoint_connector_alpha=keypoint_connector_alpha,
+                keypoint_connector_linewidth=keypoint_connector_linewidth,
+                pose_label_color=pose_label_color,
+                pose_label_background_alpha=pose_label_background_alpha,
+                pose_label_font_scale=pose_label_font_scale,
+                pose_label_line_width=pose_label_line_width,
+                output_directory=output_directory,
+                output_filename_prefix=output_filename_prefix,
+                output_filename_datetime_format=output_filename_datetime_format,
+                output_filename_extension=output_filename_extension,
+                output_fourcc_string=output_fourcc_string,
+                progress_bar=progress_bar,
+                notebook=notebook
             )
             output_paths.append(output_path)
-            logger.info('Video output path: {}'.format(output_path))
-            video_input = cv_utils.VideoInput(
-                input_path=input_path,
-                start_time=video_timestamp
-            )
-            video_start_time = video_input.video_parameters.start_time
-            video_fps = video_input.video_parameters.fps
-            video_frame_count = video_input.video_parameters.frame_count
-            logger.info('Opened video input. Start time: {}. FPS: {}. Frame count: {}'.format(
-                video_start_time.isoformat(),
-                video_fps,
-                video_frame_count
-            ))
-            if video_fps != 10.0:
-                raise ValueError('Overlay function expects 10 FPS but video has {} FPS'.format(video_fps))
-            if pd.to_datetime(video_start_time, utc=True) < poses_3d_df['timestamp'].min():
-                raise ValueError('Video starts at {} but 3D pose data starts at {}'.format(
-                    video_start_time.isoformat(),
-                    poses_3d_df['timestamp'].min().isoformat()
-                ))
-            video_end_time = video_start_time + datetime.timedelta(milliseconds=(video_frame_count - 1)*100)
-            if pd.to_datetime(video_end_time, utc=True) > poses_3d_df['timestamp'].max():
-                raise ValueError('Video ends at {} but 3D pose data ends at {}'.format(
-                    video_end_time.isoformat(),
-                    poses_3d_df['timestamp'].max().isoformat()
-                ))
-            video_output_parameters = video_input.video_parameters
-            if output_fourcc_string is not None:
-                video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(output_fourcc_string)
-            video_output = cv_utils.VideoOutput(
-                output_path,
-                video_parameters=video_output_parameters
-            )
-            if progress_bar:
-                if notebook:
-                    t = tqdm.tqdm_notebook(total=video_frame_count)
-                else:
-                    t = tqdm.tqdm(total=video_frame_count)
-            for frame_index in range(video_frame_count):
-                timestamp = video_timestamp + datetime.timedelta(milliseconds=frame_index*100)
-                timestamp_pandas = pd.to_datetime(timestamp, utc=True)
-                frame = video_input.get_frame()
-                if frame is None:
-                    raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
-                for pose_3d_id, row in poses_3d_df.loc[poses_3d_df['timestamp'] == timestamp_pandas].iterrows():
-                    keypoint_coordinates_2d = cv_utils.project_points(
-                        object_points=row['keypoint_coordinates_3d'],
-                        rotation_vector=camera_calibration['rotation_vector'],
-                        translation_vector=camera_calibration['translation_vector'],
-                        camera_matrix=camera_calibration['camera_matrix'],
-                        distortion_coefficients=camera_calibration['distortion_coefficients'],
-                        remove_behind_camera=True,
-                        remove_outside_frame=True,
-                        image_corners=[
-                            [0,0],
-                            [camera_calibration['image_width'], camera_calibration['image_height']]
-                        ]
-                    )
-                    if pose_label_column is not None:
-                        pose_label = row[pose_label_column]
-                    else:
-                        pose_label = None
-                    frame=draw_pose_2d_opencv(
-                        image=frame,
-                        keypoint_coordinates=keypoint_coordinates_2d,
-                        pose_label=pose_label,
-                        draw_keypoint_connectors=draw_keypoint_connectors,
-                        keypoint_connectors=keypoint_connectors,
-                        keypoint_alpha=keypoint_alpha,
-                        keypoint_connector_alpha=keypoint_connector_alpha,
-                        keypoint_connector_linewidth=keypoint_connector_linewidth,
-                        pose_label_font_scale=pose_label_font_scale,
-                        pose_label_line_width=pose_label_line_width
-                    )
-                video_output.write_frame(frame)
-                if progress_bar:
-                    t.update()
-            video_input.close()
-            video_output.close()
         if concatenate_videos:
             concat_output_path = os.path.join(
                 output_directory,
@@ -375,7 +190,246 @@ def overlay_video_poses_3d(
                 delete_input_videos=delete_individual_clips
             )
 
+def overlay_video_poses_camera_time_segment(
+    poses_df,
+    video_timestamp,
+    camera_name,
+    video_local_path,
+    pose_label_column=None,
+    draw_keypoint_connectors=False,
+    keypoint_connectors=None,
+    pose_color='green',
+    keypoint_radius=3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.6,
+    pose_label_font_scale=2.0,
+    pose_label_line_width=2,
+    output_directory='.',
+    output_filename_prefix='poses_overlay',
+    output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
+    output_filename_extension='mp4',
+    output_fourcc_string=None,
+    progress_bar=False,
+    notebook=False
+):
+    logger.info('Overlaying poses for video starting at {}'.format(video_timestamp.isoformat()))
+    logger.info('Video input path: {}'.format(video_local_path))
+    output_path = os.path.join(
+        output_directory,
+        '{}_{}_{}.{}'.format(
+            output_filename_prefix,
+            video_timestamp.strftime(output_filename_datetime_format),
+            slugify.slugify(camera_name),
+            output_filename_extension
+        )
+    )
+    # output_paths.append(output_path)
+    logger.info('Video output path: {}'.format(output_path))
+    video_input = cv_utils.VideoInput(
+        input_path=video_local_path,
+        start_time=video_timestamp
+    )
+    video_start_time = video_input.video_parameters.start_time
+    video_fps = video_input.video_parameters.fps
+    video_frame_count = video_input.video_parameters.frame_count
+    logger.info('Opened video input. Start time: {}. FPS: {}. Frame count: {}'.format(
+        video_start_time.isoformat(),
+        video_fps,
+        video_frame_count
+    ))
+    if video_fps != 10.0:
+        raise ValueError('Overlay function expects 10 FPS but video has {} FPS'.format(video_fps))
+    if pd.to_datetime(video_start_time, utc=True) < poses_df['timestamp'].min():
+        raise ValueError('Video starts at {} but 3D pose data starts at {}'.format(
+            video_start_time.isoformat(),
+            poses_df['timestamp'].min().isoformat()
+        ))
+    video_end_time = video_start_time + datetime.timedelta(milliseconds=(video_frame_count - 1)*100)
+    if pd.to_datetime(video_end_time, utc=True) > poses_df['timestamp'].max():
+        raise ValueError('Video ends at {} but 3D pose data ends at {}'.format(
+            video_end_time.isoformat(),
+            poses_df['timestamp'].max().isoformat()
+        ))
+    video_output_parameters = video_input.video_parameters
+    if output_fourcc_string is not None:
+        video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(output_fourcc_string)
+    video_output = cv_utils.VideoOutput(
+        output_path,
+        video_parameters=video_output_parameters
+    )
+    if progress_bar:
+        if notebook:
+            t = tqdm.tqdm_notebook(total=video_frame_count)
+        else:
+            t = tqdm.tqdm(total=video_frame_count)
+    for frame_index in range(video_frame_count):
+        timestamp = video_timestamp + datetime.timedelta(milliseconds=frame_index*100)
+        timestamp_pandas = pd.to_datetime(timestamp, utc=True)
+        frame = video_input.get_frame()
+        if frame is None:
+            raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
+        for pose_id, row in poses_df.loc[poses_df['timestamp'] == timestamp_pandas].iterrows():
+            keypoint_coordinates_2d = row['keypoint_coordinates_2d']
+            if pose_label_column is not None:
+                pose_label = row[pose_label_column]
+            else:
+                pose_label = None
+            frame=draw_pose_2d_opencv(
+                image=frame,
+                keypoint_coordinates=keypoint_coordinates_2d,
+                pose_label=pose_label,
+                draw_keypoint_connectors=draw_keypoint_connectors,
+                keypoint_connectors=keypoint_connectors,
+                keypoint_alpha=keypoint_alpha,
+                keypoint_connector_alpha=keypoint_connector_alpha,
+                keypoint_connector_linewidth=keypoint_connector_linewidth,
+                pose_label_font_scale=pose_label_font_scale,
+                pose_label_line_width=pose_label_line_width
+            )
+        video_output.write_frame(frame)
+        if progress_bar:
+            t.update()
+    video_input.close()
+    video_output.close()
+    return output_path
 
+# def overlay_video_poses_2d(
+#     poses_2d_df,
+#     video_start,
+#     pose_model_id=None,
+#     camera_names=None,
+#     camera_calibrations=None,
+#     draw_keypoint_connectors=True,
+#     keypoint_connectors=None,
+#     pose_label=None,
+#     pose_color='green',
+#     keypoint_radius=3,
+#     keypoint_alpha=0.6,
+#     keypoint_connector_alpha=0.6,
+#     keypoint_connector_linewidth=3,
+#     pose_label_color='white',
+#     pose_label_background_alpha=0.6,
+#     pose_label_font_scale=2.0,
+#     pose_label_line_width=2,
+#     output_directory='.',
+#     output_filename_prefix='poses_2d_overlay',
+#     output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
+#     output_filename_extension='mp4',
+#     output_fourcc_string=None,
+#     progress_bar=False,
+#     notebook=False
+# ):
+#     camera_ids = poses_2d_df['camera_id'].unique().tolist()
+#     if pose_model_id is not None:
+#         pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
+#             pose_model_id
+#         )
+#         if keypoint_connectors is None:
+#             keypoint_connectors = pose_model.get('keypoint_connectors')
+#     if camera_names is None:
+#         camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
+#             camera_ids
+#         )
+#     if camera_calibrations is None:
+#         camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+#             camera_ids,
+#             start=video_start,
+#             end=video_start
+#         )
+#     for camera_id in camera_ids:
+#         camera_name = camera_names[camera_id]
+#         camera_calibration = camera_calibrations[camera_id]
+#         logger.info('Overlaying poses for {}'.format(camera_name))
+#         video_metadata_with_local_paths = video_io.fetch_videos(
+#             video_timestamps=[video_start],
+#             camera_device_ids=[camera_id],
+#         )
+#         if len(video_metadata_with_local_paths) > 1:
+#             raise ValueError('More than one video found for camera ID {} and video start {}'.format(
+#                 camera_id,
+#                 video_start.isoformat()
+#             ))
+#         input_path = video_metadata_with_local_paths[0]['video_local_path']
+#         logger.info('Video input path: {}'.format(input_path))
+#         output_path = os.path.join(
+#             output_directory,
+#             '{}_{}_{}.{}'.format(
+#                 output_filename_prefix,
+#                 video_start.strftime(output_filename_datetime_format),
+#                 slugify.slugify(camera_name),
+#                 output_filename_extension
+#             )
+#         )
+#         logger.info('Video output path: {}'.format(output_path))
+#         if keypoint_connectors is not None:
+#             draw_keypoint_connectors = True
+#         else:
+#             draw_keypoint_connectors = False
+#         video_input = cv_utils.VideoInput(
+#             input_path=input_path,
+#             start_time=video_start
+#         )
+#         video_start_time = video_input.video_parameters.start_time
+#         video_fps = video_input.video_parameters.fps
+#         video_frame_count = video_input.video_parameters.frame_count
+#         logger.info('Opened video input. Start time: {}. FPS: {}. Frame count: {}'.format(
+#             video_start_time.isoformat(),
+#             video_fps,
+#             video_frame_count
+#         ))
+#         if video_fps != 10.0:
+#             raise ValueError('Overlay function expects 10 FPS but video has {} FPS'.format(video_fps))
+#         if pd.to_datetime(video_start_time, utc=True) < poses_2d_df['timestamp'].min():
+#             raise ValueError('Video starts at {} but 2D pose data starts at {}'.format(
+#                 video_start_time.isoformat(),
+#                 poses_2d_df['timestamp'].min().isoformat()
+#             ))
+#         video_end_time = video_start_time + datetime.timedelta(milliseconds=(video_frame_count - 1)*100)
+#         if pd.to_datetime(video_end_time, utc=True) > poses_2d_df['timestamp'].max():
+#             raise ValueError('Video ends at {} but 2D pose data ends at {}'.format(
+#                 video_end_time.isoformat(),
+#                 poses_2d_df['timestamp'].max().isoformat()
+#             ))
+#         video_output_parameters = video_input.video_parameters
+#         if output_fourcc_string is not None:
+#             video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(output_fourcc_string)
+#         video_output = cv_utils.VideoOutput(
+#             output_path,
+#             video_parameters=video_output_parameters
+#         )
+#         if progress_bar:
+#             if notebook:
+#                 t = tqdm.tqdm_notebook(total=video_frame_count)
+#             else:
+#                 t = tqdm.tqdm(total=video_frame_count)
+#         for frame_index in range(video_frame_count):
+#             timestamp = video_start + datetime.timedelta(milliseconds=frame_index*100)
+#             timestamp_pandas = pd.to_datetime(timestamp, utc=True)
+#             frame = video_input.get_frame()
+#             if frame is None:
+#                 raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
+#             for pose_2d_id, row in poses_2d_df.loc[
+#                 (poses_2d_df['timestamp'] == timestamp_pandas) &
+#                 (poses_2d_df['camera_id'] == camera_id)
+#             ].iterrows():
+#                 keypoint_coordinates_2d = row['keypoint_coordinates_2d']
+#                 frame=draw_pose_2d_opencv(
+#                     image=frame,
+#                     keypoint_coordinates=keypoint_coordinates_2d,
+#                     draw_keypoint_connectors=draw_keypoint_connectors,
+#                     keypoint_connectors=keypoint_connectors,
+#                     keypoint_alpha=keypoint_alpha,
+#                     keypoint_connector_alpha=keypoint_connector_alpha,
+#                     keypoint_connector_linewidth=keypoint_connector_linewidth,
+#                 )
+#             video_output.write_frame(frame)
+#             if progress_bar:
+#                 t.update()
+#         video_input.close()
+#         video_output.close()
 
 def draw_poses_2d_timestamp_camera_pair_opencv(
     df,
