@@ -135,15 +135,19 @@ def overlay_video_poses_3d(
                 [camera_calibration['image_width'], camera_calibration['image_height']]
             ]
         )
-        poses_df = poses_3d_df.copy()
-        poses_df['keypoint_coordinates_2d'] = poses_df['keypoint_coordinates_3d'].apply(project_points_partial)
         logger.info('Overlaying poses for {}'.format(camera_name))
         video_timestamps = sorted(video_metadata_dict[camera_id].keys())
         output_paths = list()
         for video_timestamp in video_timestamps:
+            # Add an extra second to capture extra frames in video
+            poses_time_segment_df = poses_3d_df.loc[
+                (poses_3d_df['timestamp'] >= video_timestamp )&
+                (poses_3d_df['timestamp'] < video_timestamp + datetime.timedelta(seconds=11))
+            ].copy()
+            poses_time_segment_df['keypoint_coordinates_2d'] = poses_time_segment_df['keypoint_coordinates_3d'].apply(project_points_partial)
             video_local_path = video_metadata_dict[camera_id][video_timestamp]['video_local_path']
             output_path = overlay_video_poses_camera_time_segment(
-                poses_df=poses_df,
+                poses_df=poses_time_segment_df,
                 video_timestamp=video_timestamp,
                 camera_name=camera_name,
                 video_local_path=video_local_path,
