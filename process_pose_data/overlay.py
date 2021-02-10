@@ -1504,6 +1504,7 @@ def concat_videos(
     fp.close()
     stream  = ffmpeg.input(temp_file_list_path, format='concat', safe=0)
     stream = ffmpeg.output(stream, output_video_path, c='copy')
+    stream = ffmpeg.overwrite_output(stream)
     ffmpeg.run(stream)
     if delete_input_videos:
         for input_video_path in input_videos_path_list:
