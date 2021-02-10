@@ -119,6 +119,30 @@ def overlay_video_poses_3d(
         draw_keypoint_connectors = True
     else:
         draw_keypoint_connectors = False
+    overlay_video_poses_camera_time_segment_partial = functools.partial(
+        overlay_video_poses_camera_time_segment,
+        pose_label_column=pose_label_column,
+        draw_keypoint_connectors=draw_keypoint_connectors,
+        keypoint_connectors=keypoint_connectors,
+        pose_color=pose_color,
+        keypoint_radius=keypoint_radius,
+        keypoint_alpha=keypoint_alpha,
+        keypoint_connector_alpha=keypoint_connector_alpha,
+        keypoint_connector_linewidth=keypoint_connector_linewidth,
+        pose_label_color=pose_label_color,
+        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_font_scale=pose_label_font_scale,
+        pose_label_line_width=pose_label_line_width,
+        output_directory=output_directory,
+        output_filename_prefix=output_filename_prefix,
+        output_filename_datetime_format=output_filename_datetime_format,
+        output_filename_extension=output_filename_extension,
+        output_fourcc_string=output_fourcc_string,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
+    input_parameters_list = list()
+    output_parameters_list = list()
     for camera_id in camera_ids:
         camera_name = camera_name_dict[camera_id]
         camera_calibration = camera_calibrations[camera_id]
@@ -137,7 +161,6 @@ def overlay_video_poses_3d(
         )
         logger.info('Overlaying poses for {}'.format(camera_name))
         video_timestamps = sorted(video_metadata_dict[camera_id].keys())
-        output_paths = list()
         for video_timestamp in video_timestamps:
             # Add an extra second to capture extra frames in video
             poses_time_segment_df = poses_3d_df.loc[
@@ -146,33 +169,33 @@ def overlay_video_poses_3d(
             ].copy()
             poses_time_segment_df['keypoint_coordinates_2d'] = poses_time_segment_df['keypoint_coordinates_3d'].apply(project_points_partial)
             video_local_path = video_metadata_dict[camera_id][video_timestamp]['video_local_path']
-            output_path = overlay_video_poses_camera_time_segment(
-                poses_df=poses_time_segment_df,
-                video_timestamp=video_timestamp,
-                camera_name=camera_name,
-                video_local_path=video_local_path,
-                pose_label_column=pose_label_column,
-                draw_keypoint_connectors=draw_keypoint_connectors,
-                keypoint_connectors=keypoint_connectors,
-                pose_color=pose_color,
-                keypoint_radius=keypoint_radius,
-                keypoint_alpha=keypoint_alpha,
-                keypoint_connector_alpha=keypoint_connector_alpha,
-                keypoint_connector_linewidth=keypoint_connector_linewidth,
-                pose_label_color=pose_label_color,
-                pose_label_background_alpha=pose_label_background_alpha,
-                pose_label_font_scale=pose_label_font_scale,
-                pose_label_line_width=pose_label_line_width,
-                output_directory=output_directory,
-                output_filename_prefix=output_filename_prefix,
-                output_filename_datetime_format=output_filename_datetime_format,
-                output_filename_extension=output_filename_extension,
-                output_fourcc_string=output_fourcc_string,
-                progress_bar=progress_bar,
-                notebook=notebook
-            )
-            output_paths.append(output_path)
-        if concatenate_videos:
+            input_parameters_list.append({
+                'poses_df': poses_time_segment_df,
+                'video_timestamp': video_timestamp,
+                'camera_name': camera_name,
+                'video_local_path': video_local_path
+
+            })
+            # output_parameters = overlay_video_poses_camera_time_segment_partial(
+            #     poses_df=poses_time_segment_df,
+            #     video_timestamp=video_timestamp,
+            #     camera_name=camera_name,
+            #     video_local_path=video_local_path
+            # )
+            # output_parameters_list.append(output_parameters)
+    output_parameters_list = list(map(
+        lambda input_parameters: overlay_video_poses_camera_time_segment_partial(**input_parameters),
+        input_parameters_list
+    ))
+    if concatenate_videos:
+        output_path_dict = dict()
+        for output_parameters in output_parameters_list:
+            camera_name = output_parameters['camera_name']
+            output_path = output_parameters['output_path']
+            if camera_name not in output_path_dict.keys():
+                output_path_dict[camera_name] = list()
+            output_path_dict[camera_name].append(output_path)
+        for camera_name, output_paths in output_path_dict.items():
             concat_output_path = os.path.join(
                 output_directory,
                 '{}_{}_{}_{}.{}'.format(
@@ -298,7 +321,12 @@ def overlay_video_poses_camera_time_segment(
             t.update()
     video_input.close()
     video_output.close()
-    return output_path
+    output_parameters = {
+        'camera_name': camera_name,
+        'video_timestamp': video_timestamp,
+        'output_path': output_path
+    }
+    return output_parameters
 
 # def overlay_video_poses_2d(
 #     poses_2d_df,
