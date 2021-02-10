@@ -22,9 +22,8 @@ logger = logging.getLogger(__name__)
 
 def overlay_video_poses_3d(
     poses_3d_df,
-    start=None,
-    end=None,
-    video_timestamps=None,
+    video_timestamp_min=None,
+    video_timestamp_max=None,
     camera_assignment_ids=None,
     environment_id=None,
     environment_name=None,
@@ -68,9 +67,9 @@ def overlay_video_poses_3d(
     notebook=False
 ):
     video_metadata_with_local_paths = video_io.fetch_videos(
-        start=start,
-        end=end,
-        video_timestamps=video_timestamps,
+        start=video_timestamp_min,
+        end=video_timestamp_max,
+        video_timestamps=None,
         camera_assignment_ids=camera_assignment_ids,
         environment_id=environment_id,
         environment_name=environment_name,
@@ -90,18 +89,18 @@ def overlay_video_poses_3d(
         video_filename_extension=video_filename_extension
     )
     video_metadata_dict = dict()
-    video_timestamp_min = None
-    video_timestamp_max = None
+    # video_timestamp_min_fetched = None
+    # video_timestamp_max_fetched = None
     for datum in video_metadata_with_local_paths:
         camera_id = datum.get('device_id')
         video_timestamp = datum.get('video_timestamp')
         if camera_id not in video_metadata_dict.keys():
             video_metadata_dict[camera_id] = dict()
         video_metadata_dict[camera_id][video_timestamp] = datum
-        if video_timestamp_min is None or video_timestamp < video_timestamp_min:
-            video_timestamp_min = video_timestamp
-        if video_timestamp_max is None or video_timestamp > video_timestamp_max:
-            video_timestamp_max = video_timestamp
+        # if video_timestamp_min_fetched is None or video_timestamp < video_timestamp_min_fetched:
+        #     video_timestamp_min_fetched = video_timestamp
+        # if video_timestamp_max_fetched is None or video_timestamp > video_timestamp_max_fetched:
+        #     video_timestamp_max_fetched = video_timestamp
     camera_ids = list(video_metadata_dict.keys())
     camera_name_dict = process_pose_data.honeycomb_io.fetch_camera_names(
         camera_ids
@@ -230,10 +229,6 @@ def overlay_video_poses_3d(
 
 def overlay_video_poses_camera_time_segment(
     input_parameters,
-    # poses_df,
-    # video_timestamp,
-    # camera_name,
-    # video_local_path,
     pose_label_column=None,
     draw_keypoint_connectors=False,
     keypoint_connectors=None,
