@@ -15,6 +15,7 @@ import functools
 import datetime
 import string
 import logging
+import multiprocessing
 import os
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,8 @@ def overlay_video_poses_3d(
     output_fourcc_string=None,
     concatenate_videos=True,
     delete_individual_clips=True,
+    parallel=False,
+    num_parallel_processes=None,
     progress_bar=False,
     notebook=False
 ):
@@ -176,17 +179,25 @@ def overlay_video_poses_3d(
                 'video_local_path': video_local_path
 
             })
-            # output_parameters = overlay_video_poses_camera_time_segment_partial(
-            #     poses_df=poses_time_segment_df,
-            #     video_timestamp=video_timestamp,
-            #     camera_name=camera_name,
-            #     video_local_path=video_local_path
-            # )
-            # output_parameters_list.append(output_parameters)
-    output_parameters_list = list(map(
-        lambda input_parameters: overlay_video_poses_camera_time_segment_partial(**input_parameters),
-        input_parameters_list
-    ))
+    if parallel:
+        logger.info('Attempting to launch parallel processes')
+        if num_parallel_processes is None:
+            num_cpus=multiprocessing.cpu_count()
+            num_processes = num_cpus - 1
+            logger.info('Number of parallel processes not specified. {} CPUs detected. Launching {} processes'.format(
+                num_cpus,
+                num_processes
+            ))
+        with multiprocessing.Pool(num_processes) as p:
+            output_parameters_list = p.map(
+                overlay_video_poses_camera_time_segment_partial,
+                input_parameters_list
+            )
+    else:
+        output_parameters_list = list(map(
+            overlay_video_poses_camera_time_segment_partial,
+            input_parameters_list
+        ))
     if concatenate_videos:
         output_path_dict = dict()
         for output_parameters in output_parameters_list:
@@ -218,10 +229,11 @@ def overlay_video_poses_3d(
             )
 
 def overlay_video_poses_camera_time_segment(
-    poses_df,
-    video_timestamp,
-    camera_name,
-    video_local_path,
+    input_parameters,
+    # poses_df,
+    # video_timestamp,
+    # camera_name,
+    # video_local_path,
     pose_label_column=None,
     draw_keypoint_connectors=False,
     keypoint_connectors=None,
@@ -242,6 +254,10 @@ def overlay_video_poses_camera_time_segment(
     progress_bar=False,
     notebook=False
 ):
+    poses_df = input_parameters['poses_df']
+    video_timestamp = input_parameters['video_timestamp']
+    camera_name = input_parameters['camera_name']
+    video_local_path = input_parameters['video_local_path']
     logger.info('Overlaying poses for video starting at {}'.format(video_timestamp.isoformat()))
     logger.info('Video input path: {}'.format(video_local_path))
     output_path = os.path.join(
