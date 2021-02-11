@@ -125,8 +125,8 @@ def overlay_poses(
         draw_keypoint_connectors = True
     else:
         draw_keypoint_connectors = False
-    overlay_video_poses_camera_time_segment_partial = functools.partial(
-        overlay_video_poses_camera_time_segment,
+    overlay_poses_camera_time_segment_partial = functools.partial(
+        overlay_poses_camera_time_segment,
         video_metadata_dict=video_metadata_dict,
         camera_name_dict=camera_name_dict,
         pose_label_column=pose_label_column,
@@ -195,12 +195,12 @@ def overlay_poses(
             ))
         with multiprocessing.Pool(num_processes) as p:
             output_parameters_list = p.map(
-                overlay_video_poses_camera_time_segment_partial,
+                overlay_poses_camera_time_segment_partial,
                 input_parameters_list
             )
     else:
         output_parameters_list = list(map(
-            overlay_video_poses_camera_time_segment_partial,
+            overlay_poses_camera_time_segment_partial,
             input_parameters_list
         ))
     if concatenate_videos:
@@ -233,7 +233,7 @@ def overlay_poses(
                 delete_input_videos=delete_individual_clips
             )
 
-def overlay_video_poses_camera_time_segment(
+def overlay_poses_camera_time_segment(
     input_parameters,
     video_metadata_dict,
     camera_name_dict,
