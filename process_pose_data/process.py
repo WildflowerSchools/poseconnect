@@ -14,14 +14,116 @@ import time
 
 logger = logging.getLogger(__name__)
 
-def reconstruct_poses_3d_alphapose_local_by_time_segment(
+def extract_poses_2d_alphapose_local_by_time_segment(
     start,
     end,
     base_dir,
     environment_id,
+    alphapose_subdirectory='prepared',
+    poses_2d_file_name='alphapose-results.json',
+    poses_2d_json_format='cmu',
+    pose_processing_subdirectory='pose_processing',
+    progress_bar=False,
+    notebook=False
+):
+    if start.tzinfo is None:
+        logger.info('Specified start is timezone-naive. Assuming UTC')
+        start=start.replace(tzinfo=datetime.timezone.utc)
+    if end.tzinfo is None:
+        logger.info('Specified end is timezone-naive. Assuming UTC')
+        end=end.replace(tzinfo=datetime.timezone.utc)
+    logger.info('Extracting 2D poses from local Alphapose output. Base directory: {}. Alphapose data subdirectory: {}. Pose processing data subdirectory: {}. Environment ID: {}. Start: {}. End: {}'.format(
+        base_dir,
+        alphapose_subdirectory,
+        pose_processing_subdirectory,
+        environment_id,
+        start,
+        end
+    ))
+    logger.info('Generating metadata')
+    pose_extraction_2d_metadata = generate_metadata(
+        environment_id=environment_id,
+        pipeline_stage='pose_extraction_2d',
+        parameters={
+            'start': start,
+            'end': end
+        }
+    )
+    inference_id_local = pose_extraction_2d_metadata.get('inference_id_local')
+    logger.info('Writing inference metadata to local file')
+    process_pose_data.local_io.write_data_local(
+        data_object=pose_extraction_2d_metadata,
+        base_dir=base_dir,
+        pipeline_stage='pose_extraction_2d',
+        environment_id=environment_id,
+        filename_stem='pose_extraction_2d_metadata',
+        inference_id=pose_extraction_2d_metadata['inference_id_local'],
+        time_segment_start=None,
+        object_type='dict',
+        append=False,
+        sort_field=None,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    logger.info('Generating list of time segments')
+    time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
+        start=start,
+        end=end
+    )
+    num_time_segments = len(time_segment_start_list)
+    num_minutes = (end - start).total_seconds()/60
+    logger.info('Extracting 2D poses for {} time segments spanning {:.3f} minutes: {} to {}'.format(
+        num_time_segments,
+        num_minutes,
+        time_segment_start_list[0].isoformat(),
+        time_segment_start_list[-1].isoformat()
+    ))
+    processing_start = time.time()
+    if progress_bar:
+        if notebook:
+            time_segment_start_iterator = tqdm.notebook.tqdm(time_segment_start_list)
+        else:
+            time_segment_start_iterator = tqdm.tqdm(time_segment_start_list)
+    else:
+        time_segment_start_iterator = time_segment_start_list
+    for time_segment_start in time_segment_start_iterator:
+        poses_2d_df_time_segment = process_pose_data.local_io.fetch_2d_pose_data_alphapose_local_time_segment(
+            base_dir=base_dir,
+            environment_id=environment_id,
+            time_segment_start=time_segment_start,
+            alphapose_subdirectory=alphapose_subdirectory,
+            filename=poses_2d_file_name,
+            json_format=poses_2d_json_format
+        )
+        process_pose_data.local_io.write_data_local(
+            data_object=poses_2d_df_time_segment,
+            base_dir=base_dir,
+            pipeline_stage='pose_extraction_2d',
+            environment_id=environment_id,
+            filename_stem='poses_2d',
+            inference_id=inference_id_local,
+            time_segment_start=time_segment_start,
+            object_type='dataframe',
+            append=False,
+            sort_field=None,
+            pose_processing_subdirectory=pose_processing_subdirectory
+        )
+    processing_time = time.time() - processing_start
+    logger.info('Extracted {:.3f} minutes of 2D poses in {:.3f} minutes (ratio of {:.3f})'.format(
+        num_minutes,
+        processing_time/60,
+        (processing_time/60)/num_minutes
+    ))
+    return inference_id_local
+
+def reconstruct_poses_3d_alphapose_local_by_time_segment(
+    base_dir,
+    environment_id,
+    pose_extraction_2d_inference_id,
     pose_model_id,
     room_x_limits,
     room_y_limits,
+    start=None,
+    end=None,
     camera_assignment_ids=None,
     camera_device_id_lookup=None,
     camera_calibrations=None,
@@ -53,15 +155,30 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     progress_bar=False,
     notebook=False
 ):
+    pose_extraction_2d_metadata = process_pose_data.local_io.fetch_data_local(
+        base_dir=base_dir,
+        pipeline_stage='pose_extraction_2d',
+        environment_id=environment_id,
+        filename_stem='pose_extraction_2d_metadata',
+        inference_ids=pose_extraction_2d_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    if start is None:
+        start = pose_extraction_2d_metadata['parameters']['start']
+    if end is None:
+        end = pose_extraction_2d_metadata['parameters']['end']
     if start.tzinfo is None:
         logger.info('Specified start is timezone-naive. Assuming UTC')
         start=start.replace(tzinfo=datetime.timezone.utc)
     if end.tzinfo is None:
         logger.info('Specified end is timezone-naive. Assuming UTC')
         end=end.replace(tzinfo=datetime.timezone.utc)
-    logger.info('Reconstructing 3D poses from local 2D pose data. Base directory: {}. Alphapose data subdirectory: {}. Pose processing data subdirectory: {}. Environment ID: {}. Start: {}. End: {}'.format(
+    logger.info('Reconstructing 3D poses from local 2D pose data. Base directory: {}. Pose processing data subdirectory: {}. Environment ID: {}. Start: {}. End: {}'.format(
         base_dir,
-        alphapose_subdirectory,
         pose_processing_subdirectory,
         environment_id,
         start,
@@ -123,6 +240,7 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         environment_id=environment_id,
         pipeline_stage='pose_reconstruction_3d',
         parameters={
+            'pose_extraction_2d_inference_id': pose_extraction_2d_inference_id,
             'start': start,
             'end': end,
             'pose_model_id': pose_model_id,
@@ -181,10 +299,8 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         reconstruct_poses_3d_alphapose_local_time_segment,
         base_dir=base_dir,
         environment_id=environment_id,
-        inference_id_local=inference_id_local,
-        alphapose_subdirectory=alphapose_subdirectory,
-        poses_2d_file_name=poses_2d_file_name,
-        poses_2d_json_format=poses_2d_json_format,
+        pose_extraction_2d_inference_id=pose_extraction_2d_inference_id,
+        pose_reconstruction_3d_inference_id=inference_id_local,
         pose_processing_subdirectory=pose_processing_subdirectory,
         camera_device_id_lookup=camera_device_id_lookup,
         client=None,
@@ -240,10 +356,8 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
     time_segment_start,
     base_dir,
     environment_id,
-    inference_id_local,
-    alphapose_subdirectory='prepared',
-    poses_2d_file_name='alphapose-results.json',
-    poses_2d_json_format='cmu',
+    pose_extraction_2d_inference_id,
+    pose_reconstruction_3d_inference_id,
     pose_processing_subdirectory='pose_processing',
     camera_device_id_lookup=None,
     client=None,
@@ -273,13 +387,17 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
 ):
     logger.info('Processing 2D poses from local Alphapose output files for time segment starting at {}'.format(time_segment_start.isoformat()))
     logger.info('Fetching 2D pose data for time segment starting at {}'.format(time_segment_start.isoformat()))
-    poses_2d_df_time_segment = process_pose_data.local_io.fetch_2d_pose_data_alphapose_local_time_segment(
+    poses_2d_df_time_segment = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
+        pipeline_stage='pose_extraction_2d',
         environment_id=environment_id,
+        filename_stem='poses_2d',
+        inference_ids=pose_extraction_2d_inference_id,
+        data_ids=None,
+        sort_field=None,
         time_segment_start=time_segment_start,
-        alphapose_subdirectory=alphapose_subdirectory,
-        filename=poses_2d_file_name,
-        json_format=poses_2d_json_format
+        object_type='dataframe',
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     if len(poses_2d_df_time_segment) == 0:
         logger.info('No 2D poses found for time segment starting at %s', time_segment_start.isoformat())
@@ -329,7 +447,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         pipeline_stage='pose_reconstruction_3d',
         environment_id=environment_id,
         filename_stem='poses_3d',
-        inference_id=inference_id_local,
+        inference_id=pose_reconstruction_3d_inference_id,
         time_segment_start=time_segment_start,
         object_type='dataframe',
         append=False,
