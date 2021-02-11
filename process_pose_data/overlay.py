@@ -288,16 +288,16 @@ def overlay_video_poses_camera_time_segment(
     ))
     if video_fps != 10.0:
         raise ValueError('Overlay function expects 10 FPS but video has {} FPS'.format(video_fps))
-    if pd.to_datetime(video_start_time, utc=True) < poses_df['timestamp'].min():
-        raise ValueError('Video starts at {} but 3D pose data starts at {}'.format(
+    if pd.to_datetime(video_start_time, utc=True) > poses_df['timestamp'].max():
+        raise ValueError('Video starts at {} but 3D pose data ends at {}'.format(
             video_start_time.isoformat(),
-            poses_df['timestamp'].min().isoformat()
+            poses_df['timestamp'].max().isoformat()
         ))
     video_end_time = video_start_time + datetime.timedelta(milliseconds=(video_frame_count - 1)*100)
-    if pd.to_datetime(video_end_time, utc=True) > poses_df['timestamp'].max():
-        raise ValueError('Video ends at {} but 3D pose data ends at {}'.format(
+    if pd.to_datetime(video_end_time, utc=True) < poses_df['timestamp'].min():
+        raise ValueError('Video ends at {} but 3D pose data starts at {}'.format(
             video_end_time.isoformat(),
-            poses_df['timestamp'].max().isoformat()
+            poses_df['timestamp'].min().isoformat()
         ))
     video_output_parameters = video_input.video_parameters
     if output_fourcc_string is not None:

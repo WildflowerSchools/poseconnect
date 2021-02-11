@@ -6,20 +6,9 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 * Make functions for fetching poses with pose track IDs, person IDs, person data
 * Change argument name from `inference_id_local` to `inference_ids_local` wherever multiple IDs are permitted
-* Boil all local IO operations down to read/write by time segment or not by time segment
 * Consider getting rid of all distinctions between local and remote IDs in naming
-* Fix up overlay functions so they cope if overlay already exists
-* Fix up video overlay function to flexibly handle different kinds of output (poses, poses with track labels, poses with person info)
-* Make video overlay function use multiple cores
-* Rewrite `overlay.overlay_video_poses_2d()` to match functionality of `overlay.overlay_video_poses_3d()` (e.g., more flexible specification of videos, concatenation)
 * Extend ability to set output container and code to all overlay functions
-* Add ability to overlay for a time range (batch processing)
-* Loosen checks on overlap between pose data and video data (go ahead as long as there is _some_ overlap)
-* Allow specification of active person tags during identification (so it ignores others)
 * Figure out how to make code source package version number
-* Diagnose missing CUWB data in analysis of 19:48-19:55 UTC on Jan 21
-* Diagnose floating pose in output from 19:48-19:55 UTC on Jan 21 and from earlier test night
-* Consider restricting to  _x_ and _y_ position data when identifying tracks (_z_ position data seems noisy)
 * Add additional machinery for checking UWB data integrity (e.g., duplicates)
 * Add omnibus process function that runs the others in sequence
 * Add endpoints for all processing functions
