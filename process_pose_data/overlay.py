@@ -376,8 +376,9 @@ def visualize_3d_pose_reconstruction(
     keypoint_alpha=0.6,
     keypoint_connector_alpha=0.6,
     keypoint_connector_linewidth=3,
-    timestamp_color='white',
-    timestamp_background_alpha=0.6,
+    timestamp_text_color='white',
+    timestamp_background_color='black',
+    timestamp_background_alpha=0.3,
     timestamp_font_scale=1.5,
     timestamp_line_width=1,
     output_directory='./image_overlays',
@@ -577,14 +578,13 @@ def visualize_3d_pose_reconstruction(
             keypoint_connector_linewidth=keypoint_connector_linewidth
         )
         # Draw floor box underneath 3D pose in same color color
-        image = draw_polygon_2d_opencv(
-            image=image,
-            vertices=pose_3d_footprint_vertices_2d,
-            line_color=pose_3d_footprint_color,
-            line_width=0,
-            fill_color=pose_3d_footprint_color,
-            fill_alpha=pose_3d_footprint_alpha
-        )
+        if np.all(np.isfinite(pose_3d_footprint_vertices_2d)):
+            image = draw_polygon_2d_opencv(
+                image=image,
+                vertices=pose_3d_footprint_vertices_2d,
+                fill_color=pose_3d_footprint_color,
+                fill_alpha=pose_3d_footprint_alpha
+            )
         # Draw 2D poses
         poses_2d_camera_df = poses_2d_df.loc[poses_2d_df['camera_id'] == camera_id]
         for pose_2d_id, pose_2d in poses_2d_camera_df.iterrows():
@@ -608,7 +608,8 @@ def visualize_3d_pose_reconstruction(
         image = draw_timestamp_opencv(
             image=image,
             timestamp=pose_3d_timestamp,
-            color=timestamp_color,
+            text_color=timestamp_text_color,
+            background_color=timestamp_background_color,
             background_alpha=timestamp_background_alpha,
             font_scale=timestamp_font_scale,
             line_width=timestamp_line_width
@@ -877,23 +878,67 @@ def draw_pose_2d_opencv(
 def draw_polygon_2d_opencv(
     image,
     vertices,
-    line_color='white',
-    line_width=1,
     fill_color='white',
     fill_alpha=0.5
 ):
-    logger.warn('draw_polygon_2d_opencv() not yet implemented')
+    fill_color = matplotlib.colors.to_hex(fill_color, keep_alpha=False)
+    image = cv_utils.draw_polygon(
+        original_image=image,
+        vertices=vertices,
+        color=fill_color,
+        alpha=fill_alpha
+    )
     return image
 
 def draw_timestamp_opencv(
     image,
     timestamp,
-    color='white',
-    background_alpha=0.5,
+    text_color='white',
+    background_color='black',
+    background_alpha=0.3,
     font_scale=1.5,
-    line_width=1
+    line_width=1,
+    padding = 5
 ):
-    logger.warn('draw_timestamp_opencv() not yet implemented')
+    text_color = matplotlib.colors.to_hex(text_color, keep_alpha=False)
+    background_color = matplotlib.colors.to_hex(background_color, keep_alpha=False)
+    image_height, image_width, image_depth = image.shape
+    upper_right_coordinates = [image_width - padding, padding]
+    timestamp_text = timestamp.isoformat()
+    text_box_size, baseline = cv.getTextSize(
+        text=str(timestamp_text),
+        fontFace=cv.FONT_HERSHEY_PLAIN,
+        fontScale=font_scale,
+        thickness=line_width
+    )
+    image=cv_utils.draw_rectangle(
+        original_image=image,
+        coordinates=[
+            [
+                upper_right_coordinates[0] - text_box_size[0],
+                upper_right_coordinates[1]
+            ],
+            [
+                upper_right_coordinates[0],
+                upper_right_coordinates[1] + text_box_size[1]
+            ]
+        ],
+        line_width=0,
+        color=background_color,
+        fill=True,
+        alpha=background_alpha
+    )
+    image = cv_utils.draw_text(
+        original_image=image,
+        coordinates=upper_right_coordinates,
+        text=timestamp.isoformat(),
+        horizontal_alignment='right',
+        vertical_alignment='top',
+        font_face=cv.FONT_HERSHEY_PLAIN,
+        font_scale=font_scale,
+        line_width=line_width,
+        color=text_color
+    )
     return image
 
 def draw_poses_3d_timestamp_camera_opencv(
