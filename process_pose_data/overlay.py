@@ -52,8 +52,8 @@ def overlay_poses(
     keypoint_connector_linewidth=3,
     pose_label_color='white',
     pose_label_background_alpha=0.6,
-    pose_label_font_scale=2.0,
-    pose_label_line_width=2,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1,
     output_directory='.',
     output_filename_prefix='poses_3d_overlay',
     output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
@@ -247,8 +247,8 @@ def overlay_poses_camera_time_segment(
     keypoint_connector_linewidth=3,
     pose_label_color='white',
     pose_label_background_alpha=0.6,
-    pose_label_font_scale=2.0,
-    pose_label_line_width=2,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1,
     output_directory='.',
     output_filename_prefix='poses_overlay',
     output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
@@ -347,6 +347,288 @@ def overlay_poses_camera_time_segment(
     }
     return output_parameters
 
+def visualize_3d_pose_reconstruction(
+    pose_3d_id,
+    pose_model_id,
+    floor_height=0.0,
+    poses_3d_df=None,
+    pose_reconstruction_3d_inference_id=None,
+    pose_3d_timestamp=None,
+    poses_2d_df=None,
+    pose_extraction_2d_inference_id=None,
+    base_dir=None,
+    environment_id=None,
+    pose_processing_subdirectory='pose_processing',
+    camera_device_id_lookup=None,
+    camera_calibrations=None,
+    camera_names=None,
+    local_image_directory='./images',
+    image_filename_extension='png',
+    local_video_directory='./videos',
+    video_filename_extension='mp4',
+    pose_3d_color='green',
+    pose_3d_footprint_color='green',
+    pose_3d_footprint_alpha=0.5,
+    constituent_pose_2d_color='blue',
+    non_constituent_pose_2d_color='red',
+    keypoint_connectors=None,
+    keypoint_radius=3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
+    keypoint_connector_linewidth=3,
+    timestamp_color='white',
+    timestamp_background_alpha=0.6,
+    timestamp_font_scale=1.5,
+    timestamp_line_width=1,
+    output_directory='./image_overlays',
+    output_filename_stem='pose_3d_reconstruction',
+    output_filename_extension='png',
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    pass
+    # Fetch 3D poses (if necessary)
+    if poses_3d_df is None:
+        if (
+            base_dir is None or
+            environment_id is None or
+            pose_reconstruction_3d_inference_id is None or
+            pose_3d_timestamp is None
+        ):
+            raise ValueError('If poses_3d_df not supplied, must specify base_dir, and environment_id, pose_reconstruction_3d_inference_id, and pose_3d_timestamp')
+        poses_3d_df = process_pose_data.local_io.fetch_data_local_by_time_segment(
+            start=pose_3d_timestamp,
+            end=pose_3d_timestamp,
+            base_dir=base_dir,
+            pipeline_stage='pose_reconstruction_3d',
+            environment_id=environment_id,
+            filename_stem='poses_3d',
+            inference_ids=pose_reconstruction_3d_inference_id,
+            data_ids=[pose_3d_id],
+            sort_field=None,
+            object_type='dataframe',
+            pose_processing_subdirectory='pose_processing'
+        )
+    # Extract 3D pose
+    if pose_3d_id not in poses_3d_df.index:
+        raise ValueError('3D pose {} not found in 3D poses'.format(
+            pose_3d_id
+        ))
+    pose_3d = poses_3d_df.loc[pose_3d_id]
+    pose_3d_timestamp = pose_3d['timestamp']
+    pose_3d_keypoint_coordinates_3d = pose_3d['keypoint_coordinates_3d']
+    pose_3d_pose_2d_ids = pose_3d['pose_2d_ids_local']
+    # Calculate 3D pose footprint
+    x_min = np.nanmin(pose_3d_keypoint_coordinates_3d[:, 0])
+    x_max = np.nanmax(pose_3d_keypoint_coordinates_3d[:, 0])
+    y_min = np.nanmin(pose_3d_keypoint_coordinates_3d[:, 1])
+    y_max = np.nanmax(pose_3d_keypoint_coordinates_3d[:, 1])
+    pose_3d_footprint_vertices_3d = np.array([
+        [x_min, y_min, floor_height],
+        [x_min, y_max, floor_height],
+        [x_max, y_max, floor_height],
+        [x_max, y_min, floor_height]
+    ])
+    # Fetch 2D poses (if necessary)
+    if poses_2d_df is None:
+        if (
+            base_dir is None or
+            environment_id is None or
+            pose_extraction_2d_inference_id is None or
+            pose_3d_timestamp is None
+        ):
+            raise ValueError('If poses_2d_df not supplied, must specify base_dir, environment_id, pose_extraction_2d_inference_id, and pose_3d_timestamp')
+        poses_2d_df = process_pose_data.local_io.fetch_data_local_by_time_segment(
+            start=pose_3d_timestamp,
+            end=pose_3d_timestamp,
+            base_dir=base_dir,
+            pipeline_stage='pose_extraction_2d',
+            environment_id=environment_id,
+            filename_stem='poses_2d',
+            inference_ids=pose_extraction_2d_inference_id,
+            data_ids=None,
+            sort_field=None,
+            object_type='dataframe',
+            pose_processing_subdirectory='pose_processing'
+        )
+    # Extract 2D poses from the same timestamp as the 3D pose
+    poses_2d_df = poses_2d_df.loc[poses_2d_df['timestamp'] == pose_3d_timestamp].copy()
+    if len(poses_2d_df) == 0:
+        raise ValueError('Timestamp associated with 3D pose {} not found in 2D poses'.format(
+            pose_3d_timestamp.isoformat()
+        ))
+    # Convert assignment IDs to device IDs for cameras
+    poses_2d_df = process_pose_data.local_io.convert_assignment_ids_to_camera_device_ids(
+        poses_2d_df=poses_2d_df,
+        camera_device_id_lookup=camera_device_id_lookup,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    camera_ids = poses_2d_df['camera_id'].unique().tolist()
+    # Fetch camera names (if necessary)
+    if camera_names is None:
+        camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
+            camera_ids=camera_ids,
+            chunk_size=chunk_size,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    # Fetch camera calibrations (if necessary)
+    if camera_calibrations is None:
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+            camera_ids=camera_ids,
+            start=pose_3d_timestamp,
+            end=pose_3d_timestamp,
+            chunk_size=chunk_size,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    # Download images
+    image_metadata_with_local_paths = video_io.fetch_images(
+        image_timestamps=[pose_3d_timestamp],
+        camera_device_ids=camera_ids,
+        chunk_size=chunk_size,
+        minimal_honeycomb_client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret,
+        local_image_directory=local_image_directory,
+        image_filename_extension=image_filename_extension,
+        local_video_directory=local_video_directory,
+        video_filename_extension=video_filename_extension
+    )
+    image_metadata_dict = {
+        image_metadatum['device_id']: image_metadatum
+        for image_metadatum in image_metadata_with_local_paths
+    }
+    # Fetch information for keypoint connectors (if necessary)
+    if pose_model_id is not None:
+        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
+            pose_model_id
+        )
+        if keypoint_connectors is None:
+            keypoint_connectors = pose_model.get('keypoint_connectors')
+    if keypoint_connectors is not None:
+        draw_keypoint_connectors = True
+    else:
+        draw_keypoint_connectors = False
+    # Create overlays
+    for camera_id in camera_ids:
+        # Project 3D pose into this camera
+        pose_3d_keypoint_coordinates_2d = cv_utils.project_points(
+            object_points=pose_3d_keypoint_coordinates_3d,
+            rotation_vector = camera_calibrations[camera_id]['rotation_vector'],
+            translation_vector = camera_calibrations[camera_id]['translation_vector'],
+            camera_matrix = camera_calibrations[camera_id]['camera_matrix'],
+            distortion_coefficients = camera_calibrations[camera_id]['distortion_coefficients'],
+            remove_behind_camera=True,
+            remove_outside_frame=True,
+            image_corners=[
+                [0,0],
+                [camera_calibrations[camera_id]['image_width'], camera_calibrations[camera_id]['image_height']]
+            ]
+        )
+        # Project 3D pose footprint into this camera
+        pose_3d_footprint_vertices_2d = cv_utils.project_points(
+            object_points=pose_3d_footprint_vertices_3d,
+            rotation_vector=camera_calibrations[camera_id]['rotation_vector'],
+            translation_vector=camera_calibrations[camera_id]['translation_vector'],
+            camera_matrix=camera_calibrations[camera_id]['camera_matrix'],
+            distortion_coefficients=camera_calibrations[camera_id]['distortion_coefficients'],
+            remove_behind_camera=True,
+            remove_outside_frame=True,
+            image_corners=[
+                [0,0],
+                [camera_calibrations[camera_id]['image_width'], camera_calibrations[camera_id]['image_height']]
+            ]
+        )
+        # Load image into memory
+        image = cv.imread(image_metadata_dict.get(camera_id).get('image_local_path'))
+        # Draw projected 3D pose in one color
+        image = draw_pose_2d_opencv(
+            image=image,
+            keypoint_coordinates=pose_3d_keypoint_coordinates_2d,
+            draw_keypoint_connectors=draw_keypoint_connectors,
+            keypoint_connectors=keypoint_connectors,
+            pose_label=None,
+            pose_color=pose_3d_color,
+            keypoint_radius=keypoint_radius,
+            keypoint_alpha=keypoint_alpha,
+            keypoint_connector_alpha=keypoint_connector_alpha,
+            keypoint_connector_linewidth=keypoint_connector_linewidth
+        )
+        # Draw floor box underneath 3D pose in same color color
+        image = draw_polygon_2d_opencv(
+            image=image,
+            vertices=pose_3d_footprint_vertices_2d,
+            line_color=pose_3d_footprint_color,
+            line_width=0,
+            fill_color=pose_3d_footprint_color,
+            fill_alpha=pose_3d_footprint_alpha
+        )
+        # Draw 2D poses
+        poses_2d_camera_df = poses_2d_df.loc[poses_2d_df['camera_id'] == camera_id]
+        for pose_2d_id, pose_2d in poses_2d_camera_df.iterrows():
+            if pose_2d_id in pose_3d_pose_2d_ids:
+                pose_2d_color = constituent_pose_2d_color
+            else:
+                pose_2d_color = non_constituent_pose_2d_color
+            image = draw_pose_2d_opencv(
+                image=image,
+                keypoint_coordinates=pose_2d['keypoint_coordinates_2d'],
+                draw_keypoint_connectors=draw_keypoint_connectors,
+                keypoint_connectors=keypoint_connectors,
+                pose_label=None,
+                pose_color=pose_2d_color,
+                keypoint_radius=keypoint_radius,
+                keypoint_alpha=keypoint_alpha,
+                keypoint_connector_alpha=keypoint_connector_alpha,
+                keypoint_connector_linewidth=keypoint_connector_linewidth
+            )
+        # Write timestamp in the corner
+        image = draw_timestamp_opencv(
+            image=image,
+            timestamp=pose_3d_timestamp,
+            color=timestamp_color,
+            background_alpha=timestamp_background_alpha,
+            font_scale=timestamp_font_scale,
+            line_width=timestamp_line_width
+        )
+        # Build image save path
+        output_path = os.path.join(
+            output_directory,
+            '{}_{}_{}.{}'.format(
+                output_filename_stem,
+                pose_3d_id,
+                slugify.slugify(camera_names[camera_id]),
+                output_filename_extension
+            )
+        )
+        # Create directory if necessary
+        os.makedirs(output_directory, exist_ok=True)
+        # Save image
+        cv.imwrite(output_path, image)
+
+
 def draw_poses_2d_timestamp_camera_pair_opencv(
     df,
     annotate_matches=False,
@@ -359,8 +641,8 @@ def draw_poses_2d_timestamp_camera_pair_opencv(
     keypoint_connector_linewidth=3,
     pose_label_color='white',
     pose_label_background_alpha=0.6,
-    pose_label_font_scale=2.0,
-    pose_label_line_width=2,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1,
     show=True,
     fig_width_inches=10.5,
     fig_height_inches=8
@@ -439,8 +721,8 @@ def draw_poses_2d_timestamp_camera_opencv(
     keypoint_connector_linewidth=3,
     pose_label_color='white',
     pose_label_background_alpha=0.6,
-    pose_label_font_scale=2.0,
-    pose_label_line_width=2,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1,
     show=True,
     fig_width_inches=10.5,
     fig_height_inches=8
@@ -518,8 +800,8 @@ def draw_pose_2d_opencv(
     keypoint_connector_linewidth=3,
     pose_label_color='white',
     pose_label_background_alpha=0.6,
-    pose_label_font_scale=2.0,
-    pose_label_line_width=2
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1
 ):
     pose_color = matplotlib.colors.to_hex(pose_color, keep_alpha=False)
     pose_label_color = matplotlib.colors.to_hex(pose_label_color, keep_alpha=False)
@@ -591,6 +873,28 @@ def draw_pose_2d_opencv(
             color=pose_label_color
         )
     return new_image
+
+def draw_polygon_2d_opencv(
+    image,
+    vertices,
+    line_color='white',
+    line_width=1,
+    fill_color='white',
+    fill_alpha=0.5
+):
+    logger.warn('draw_polygon_2d_opencv() not yet implemented')
+    return image
+
+def draw_timestamp_opencv(
+    image,
+    timestamp,
+    color='white',
+    background_alpha=0.5,
+    font_scale=1.5,
+    line_width=1
+):
+    logger.warn('draw_timestamp_opencv() not yet implemented')
+    return image
 
 def draw_poses_3d_timestamp_camera_opencv(
     df,
