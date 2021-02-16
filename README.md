@@ -4,26 +4,31 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Make functions for fetching poses with pose track IDs, person IDs, person data
-* Change argument name from `inference_id_local` to `inference_ids_local` wherever multiple IDs are permitted
-* Consider getting rid of all distinctions between local and remote IDs in naming
-* Extend ability to set output container and code to all overlay functions
+* Generate progress bars for overall progress in addition to or instead of progress bars for each time segment
 * Figure out how to make code source package version number
-* Add additional machinery for checking UWB data integrity (e.g., duplicates)
-* Add omnibus process function that runs the others in sequence
-* Add endpoints for all processing functions
-* Add `poses_2d_json_format` option to `reconstruct_poses_3d` entry point
+* Consider getting rid of all distinctions between local and remote IDs in naming
+* Change argument name from `inference_id_local` to `inference_ids_local` wherever multiple IDs are permitted
+* Make functions for fetching poses with pose track IDs, person IDs, person data
+* Extend ability to set output container and code to all overlay functions
+* Make processing functions for overlaying 2D poses, 3D poses, uninterpolated 3D pose tracks, interpolated 3D pose tracks, identified interpolated 3D pose tracks
+* Add omnibus processing function that runs the others in sequence
+* Consider getting rid of `geom_render` module
+* Disable and/or comment out obsolete functions until we can update them
 * Clean up argument ordering in `reconstruct_poses_3d_alphapose_local_time_segment`
+* Write docstrings for main user-facing classes, methods, and functions
+* Add `poses_2d_json_format` option to `reconstruct_poses_3d` entry point
+* Add endpoints for all processing functions
 * Add ability to write locally generated object IDs to Honeycomb
 * Create separate workers for uploading to Honeycomb 3D poses, 3D pose tracks, interpolated 3D pose tracks, 3D pose identification, 3D pose track identification
+* Dockerize pipeline
+* Set up pipeline for Airflow
+* Add additional machinery for checking UWB data integrity (e.g., duplicates)
 * Retool `generate_inference_metadata_reconstruct_3d_poses_alphapose_local` to exclude cameras without calibration data
 * Make function to delete Honeycomb inference executions
 * Make function to delete local inference metadata
 * Make function to delete local 3D pose files
 * Make function for deleting local 3D pose data
 * Rewrite all log messages so formatting isn't called if log isn't printed
-* Dockerize pipeline
-* Set up pipeline for Airflow
 * Make functions handle empty poses (all keypoints `NaN`) more gracefully (e.g., `score_pose_pairs()`, `draw_pose_2d()`)
 * Make visualization functions handle missing fields (e.g., `pose_quality`) more gracefully
 * Figure out inconsistent behavior of `groupby(...).apply(...)` (under what conditions does it add grouping variables to index?)
