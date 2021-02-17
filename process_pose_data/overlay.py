@@ -302,6 +302,7 @@ def overlay_poses_camera_time_segment(
     video_output_parameters = video_input.video_parameters
     if output_fourcc_string is not None:
         video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(output_fourcc_string)
+    os.makedirs(output_directory, exist_ok=True)
     video_output = cv_utils.VideoOutput(
         output_path,
         video_parameters=video_output_parameters
