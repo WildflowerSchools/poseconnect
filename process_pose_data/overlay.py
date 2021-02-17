@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 def overlay_poses(
     poses_df,
-    video_timestamp_min=None,
-    video_timestamp_max=None,
+    start=None,
+    end=None,
     camera_assignment_ids=None,
     environment_id=None,
     environment_name=None,
@@ -76,8 +76,8 @@ def overlay_poses(
         poses_3d = False
         poses_2d = True
     video_metadata_with_local_paths = video_io.fetch_videos(
-        start=video_timestamp_min,
-        end=video_timestamp_max,
+        start=start,
+        end=end,
         video_timestamps=None,
         camera_assignment_ids=camera_assignment_ids,
         environment_id=environment_id,
@@ -112,8 +112,8 @@ def overlay_poses(
         if camera_calibrations is None:
             camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
                 camera_ids,
-                start=video_timestamp_min,
-                end=video_timestamp_max
+                start=start,
+                end=end
             )
     if pose_model_id is not None:
         pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
