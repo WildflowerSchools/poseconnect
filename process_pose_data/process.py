@@ -1166,6 +1166,7 @@ def overlay_poses_2d_local(
     camera_part_numbers=None,
     camera_names=None,
     camera_serial_numbers=None,
+    pose_processing_subdirectory='pose_processing',
     chunk_size=100,
     client=None,
     uri=None,
@@ -1207,7 +1208,7 @@ def overlay_poses_2d_local(
         data_ids=None,
         sort_field=None,
         object_type='dataframe',
-        pose_processing_subdirectory='pose_processing'
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     poses_2d_df = process_pose_data.local_io.convert_assignment_ids_to_camera_device_ids(poses_2d_df)
     process_pose_data.overlay.overlay_poses(
@@ -1272,6 +1273,7 @@ def overlay_poses_3d_local(
     camera_part_numbers=None,
     camera_names=None,
     camera_serial_numbers=None,
+    pose_processing_subdirectory='pose_processing',
     chunk_size=100,
     client=None,
     uri=None,
@@ -1313,7 +1315,7 @@ def overlay_poses_3d_local(
         data_ids=None,
         sort_field=None,
         object_type='dataframe',
-        pose_processing_subdirectory='pose_processing'
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
     process_pose_data.overlay.overlay_poses(
         poses_df=poses_3d_df,
