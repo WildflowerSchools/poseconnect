@@ -71,10 +71,15 @@ def overlay_poses(
         logger.info('Poses appear to be 3D poses. Projecting into each camera view')
         poses_3d = True
         poses_2d = False
-    if 'keypoint_coordinates_3d' not in poses_df_columns and 'camera_id' in poses_df_columns:
+    elif 'keypoint_coordinates_3d' not in poses_df_columns and 'camera_id' in poses_df_columns:
         logger.info('Poses appear to be 2D poses. Subsetting poses foreach camera view')
         poses_3d = False
         poses_2d = True
+    elif len(poses_df) == 0:
+        logger.warn('Pose dataframe is empty')
+        return
+    else:
+        raise ValueError('Cannot parse pose dataframe')
     video_metadata_with_local_paths = video_io.fetch_videos(
         start=start,
         end=end,
