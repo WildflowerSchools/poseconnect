@@ -6,16 +6,13 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 * Generate progress bars for overall progress in addition to or instead of progress bars for each time segment
 * Figure out how to make code source package version number
-* Consider getting rid of all distinctions between local and remote IDs in naming
-* Change argument name from `inference_id_local` to `inference_ids_local` wherever multiple IDs are permitted
 * Make functions for fetching poses with pose track IDs, person IDs, person data
-* Extend ability to set output container and code to all overlay functions
 * Make processing functions for overlaying 2D poses, 3D poses, uninterpolated 3D pose tracks, interpolated 3D pose tracks, identified interpolated 3D pose tracks
 * Add omnibus processing function that runs the others in sequence
-* Consider getting rid of `geom_render` module
 * Disable and/or comment out obsolete functions until we can update them
-* Clean up argument ordering in `reconstruct_poses_3d_alphapose_local_time_segment`
+* Consider getting rid of `geom_render` module
 * Write docstrings for main user-facing classes, methods, and functions
+* Clean up argument ordering in `reconstruct_poses_3d_alphapose_local_time_segment`
 * Add `poses_2d_json_format` option to `reconstruct_poses_3d` entry point
 * Add endpoints for all processing functions
 * Add ability to write locally generated object IDs to Honeycomb

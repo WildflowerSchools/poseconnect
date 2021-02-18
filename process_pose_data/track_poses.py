@@ -89,8 +89,8 @@ def interpolate_pose_track(pose_track_3d_df):
     ).to_frame()
     poses_3d_new_df = poses_3d_interpolated_df.reindex(new_time_index)
     pose_3d_ids_new = [uuid4().hex for _ in range(len(poses_3d_new_df))]
-    poses_3d_new_df['pose_3d_id_local'] = pose_3d_ids_new
-    poses_3d_new_df = poses_3d_new_df.reset_index().set_index('pose_3d_id_local')
+    poses_3d_new_df['pose_3d_id'] = pose_3d_ids_new
+    poses_3d_new_df = poses_3d_new_df.reset_index().set_index('pose_3d_id')
     return poses_3d_new_df
 
 class PoseTracks3D:

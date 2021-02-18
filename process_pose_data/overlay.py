@@ -429,7 +429,7 @@ def visualize_3d_pose_reconstruction(
     pose_3d = poses_3d_df.loc[pose_3d_id]
     pose_3d_timestamp = pose_3d['timestamp']
     pose_3d_keypoint_coordinates_3d = pose_3d['keypoint_coordinates_3d']
-    pose_3d_pose_2d_ids = pose_3d['pose_2d_ids_local']
+    pose_3d_pose_2d_ids = pose_3d['pose_2d_ids']
     # Calculate 3D pose footprint
     x_min = np.nanmin(pose_3d_keypoint_coordinates_3d[:, 0])
     x_max = np.nanmax(pose_3d_keypoint_coordinates_3d[:, 0])

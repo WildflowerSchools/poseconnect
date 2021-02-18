@@ -119,17 +119,17 @@ def reconstruct_poses_3d(
             tqdm.notebook.tqdm.pandas()
         else:
             tqdm.tqdm.pandas()
-        poses_3d_local_ids_df = poses_2d_df.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial)
+        poses_3d_df = poses_2d_df.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial)
     else:
-        poses_3d_local_ids_df = poses_2d_df.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial)
+        poses_3d_df = poses_2d_df.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial)
     elapsed_time = time.time() - start_time
     logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
-        len(poses_3d_local_ids_df),
+        len(poses_3d_df),
         elapsed_time,
         1000*elapsed_time/num_frames
     ))
-    poses_3d_local_ids_df.reset_index('timestamp', drop=True, inplace=True)
-    return poses_3d_local_ids_df
+    poses_3d_df.reset_index('timestamp', drop=True, inplace=True)
+    return poses_3d_df
 
 def pose_3d_limits_by_pose_model(
     room_x_limits,
@@ -287,7 +287,7 @@ def reconstruct_poses_3d_timestamp(
         pose_pairs_2d_df_timestamp,
         pose_2d_id_column_name=pose_2d_id_column_name
     )
-    poses_3d_local_ids_df_timestamp = generate_3d_poses_timestamp(
+    poses_3d_df_timestamp = generate_3d_poses_timestamp(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
         pose_2d_ids_column_name=pose_2d_ids_column_name,
         initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
@@ -295,10 +295,10 @@ def reconstruct_poses_3d_timestamp(
         include_track_labels=include_track_labels,
         validate_df=validate_df
     )
-    if len(poses_3d_local_ids_df_timestamp) == 0:
-        return poses_3d_local_ids_df_timestamp
-    poses_3d_local_ids_df_timestamp.set_index('pose_3d_id_local', inplace=True)
-    return poses_3d_local_ids_df_timestamp
+    if len(poses_3d_df_timestamp) == 0:
+        return poses_3d_df_timestamp
+    poses_3d_df_timestamp.set_index('pose_3d_id', inplace=True)
+    return poses_3d_df_timestamp
 
 def generate_pose_pairs_timestamp(
     poses_2d_df_timestamp,
@@ -614,13 +614,13 @@ def generate_3d_poses_timestamp(
         initial_edge_threshold=initial_edge_threshold,
         max_dispersion=max_dispersion
     )
-    pose_3d_ids_local = list()
+    pose_3d_ids = list()
     keypoint_coordinates_3d = list()
     pose_2d_ids = list()
     if include_track_labels:
         track_labels = list()
     for subgraph in subgraph_list:
-        pose_3d_ids_local.append(uuid4().hex)
+        pose_3d_ids.append(uuid4().hex)
         keypoint_coordinates_3d_list = list()
         track_label_list = list()
         pose_2d_ids_list = list()
@@ -640,24 +640,24 @@ def generate_3d_poses_timestamp(
         pose_2d_ids.append(pose_2d_ids_list)
         if include_track_labels:
             track_labels.append(track_label_list)
-    if len(pose_3d_ids_local) == 0:
+    if len(pose_3d_ids) == 0:
         return pd.DataFrame()
     if include_track_labels:
-        poses_3d_local_ids_df_timestamp = pd.DataFrame({
-            'pose_3d_id_local': pose_3d_ids_local,
+        poses_3d_df_timestamp = pd.DataFrame({
+            'pose_3d_id': pose_3d_ids,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
             pose_2d_ids_column_name: pose_2d_ids,
             'track_labels_2d': track_labels
         })
     else:
-        poses_3d_local_ids_df_timestamp = pd.DataFrame({
-            'pose_3d_id_local': pose_3d_ids_local,
+        poses_3d_df_timestamp = pd.DataFrame({
+            'pose_3d_id': pose_3d_ids,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
             pose_2d_ids_column_name: pose_2d_ids
         })
-    return poses_3d_local_ids_df_timestamp
+    return poses_3d_df_timestamp
 
 def generate_pose_graph(
     pose_pairs_2d_df_timestamp,
