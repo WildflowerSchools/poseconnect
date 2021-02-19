@@ -4,11 +4,9 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Figure out how to make code source package version number
-* Disable and/or comment out obsolete functions until we can update them
 * Rename `analyze` module (to `reconstruct`)?
-* Consider getting rid of `geom_render` module
 * Write docstrings for main user-facing classes, methods, and functions
+* Consider getting rid of `geom_render` module
 * Fix up progress bars so we can have task-level and segment-level progress bars without logging in notebook
 * Fix up progress bars so they work properly outside of notebook with multiprocessing
 * Add indentation/labeling on segment-level progress bars

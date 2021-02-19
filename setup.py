@@ -55,10 +55,11 @@ setup(
     #     'test': TEST_DEPENDENCIES,
     #     'local': LOCAL_DEPENDENCIES
     # },
-    entry_points='''
-        [console_scripts]
-        reconstruct_poses_3d=process_pose_data.scripts.reconstruct_poses_3d:reconstruct_poses_3d
-    ''',
+    # entry_points={
+    #     "console_scripts": [
+    #          "COMMAND_NAME = MODULE_PATH:METHOD_NAME"
+    #     ]
+    # },
     keywords=['pose estimation'],
     classifiers=[
         'Intended Audience :: Developers',
