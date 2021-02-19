@@ -1,6 +1,6 @@
 import process_pose_data.local_io
 import process_pose_data.honeycomb_io
-import process_pose_data.analyze
+import process_pose_data.reconstruct
 import process_pose_data.track_poses
 import process_pose_data.identify
 import video_io
@@ -447,7 +447,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
     )
     logger.info('Converted camera assignment IDs to camera device IDs for time segment starting at {}'.format(time_segment_start.isoformat()))
     logger.info('Reconstructing 3D poses for time segment starting at {}'.format(time_segment_start.isoformat()))
-    poses_3d_df = process_pose_data.analyze.reconstruct_poses_3d(
+    poses_3d_df = process_pose_data.reconstruct.reconstruct_poses_3d(
         poses_2d_df=poses_2d_df_time_segment,
         pose_2d_id_column_name='pose_2d_id',
         pose_2d_ids_column_name='pose_2d_ids',
@@ -1764,7 +1764,7 @@ def generate_pose_3d_limits(
         client_secret=client_secret
     )
     pose_model_name = pose_model.get('model_name')
-    pose_3d_limits = process_pose_data.analyze.pose_3d_limits_by_pose_model(
+    pose_3d_limits = process_pose_data.reconstruct.pose_3d_limits_by_pose_model(
         room_x_limits=room_x_limits,
         room_y_limits=room_y_limits,
         pose_model_name=pose_model_name
