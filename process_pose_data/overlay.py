@@ -63,7 +63,8 @@ def overlay_poses(
     delete_individual_clips=True,
     parallel=False,
     num_parallel_processes=None,
-    progress_bar=False,
+    task_progress_bar=False,
+    segment_progress_bar=False,
     notebook=False
 ):
     poses_df_columns = poses_df.columns.tolist()
@@ -151,7 +152,7 @@ def overlay_poses(
         output_filename_datetime_format=output_filename_datetime_format,
         output_filename_extension=output_filename_extension,
         output_fourcc_string=output_fourcc_string,
-        progress_bar=progress_bar,
+        progress_bar=segment_progress_bar,
         notebook=notebook
     )
     input_parameters_list = list()
@@ -199,15 +200,47 @@ def overlay_poses(
                 num_processes
             ))
         with multiprocessing.Pool(num_processes) as p:
-            output_parameters_list = p.map(
+            if task_progress_bar:
+                if notebook:
+                    output_parameters_list = list(tqdm.notebook.tqdm(
+                        p.imap_unordered(
+                            overlay_poses_camera_time_segment_partial,
+                            input_parameters_list
+                        ),
+                        total=len(input_parameters_list)
+                    ))
+                else:
+                    output_parameters_list = list(tqdm.tqdm(
+                        p.imap_unordered(
+                            overlay_poses_camera_time_segment_partial,
+                            input_parameters_list
+                        ),
+                        total=len(input_parameters_list)
+                    ))
+            else:
+                output_parameters_list = list(
+                    p.imap_unordered(
+                        overlay_poses_camera_time_segment_partial,
+                        input_parameters_list
+                    )
+                )
+    else:
+        if task_progress_bar:
+            if notebook:
+                output_parameters_list = list(map(
+                    overlay_poses_camera_time_segment_partial,
+                    tqdm.notebook.tqdm(input_parameters_list)
+                ))
+            else:
+                output_parameters_list = list(map(
+                    overlay_poses_camera_time_segment_partial,
+                    tqdm.tqdm(input_parameters_list)
+                ))
+        else:
+            output_parameters_list = list(map(
                 overlay_poses_camera_time_segment_partial,
                 input_parameters_list
-            )
-    else:
-        output_parameters_list = list(map(
-            overlay_poses_camera_time_segment_partial,
-            input_parameters_list
-        ))
+            ))
     if concatenate_videos:
         output_path_dict = dict()
         for output_parameters in output_parameters_list:

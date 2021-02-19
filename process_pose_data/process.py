@@ -24,7 +24,7 @@ def extract_poses_2d_alphapose_local_by_time_segment(
     poses_2d_file_name='alphapose-results.json',
     poses_2d_json_format='cmu',
     pose_processing_subdirectory='pose_processing',
-    progress_bar=False,
+    task_progress_bar=False,
     notebook=False
 ):
     if start.tzinfo is None:
@@ -79,7 +79,7 @@ def extract_poses_2d_alphapose_local_by_time_segment(
         time_segment_start_list[-1].isoformat()
     ))
     processing_start = time.time()
-    if progress_bar:
+    if task_progress_bar:
         if notebook:
             time_segment_start_iterator = tqdm.notebook.tqdm(time_segment_start_list)
         else:
@@ -153,7 +153,8 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     include_track_labels=False,
     parallel=False,
     num_parallel_processes=None,
-    progress_bar=False,
+    task_progress_bar=False,
+    segment_progress_bar=False,
     notebook=False
 ):
     pose_extraction_2d_metadata = process_pose_data.local_io.fetch_data_local(
@@ -326,10 +327,10 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
         include_track_labels=include_track_labels,
-        progress_bar=progress_bar,
+        progress_bar=segment_progress_bar,
         notebook=notebook
     )
-    if progress_bar and parallel and ~notebook:
+    if (task_progress_bar or segment_progress_bar) and parallel and not notebook:
         logger.warning('Progress bars may not display properly with parallel processing enabled outside of a notebook')
     processing_start = time.time()
     if parallel:
@@ -342,9 +343,38 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
                 num_processes
             ))
         with multiprocessing.Pool(num_processes) as p:
-            poses_3d_df_list = p.map(reconstruct_poses_3d_alphapose_local_time_segment_partial, time_segment_start_list)
+            if task_progress_bar:
+                if notebook:
+                    list(tqdm.notebook.tqdm(
+                        p.imap_unordered(
+                            reconstruct_poses_3d_alphapose_local_time_segment_partial,
+                            time_segment_start_list
+                        ),
+                        total=len(time_segment_start_list)
+                    ))
+                else:
+                    list(tqdm.tqdm(
+                        p.imap_unordered(
+                            reconstruct_poses_3d_alphapose_local_time_segment_partial,
+                            time_segment_start_list
+                        ),
+                        total=len(time_segment_start_list)
+                    ))
+            else:
+                list(
+                    p.imap_unordered(
+                        reconstruct_poses_3d_alphapose_local_time_segment_partial,
+                        time_segment_start_list
+                    )
+                )
     else:
-        poses_3d_df_list = list(map(reconstruct_poses_3d_alphapose_local_time_segment_partial, time_segment_start_list))
+        if task_progress_bar:
+            if notebook:
+                list(map(reconstruct_poses_3d_alphapose_local_time_segment_partial, tqdm.notebook.tqdm(time_segment_start_list)))
+            else:
+                list(map(reconstruct_poses_3d_alphapose_local_time_segment_partial, tqdm.tqdm(time_segment_start_list)))
+        else:
+            list(map(reconstruct_poses_3d_alphapose_local_time_segment_partial, time_segment_start_list))
     processing_time = time.time() - processing_start
     logger.info('Processed {:.3f} minutes of 2D poses in {:.3f} minutes (ratio of {:.3f})'.format(
         num_minutes,
@@ -471,7 +501,7 @@ def generate_pose_tracks_3d_local_by_time_segment(
     position_observation_sd=0.5,
     num_poses_per_track_min=11,
     pose_processing_subdirectory='pose_processing',
-    progress_bar=False,
+    task_progress_bar=False,
     notebook=False
 ):
     pose_reconstruction_3d_metadata = process_pose_data.local_io.fetch_data_local(
@@ -551,7 +581,7 @@ def generate_pose_tracks_3d_local_by_time_segment(
     ))
     processing_start = time.time()
     pose_tracks_3d = None
-    if progress_bar:
+    if task_progress_bar:
         if notebook:
             time_segment_start_iterator = tqdm.notebook.tqdm(time_segment_start_list)
         else:
@@ -617,7 +647,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     environment_id,
     pose_tracking_3d_inference_id,
     pose_processing_subdirectory='pose_processing',
-    progress_bar=False,
+    task_progress_bar=False,
     notebook=False
 ):
     pose_tracking_3d_metadata = process_pose_data.local_io.fetch_data_local(
@@ -691,7 +721,7 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
         pose_tracks_end.isoformat()
     ))
     processing_start = time.time()
-    if progress_bar:
+    if task_progress_bar:
         if notebook:
             pose_track_iterator = tqdm.notebook.tqdm(pose_tracks_3d.items())
         else:
@@ -771,7 +801,7 @@ def download_position_data_by_datapoint(
     audience=None,
     client_id=None,
     client_secret=None,
-    progress_bar=False,
+    task_progress_bar=False,
     notebook=False
 ):
     if datapoint_timestamp_min.tzinfo is None:
@@ -867,7 +897,7 @@ def download_position_data_by_datapoint(
         len(data_ids)
     ))
     logger.info('Fetching position data from each of these UWB datapoints and writing to local files')
-    if progress_bar:
+    if task_progress_bar:
         if notebook:
             data_id_iterator = tqdm.notebook.tqdm(data_ids)
         else:
@@ -948,7 +978,7 @@ def identify_pose_tracks_3d_local_by_segment(
     min_fraction_matched = None,
     return_match_statistics=False,
     pose_processing_subdirectory='pose_processing',
-    progress_bar=False,
+    task_progress_bar=False,
     notebook=False
 ):
     pose_track_3d_interpolation_metadata = process_pose_data.local_io.fetch_data_local(
@@ -1052,7 +1082,7 @@ def identify_pose_tracks_3d_local_by_segment(
         time_segment_start_list[0].isoformat(),
         time_segment_start_list[-1].isoformat()
     ))
-    if progress_bar:
+    if task_progress_bar:
         if notebook:
             time_segment_start_iterator = tqdm.notebook.tqdm(time_segment_start_list)
         else:
@@ -1194,7 +1224,8 @@ def overlay_poses_2d_local(
     delete_individual_clips=True,
     parallel=False,
     num_parallel_processes=None,
-    progress_bar=False,
+    task_progress_bar=False,
+    segment_progress_bar=False,
     notebook=False
 ):
     poses_2d_df = process_pose_data.local_io.fetch_data_local_by_time_segment(
@@ -1254,7 +1285,8 @@ def overlay_poses_2d_local(
         delete_individual_clips=delete_individual_clips,
         parallel=parallel,
         num_parallel_processes=num_parallel_processes,
-        progress_bar=progress_bar,
+        task_progress_bar=task_progress_bar,
+        segment_progress_bar=segment_progress_bar,
         notebook=notebook
     )
 
@@ -1301,7 +1333,8 @@ def overlay_poses_3d_local(
     delete_individual_clips=True,
     parallel=False,
     num_parallel_processes=None,
-    progress_bar=False,
+    task_progress_bar=False,
+    segment_progress_bar=False,
     notebook=False
 ):
     poses_3d_df = process_pose_data.local_io.fetch_data_local_by_time_segment(
@@ -1360,7 +1393,8 @@ def overlay_poses_3d_local(
         delete_individual_clips=delete_individual_clips,
         parallel=parallel,
         num_parallel_processes=num_parallel_processes,
-        progress_bar=progress_bar,
+        task_progress_bar=task_progress_bar,
+        segment_progress_bar=segment_progress_bar,
         notebook=notebook
     )
 
@@ -1407,7 +1441,8 @@ def overlay_pose_tracks_3d_uninterpolated_local(
     delete_individual_clips=True,
     parallel=False,
     num_parallel_processes=None,
-    progress_bar=False,
+    task_progress_bar=False,
+    segment_progress_bar=False,
     notebook=False
 ):
     pose_tracks_3d_uninterpolated_df = process_pose_data.local_io.fetch_3d_poses_with_uninterpolated_tracks_local(
@@ -1465,7 +1500,8 @@ def overlay_pose_tracks_3d_uninterpolated_local(
         delete_individual_clips=delete_individual_clips,
         parallel=parallel,
         num_parallel_processes=num_parallel_processes,
-        progress_bar=progress_bar,
+        task_progress_bar=task_progress_bar,
+        segment_progress_bar=segment_progress_bar,
         notebook=notebook
     )
 
@@ -1512,7 +1548,8 @@ def overlay_pose_tracks_3d_interpolated_local(
     delete_individual_clips=True,
     parallel=False,
     num_parallel_processes=None,
-    progress_bar=False,
+    task_progress_bar=False,
+    segment_progress_bar=False,
     notebook=False
 ):
     pose_tracks_3d_interpolated_df = process_pose_data.local_io.fetch_3d_poses_with_interpolated_tracks_local(
@@ -1570,7 +1607,8 @@ def overlay_pose_tracks_3d_interpolated_local(
         delete_individual_clips=delete_individual_clips,
         parallel=parallel,
         num_parallel_processes=num_parallel_processes,
-        progress_bar=progress_bar,
+        task_progress_bar=task_progress_bar,
+        segment_progress_bar=segment_progress_bar,
         notebook=notebook
     )
 
@@ -1618,7 +1656,8 @@ def overlay_pose_tracks_3d_identified_interpolated_local(
     delete_individual_clips=True,
     parallel=False,
     num_parallel_processes=None,
-    progress_bar=False,
+    task_progress_bar=False,
+    segment_progress_bar=False,
     notebook=False
 ):
     pose_tracks_3d_identified_interpolated_df = process_pose_data.local_io.fetch_3d_poses_with_person_info(
@@ -1678,7 +1717,8 @@ def overlay_pose_tracks_3d_identified_interpolated_local(
         delete_individual_clips=delete_individual_clips,
         parallel=parallel,
         num_parallel_processes=num_parallel_processes,
-        progress_bar=progress_bar,
+        task_progress_bar=task_progress_bar,
+        segment_progress_bar=segment_progress_bar,
         notebook=notebook
     )
 
