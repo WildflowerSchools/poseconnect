@@ -1863,7 +1863,7 @@ def generate_metadata(
         'infererence_execution_start': datetime.datetime.now(tz=datetime.timezone.utc),
         'inference_execution_name': pipeline_stage,
         'inference_execution_model': 'wf-process-pose-data',
-        'inference_execution_version': '2.4.0',
+        'inference_execution_version': process_pose_data.__version__,
         'parameters': parameters
     }
     return metadata

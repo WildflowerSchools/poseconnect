@@ -9,6 +9,9 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 * Rename `analyze` module (to `reconstruct`)?
 * Consider getting rid of `geom_render` module
 * Write docstrings for main user-facing classes, methods, and functions
+* Fix up progress bars so we can have task-level and segment-level progress bars without logging in notebook
+* Fix up progress bars so they work properly outside of notebook with multiprocessing
+* Add indentation/labeling on segment-level progress bars
 * Clean up argument ordering in `reconstruct_poses_3d_alphapose_local_time_segment`
 * Add `poses_2d_json_format` option to `reconstruct_poses_3d` entry point
 * Add endpoints for all processing functions
