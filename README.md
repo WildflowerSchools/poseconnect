@@ -4,8 +4,10 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Rename `analyze` module (to `reconstruct`)?
-* Write docstrings for main user-facing classes, methods, and functions
+* Ensure that all visual specs (colors, line widths, etc.) propagate to video overlay
+* Add drawing primitive to `wf-cv-utils` for text with background
+* Use new text-with-background drawing primitive for pose labels
+* Add timestamp to video overlays
 * Consider getting rid of `geom_render` module
 * Fix up progress bars so we can have task-level and segment-level progress bars without logging in notebook
 * Fix up progress bars so they work properly outside of notebook with multiprocessing

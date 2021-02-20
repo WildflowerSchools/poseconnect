@@ -27,6 +27,34 @@ def extract_poses_2d_alphapose_local_by_time_segment(
     task_progress_bar=False,
     notebook=False
 ):
+    """
+    Fetches 2D pose data from local Alphapose output and writes back to local files.
+
+    Input data is assumed to be organized according to standard Alphapose
+    pipeline output (see documentation for that pipeline).
+
+    Output data is organized into 10 second segments (mirroring source videos),
+    saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_extraction_2d/ENVIRONMENT_ID/YYYY/MM/DD/HH-MM-SS/poses_2d_INFERENCE_ID.pkl\'
+
+    Output metadata is saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_extraction_2d/ENVIRONMENT_ID/pose_extraction_2d_metadata_INFERENCE_ID.pkl\'
+
+    Args:
+        start (datetime): Start of period to be analyzed
+        end (datetime): End of period to be analyzed
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        alphapose_subdirectory (str): subdirectory (under base directory) for Alphapose output (default is \'prepared\')
+        poses_2d_file_name: Filename for Alphapose data in each directory (default is \'alphapose-results.json\')
+        poses_2d_json_format: Format of Alphapose results files (default is\'cmu\')
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        task_progress_bar (bool): Boolean indicating whether script should display a progress bar (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+
+    Returns:
+        (str) Locally-generated inference ID for this run (identifies output data)
+    """
     if start.tzinfo is None:
         logger.info('Specified start is timezone-naive. Assuming UTC')
         start=start.replace(tzinfo=datetime.timezone.utc)
@@ -116,7 +144,7 @@ def extract_poses_2d_alphapose_local_by_time_segment(
     ))
     return inference_id
 
-def reconstruct_poses_3d_alphapose_local_by_time_segment(
+def reconstruct_poses_3d_local_by_time_segment(
     base_dir,
     environment_id,
     pose_extraction_2d_inference_id,
@@ -135,9 +163,6 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     audience=None,
     client_id=None,
     client_secret=None,
-    alphapose_subdirectory='prepared',
-    poses_2d_file_name='alphapose-results.json',
-    poses_2d_json_format='cmu',
     pose_processing_subdirectory='pose_processing',
     min_keypoint_quality=None,
     min_num_keypoints=None,
@@ -157,6 +182,87 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
     segment_progress_bar=False,
     notebook=False
 ):
+    """
+    Fetches 2D pose data from local files, reconstructs 3D poses, and writes output back to local files.
+
+    If camera information is not specified, script pulls camera data from
+    Honeycomb based on environment ID, start time, and end time.
+
+    Options for pose pair score distance method are \'pixels\' (simple 2D distance
+    measured in pixels) or \'probability\' (likelihood of that distance assuming
+    2D Gaussian reprojection error).
+
+    Options for pose pair score summary method are \'rms\' (root mean square of
+    distances across keypoints) or \'sum\' (sum of distances across keypoints).
+
+    3D pose limits are an array with shape (2, NUM_KEYPOINTS, 3) specifying the
+    minimum and maximum possible coordinate values for each type of keypoint
+    (for filtering 3D poses). If these limits are not specified, script
+    calculates default limits based on room x and y limits and pose model.
+
+    Candidate 3D poses are validated and grouped into people using an adaptive
+    strategy. After initial pose filtering, the algorithm forms a graph with 2D
+    poses as nodes and candidate 3D poses as edges. This graph is then split
+    into k-edge-connected subgraphs (people), starting with the specified
+    initial k (i.e., if k > 1, each person must be confirmed by matches across
+    multiple cameras). If the spatial dispersion of the 3D poses for any
+    subgraph (person) exceeds the specified threshold (suggesting that multiple
+    people are being conflated), k is increased for that subgraph, effectively
+    splitting the subgraph. This process repeats until all subgraphs (people)
+    fall below the maximum spatial dispersion (a valid person) or below minimum
+    k (poses are rejected).
+
+    Input data is assumed to be organized as specified by
+    extract_poses_2d_alphapose_local_by_time_segment().
+
+    Output data is organized into 10 second segments (mirroring source videos),
+    saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_reconstruction_3d/ENVIRONMENT_ID/YYYY/MM/DD/HH-MM-SS/poses_3d_INFERENCE_ID.pkl\'
+
+    Output metadata is saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_reconstruction_3d/ENVIRONMENT_ID/pose_reconstruction_3d_metadata_INFERENCE_ID.pkl\'
+
+    Args:
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        pose_extraction_2d_inference_id (str): Inference ID for source data
+        pose_model_id (str): Honeycomb pose model ID for pose model that defines 2D/3D pose data structure
+        room_x_limits (sequence of float): Boundaries of room in x direction in [MIN, MAX] format (for filtering 3D poses)
+        room_y_limits (sequence of float): Boundaries of room in y direction in [MIN, MAX] format (for filtering 3D poses)
+        start (datetime): Start of period within source data to be analyzed (default is None)
+        end (datetime): End of period within source data to be analyzed (default is None)
+        camera_assignment_ids (sequence of str): List of camera assignment IDs to analyze (default is None)
+        camera_device_id_lookup (dict): Dict in format {ASSSIGNMENT_ID: DEVICE ID} (default is None)
+        camera_calibrations (dict): Dict in format {DEVICE_ID: CAMERA_CALIBRATION_DATA} (default is None)
+        coordinate_space_id (dict): Coordinate space ID of extrinsic camera calibrations (and therefore 3D pose output) (default is None)
+        client (MinimalHoneycombClient): Honeycomb client (otherwise generates one) (default is None)
+        uri (str): Honeycomb URI (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        token_uri (str): Honeycomb token URI (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        audience (str): Honeycomb audience (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        client_id (str): Honeycomb client ID (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        client_secret (str): Honeycomb client secret (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        min_keypoint_quality (float): Minimum keypoint quality for keypoint to be included (default is None)
+        min_num_keypoints (float): Mininum number of keypoints (after keypoint quality filter) for 2D pose to be included (default is None)
+        min_pose_quality=None (float): Minimum pose quality for 2D pose to be included (default is None)
+        min_pose_pair_score (float): Minimum pose pair score for pose pair to be included (default is None)
+        max_pose_pair_score (float): Maximum pose pair for pose pair to be included (default is 25.0)
+        pose_pair_score_distance_method (str): Method for calculating distance between original and reprojected pose keypoints (default is \'pixels\')
+        pose_pair_score_pixel_distance_scale (float): Pixel distance scale for \'probability\' method (default is 5.0)
+        pose_pair_score_summary_method (str): Method for summarizing reprojected keypoint distance over pose (default is \'rms\')
+        pose_3d_limits (array): Spatial limits for each type of pose keypoint (for filtering candidate 3D poses) (default is None)
+        pose_3d_graph_initial_edge_threshold (int): Minimum number of pose pairs in pose (edges in graph) (default is 2)
+        pose_3d_graph_max_dispersion (float): Keypoint dispersion threshold for increasing required number of edges (default is 0.20)
+        include_track_labels (bool): Boolean indicating whether to include source 2D track labels in 3D pose data (default is False)
+        parallel (bool): Boolean indicating whether to use multiple parallel processes (one for each time segment) (default is False)
+        num_parallel_processes (int): Number of parallel processes in pool (otherwise defaults to number of cores - 1) (default is None)
+        task_progress_bar (bool): Boolean indicating whether script should display an overall progress bar (default is False)
+        segment_progress_bar (bool): Boolean indicating whether script should display a progress bar for each time segment (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+
+    Returns:
+        (str) Locally-generated inference ID for this run (identifies output data)
+    """
     pose_extraction_2d_metadata = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
         pipeline_stage='pose_extraction_2d',
@@ -253,7 +359,6 @@ def reconstruct_poses_3d_alphapose_local_by_time_segment(
             'camera_device_ids': camera_device_ids,
             'camera_calibrations': camera_calibrations,
             'coordinate_space_id': coordinate_space_id,
-            'poses_2d_json_format': poses_2d_json_format,
             'min_keypoint_quality': min_keypoint_quality,
             'min_num_keypoints': min_num_keypoints,
             'min_pose_quality': min_pose_quality,
@@ -504,6 +609,39 @@ def generate_pose_tracks_3d_local_by_time_segment(
     task_progress_bar=False,
     notebook=False
 ):
+    """
+    Fetches 3D pose data from local files, assembles them into pose tracks, and writes output back to local files.
+
+    Input data is assumed to be organized as specified by output of
+    reconstruct_poses_3d_local_by_time_segment().
+
+    Output data is saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_tracking_3d/ENVIRONMENT_ID/pose_tracks_3d_INFERENCE_ID.pkl\'
+
+    Output metadata is saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_tracking_3d/ENVIRONMENT_ID/pose_tracking_3d_metadata_INFERENCE_ID.pkl\'
+
+    Args:
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        pose_reconstruction_3d_inference_id (str): Inference ID for source data
+        start (datetime): Start of period within source data to be analyzed (default is None)
+        end (datetime): End of period within source data to be analyzed (default is None)
+        max_match_distance (float): Maximum distance between 3D pose and predicted pose track for pose to be added to track (default is 1.0)
+        max_iterations_since_last_match (int): Maximum number of unmatched iterations before pose track is terminated (default is 20)
+        centroid_position_initial_sd (float): Initial standard deviation for pose track centroid position (default is 1.0)
+        centroid_velocity_initial_sd (float): Initial standard deviation for pose track centroid velocity (default is 1.0)
+        reference_delta_t_seconds (float): Reference time period for specifying velocity drift (default is 1.0)
+        reference_velocity_drift (float): Reference velocity drift (default is 0.30)
+        position_observation_sd (float): Position observation error (reference is 0.5)
+        num_poses_per_track_min (it): Mininum number of poses in a track (default is 11)
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        task_progress_bar (bool): Boolean indicating whether script should display an overall progress bar (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+
+    Returns:
+        (str) Locally-generated inference ID for this run (identifies output data)
+    """
     pose_reconstruction_3d_metadata = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
         pipeline_stage='pose_reconstruction_3d',
@@ -650,6 +788,36 @@ def interpolate_pose_tracks_3d_local_by_pose_track(
     task_progress_bar=False,
     notebook=False
 ):
+    """
+    Fetches 3D pose and pose track data from local files, interpolates to fill gaps in the tracks, and writes output back to local files.
+
+    Input data is assumed to be organized as specified by output of
+    reconstruct_poses_3d_local_by_time_segment() and
+    generate_pose_tracks_3d_local_by_time_segment().
+
+    The script looks up the inference ID for the 3D poses in the tracks by
+    inspecting the metadata from the pose tracking run.
+
+    Output data is saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_reconstruction_3d/ENVIRONMENT_ID/YYYY/MM/DD/HH-MM-SS/poses_3d_INFERENCE_ID.pkl\'
+    (for new poses) and
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_tracking_3d/ENVIRONMENT_ID/pose_tracks_3d_INFERENCE_ID.pkl\'
+    (for new pose track data).
+
+    Output metadata is saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_track_3d_interpolation/ENVIRONMENT_ID/pose_track_3d_interpolation_metadata_INFERENCE_ID.pkl\'
+
+    Args:
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        pose_tracking_3d_inference_id (str): Inference ID for source data
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        task_progress_bar (bool): Boolean indicating whether script should display an overall progress bar (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+
+    Returns:
+        (str) Locally-generated inference ID for this run (identifies output data)
+    """
     pose_tracking_3d_metadata = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
         pipeline_stage='pose_tracking_3d',
@@ -804,6 +972,47 @@ def download_position_data_by_datapoint(
     task_progress_bar=False,
     notebook=False
 ):
+    """
+    Fetches UWB position data from Honeycomb and writes it back to local files.
+
+    Determination of minimum and maximum datapoint timestamps for a given start
+    and end time is tricky, because the timestamp on a UWB datapoint typically
+    captures when the data in that datapoint begins but the duration of the data
+    in that datapoint is less predictable (typically about 30 minutes). For this
+    reason, the script asks the user to explicitly specify minimum and maximum
+    datapoint timestamps rather than calculating them from the specified start and
+    end times. A reasonable practice is to set the minimum datapoint timestamp
+    to be about 40 minutes less than the start time and to set the maximum
+    datapoint timestamp to be equal to the end time.
+
+    Output data is organized into 10 second segments (mirroring videos) and
+    saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/download_position_data/ENVIRONMENT_ID/YYYY/MM/DD/HH-MM-SS/position_data_INFERENCE_ID.pkl\'.
+
+    Output metadata is saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/download_position_data/ENVIRONMENT_ID/download_position_data_metadata_INFERENCE_ID.pkl\'
+
+    Args:
+        datapoint_timestamp_min (datetime): Minimum UWB data datapoint timestamp to fetch
+        datapoint_timestamp_max (datetime): Maximum UWB data datapoint timestamp to fetch
+        start (datetime): Start of position data to fetch
+        end (datetime): End of position data to fetch
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        chunk_size (int): Maximum number of records to pull with Honeycomb request (default is 100)
+        client (MinimalHoneycombClient): Honeycomb client (otherwise generates one) (default is None)
+        uri (str): Honeycomb URI (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        token_uri (str): Honeycomb token URI (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        audience (str): Honeycomb audience (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        client_id (str): Honeycomb client ID (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        client_secret (str): Honeycomb client secret (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        task_progress_bar (bool): Boolean indicating whether script should display an overall progress bar (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+
+    Returns:
+        (str) Locally-generated inference ID for this run (identifies output data)
+    """
     if datapoint_timestamp_min.tzinfo is None:
         logger.info('Specified minimum datapoint timestamp is timezone-naive. Assuming UTC')
         datapoint_timestamp_min=datapoint_timestamp_min.replace(tzinfo=datetime.timezone.utc)
@@ -975,12 +1184,51 @@ def identify_pose_tracks_3d_local_by_segment(
     sensor_position_keypoint_index=10,
     active_person_ids=None,
     ignore_z=False,
-    min_fraction_matched = None,
+    min_fraction_matched=0.5,
     return_match_statistics=False,
     pose_processing_subdirectory='pose_processing',
     task_progress_bar=False,
     notebook=False
 ):
+    """
+    Fetches 3D pose and pose track data and UWB position data from local files, matches pose tracks to people, and writes output back to local files.
+
+    Input data is assumed to be organized as specified by output of
+    reconstruct_poses_3d_local_by_time_segment(),
+    generate_pose_tracks_3d_local_by_time_segment(),
+    interpolate_pose_tracks_3d_local_by_pose_track(), and
+    download_position_data_by_datapoint().
+
+    The script looks up the inference IDs for the 3D pose tracks and 3D poses by
+    inspecting the metadata from the pose track interpolation run.
+
+    If active person IDs are not specified, script assumes all sensors are
+    assigned to people are available to match.
+
+    Output data is saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_track_3d_identification/ENVIRONMENT_ID/pose_track_3d_identification_INFERENCE_ID.pkl\'.
+
+    Output metadata is saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_track_3d_identificationn/ENVIRONMENT_ID/pose_track_3d_identification_metadata_INFERENCE_ID.pkl\'
+
+    Args:
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        download_position_data_inference_id (str): Inference ID for source position data
+        pose_track_3d_interpolation_inference_id_id (str): Inference ID for source pose track data
+        sensor_position_keypoint_index (int): Index of keypoint corresponding to UWB sensor on each person (default: 10)
+        active_person_ids (sequence of str): List of Honeycomb person IDs for people known to be wearing active tags (default is None)
+        ignore_z (bool): Boolean indicating whether to ignore z dimension when comparing pose and sensor positions (default is False)
+        min_fraction_matched (float): Minimum fraction of poses in track which must match person for track to be identified as person (default is 0.5)
+        return_match_statistics (bool): Boolean indicating whether algorithm should return detailed match statistics along with inference ID (defaul is False)
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        task_progress_bar (bool): Boolean indicating whether script should display an overall progress bar (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+
+    Returns:
+        (str) Locally-generated inference ID for this run (identifies output data)
+        (dataframe) Detailed match statistics (if requested)
+    """
     pose_track_3d_interpolation_metadata = process_pose_data.local_io.fetch_data_local(
         base_dir=base_dir,
         pipeline_stage='pose_track_3d_interpolation',
@@ -1213,10 +1461,6 @@ def overlay_poses_2d_local(
     keypoint_alpha=0.6,
     keypoint_connector_alpha=0.6,
     keypoint_connector_linewidth=3,
-    pose_label_color='white',
-    pose_label_background_alpha=0.6,
-    pose_label_font_scale=1.5,
-    pose_label_line_width=1,
     output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
     output_filename_extension='avi',
     output_fourcc_string='XVID',
@@ -1228,6 +1472,62 @@ def overlay_poses_2d_local(
     segment_progress_bar=False,
     notebook=False
 ):
+    """
+    Fetches 2D pose data from local files and overlays onto classroom videos.
+
+    Fetches and overlays onto all video clips that overlap with specified start
+    and end (e.g., if start is 10:32:56 and end is 10:33:20, returns videos
+    starting at 10:32:50, 10:33:00 and 10:33:10).
+
+    Script performs a logical AND across all camera specifications. If no camera
+    specifications are given, returns all active cameras in environment (as
+    determined by camera_device_types).
+
+    If keypoint connectors are not specified, script uses default keypoint
+    connectors for specified pose model.
+
+    Colors can be specifed as any string interpretable by
+    matplotlib.colors.to_hex().
+
+    Input data is assumed to be organized as specified by
+    extract_poses_2d_alphapose_local_by_time_segment().
+
+    Args:
+        start (datetime): Start of video overlay
+        end (datetime): End of video overlay
+        pose_extraction_2d_inference_id (str): Inference ID for source position data
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        pose_model_id (str): Honeycomb pose model ID for pose model that defines 2D/3D pose data structure
+        output_directory (str): Path to output directory (default is \'./video_overlays\')
+        output_filename_prefix (str): Filename prefix for output files (default is \'poses_2d\')
+        camera_assignment_ids (sequence of str): List of Honeycomb assignment IDs for target cameras (default is None)
+        camera_device_types (sequence of str): List of Honeycomb device types for target cameras (default is video_io.DEFAULT_CAMERA_DEVICE_TYPES)
+        camera_device_ids (sequence of str): List og Honeycomb device IDs for target cameras (default is None)
+        camera_part_numbers (sequence of str): List of Honeycomb part numbers for target cameras (default is None)
+        camera_names (sequence of str): List of Honeycomb device names for target cameras (default is None)
+        camera_serial_numbers (sequence of str): List of Honeycomb device serial numbers for target cameras (default is None)
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        local_video_directory (str): Path to directory where local copies of Honeycomb videos are stored (default is \'./videos\')
+        video_filename_extension (str): Filename extension for local copies of Honeycomb videos (default is \'mp4\')
+        camera_calibrations (dict): Dict in format {DEVICE_ID: CAMERA_CALIBRATION_DATA} (default is None)
+        keypoint_connectors (array): Array of keypoints to connect with lines to form pose image (default is None)
+        pose_color (str): Color of pose (default is \'green\')
+        keypoint_radius (int): Radius of keypoins in pixels (default is 3)
+        keypoint_alpha (float): Alpha value for keypoints (default is 0.6)
+        keypoint_connector_alpha (float): Alpha value for keypoint connectors (default is 0.6)
+        keypoint_connector_linewidth (float): Line width for keypoint connectors (default is 3.0)
+        output_filename_datetime_format (str): Datetime format for output filename (default is \'%Y%m%d_%H%M%S_%f\')
+        output_filename_extension (str): Filename extension for output (determines file format) (default is \'avi\')
+        output_fourcc_string (str): FOURCC code for output format (default is \'XVID\')
+        concatenate_videos (bool): Boolean indicating whether to concatenate videos for each camera into single videos (default is True)
+        delete_individual_clips (bool): Boolean indicating whether to delete individual clips after concatenating (default is True)
+        parallel (bool): Boolean indicating whether to use multiple parallel processes (one for each time segment) (default is False)
+        num_parallel_processes (int): Number of parallel processes in pool (otherwise defaults to number of cores - 1) (default is None)
+        task_progress_bar (bool): Boolean indicating whether script should display an overall progress bar (default is False)
+        segment_progress_bar (bool): Boolean indicating whether script should display a progress bar for each clip (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+    """
     poses_2d_df = process_pose_data.local_io.fetch_data_local_by_time_segment(
         start=start,
         end=end,
@@ -1272,10 +1572,6 @@ def overlay_poses_2d_local(
         keypoint_alpha=keypoint_alpha,
         keypoint_connector_alpha=keypoint_connector_alpha,
         keypoint_connector_linewidth=keypoint_connector_linewidth,
-        pose_label_color=pose_label_color,
-        pose_label_background_alpha=pose_label_background_alpha,
-        pose_label_font_scale=pose_label_font_scale,
-        pose_label_line_width=pose_label_line_width,
         output_directory=output_directory,
         output_filename_prefix=output_filename_prefix,
         output_filename_datetime_format=output_filename_datetime_format,
@@ -1322,10 +1618,6 @@ def overlay_poses_3d_local(
     keypoint_alpha=0.6,
     keypoint_connector_alpha=0.6,
     keypoint_connector_linewidth=3,
-    pose_label_color='white',
-    pose_label_background_alpha=0.6,
-    pose_label_font_scale=1.5,
-    pose_label_line_width=1,
     output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
     output_filename_extension='avi',
     output_fourcc_string='XVID',
@@ -1337,6 +1629,62 @@ def overlay_poses_3d_local(
     segment_progress_bar=False,
     notebook=False
 ):
+    """
+    Fetches 3D pose data from local files and overlays onto classroom videos.
+
+    Fetches and overlays onto all video clips that overlap with specified start
+    and end (e.g., if start is 10:32:56 and end is 10:33:20, returns videos
+    starting at 10:32:50, 10:33:00 and 10:33:10).
+
+    Script performs a logical AND across all camera specifications. If no camera
+    specifications are given, returns all active cameras in environment (as
+    determined by camera_device_types).
+
+    If keypoint connectors are not specified, script uses default keypoint
+    connectors for specified pose model.
+
+    Colors can be specifed as any string interpretable by
+    matplotlib.colors.to_hex().
+
+    Input data is assumed to be organized as specified by output of
+    reconstruct_poses_3d_local_by_time_segment().
+
+    Args:
+        start (datetime): Start of video overlay
+        end (datetime): End of video overlay
+        pose_extraction_2d_inference_id (str): Inference ID for source position data
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        pose_model_id (str): Honeycomb pose model ID for pose model that defines 2D/3D pose data structure
+        output_directory (str): Path to output directory (default is \'./video_overlays\')
+        output_filename_prefix (str): Filename prefix for output files (default is \'poses_3d\')
+        camera_assignment_ids (sequence of str): List of Honeycomb assignment IDs for target cameras (default is None)
+        camera_device_types (sequence of str): List of Honeycomb device types for target cameras (default is video_io.DEFAULT_CAMERA_DEVICE_TYPES)
+        camera_device_ids (sequence of str): List og Honeycomb device IDs for target cameras (default is None)
+        camera_part_numbers (sequence of str): List of Honeycomb part numbers for target cameras (default is None)
+        camera_names (sequence of str): List of Honeycomb device names for target cameras (default is None)
+        camera_serial_numbers (sequence of str): List of Honeycomb device serial numbers for target cameras (default is None)
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        local_video_directory (str): Path to directory where local copies of Honeycomb videos are stored (default is \'./videos\')
+        video_filename_extension (str): Filename extension for local copies of Honeycomb videos (default is \'mp4\')
+        camera_calibrations (dict): Dict in format {DEVICE_ID: CAMERA_CALIBRATION_DATA} (default is None)
+        keypoint_connectors (array): Array of keypoints to connect with lines to form pose image (default is None)
+        pose_color (str): Color of pose (default is \'green\')
+        keypoint_radius (int): Radius of keypoins in pixels (default is 3)
+        keypoint_alpha (float): Alpha value for keypoints (default is 0.6)
+        keypoint_connector_alpha (float): Alpha value for keypoint connectors (default is 0.6)
+        keypoint_connector_linewidth (float): Line width for keypoint connectors (default is 3.0)
+        output_filename_datetime_format (str): Datetime format for output filename (default is \'%Y%m%d_%H%M%S_%f\')
+        output_filename_extension (str): Filename extension for output (determines file format) (default is \'avi\')
+        output_fourcc_string (str): FOURCC code for output format (default is \'XVID\')
+        concatenate_videos (bool): Boolean indicating whether to concatenate videos for each camera into single videos (default is True)
+        delete_individual_clips (bool): Boolean indicating whether to delete individual clips after concatenating (default is True)
+        parallel (bool): Boolean indicating whether to use multiple parallel processes (one for each time segment) (default is False)
+        num_parallel_processes (int): Number of parallel processes in pool (otherwise defaults to number of cores - 1) (default is None)
+        task_progress_bar (bool): Boolean indicating whether script should display an overall progress bar (default is False)
+        segment_progress_bar (bool): Boolean indicating whether script should display a progress bar for each clip (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+    """
     poses_3d_df = process_pose_data.local_io.fetch_data_local_by_time_segment(
         start=start,
         end=end,
@@ -1380,10 +1728,6 @@ def overlay_poses_3d_local(
         keypoint_alpha=keypoint_alpha,
         keypoint_connector_alpha=keypoint_connector_alpha,
         keypoint_connector_linewidth=keypoint_connector_linewidth,
-        pose_label_color=pose_label_color,
-        pose_label_background_alpha=pose_label_background_alpha,
-        pose_label_font_scale=pose_label_font_scale,
-        pose_label_line_width=pose_label_line_width,
         output_directory=output_directory,
         output_filename_prefix=output_filename_prefix,
         output_filename_datetime_format=output_filename_datetime_format,
@@ -1445,6 +1789,66 @@ def overlay_pose_tracks_3d_uninterpolated_local(
     segment_progress_bar=False,
     notebook=False
 ):
+    """
+    Fetches uninterpolated 3D pose track data from local files and overlays onto classroom videos.
+
+    Fetches and overlays onto all video clips that overlap with specified start
+    and end (e.g., if start is 10:32:56 and end is 10:33:20, returns videos
+    starting at 10:32:50, 10:33:00 and 10:33:10).
+
+    Script performs a logical AND across all camera specifications. If no camera
+    specifications are given, returns all active cameras in environment (as
+    determined by camera_device_types).
+
+    If keypoint connectors are not specified, script uses default keypoint
+    connectors for specified pose model.
+
+    Colors can be specifed as any string interpretable by
+    matplotlib.colors.to_hex().
+
+    Input data is assumed to be organized as specified by output of
+    generate_pose_tracks_3d_local_by_time_segment().
+
+    Args:
+        start (datetime): Start of video overlay
+        end (datetime): End of video overlay
+        pose_tracking_3d_inference_id (str): Inference ID for source position data
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        pose_model_id (str): Honeycomb pose model ID for pose model that defines 2D/3D pose data structure
+        output_directory (str): Path to output directory (default is \'./video_overlays\')
+        output_filename_prefix (str): Filename prefix for output files (default is \'pose_tracks_3d_uninterpolated\')
+        camera_assignment_ids (sequence of str): List of Honeycomb assignment IDs for target cameras (default is None)
+        camera_device_types (sequence of str): List of Honeycomb device types for target cameras (default is video_io.DEFAULT_CAMERA_DEVICE_TYPES)
+        camera_device_ids (sequence of str): List og Honeycomb device IDs for target cameras (default is None)
+        camera_part_numbers (sequence of str): List of Honeycomb part numbers for target cameras (default is None)
+        camera_names (sequence of str): List of Honeycomb device names for target cameras (default is None)
+        camera_serial_numbers (sequence of str): List of Honeycomb device serial numbers for target cameras (default is None)
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        local_video_directory (str): Path to directory where local copies of Honeycomb videos are stored (default is \'./videos\')
+        video_filename_extension (str): Filename extension for local copies of Honeycomb videos (default is \'mp4\')
+        camera_calibrations (dict): Dict in format {DEVICE_ID: CAMERA_CALIBRATION_DATA} (default is None)
+        keypoint_connectors (array): Array of keypoints to connect with lines to form pose image (default is None)
+        pose_color (str): Color of pose (default is \'green\')
+        keypoint_radius (int): Radius of keypoins in pixels (default is 3)
+        keypoint_alpha (float): Alpha value for keypoints (default is 0.6)
+        keypoint_connector_alpha (float): Alpha value for keypoint connectors (default is 0.6)
+        keypoint_connector_linewidth (float): Line width for keypoint connectors (default is 3.0)
+        pose_label_color (str): Color for pose label text (default is 'white')
+        pose_label_background_alpha (float): Alpha value for pose label background (default is 0.6)
+        pose_label_font_scale (float): Font scale for pose label (default is 1.5)
+        pose_label_line_width (float): Line width for pose label text (default is 1.0)
+        output_filename_datetime_format (str): Datetime format for output filename (default is \'%Y%m%d_%H%M%S_%f\')
+        output_filename_extension (str): Filename extension for output (determines file format) (default is \'avi\')
+        output_fourcc_string (str): FOURCC code for output format (default is \'XVID\')
+        concatenate_videos (bool): Boolean indicating whether to concatenate videos for each camera into single videos (default is True)
+        delete_individual_clips (bool): Boolean indicating whether to delete individual clips after concatenating (default is True)
+        parallel (bool): Boolean indicating whether to use multiple parallel processes (one for each time segment) (default is False)
+        num_parallel_processes (int): Number of parallel processes in pool (otherwise defaults to number of cores - 1) (default is None)
+        task_progress_bar (bool): Boolean indicating whether script should display an overall progress bar (default is False)
+        segment_progress_bar (bool): Boolean indicating whether script should display a progress bar for each clip (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+    """
     pose_tracks_3d_uninterpolated_df = process_pose_data.local_io.fetch_3d_poses_with_uninterpolated_tracks_local(
         base_dir=base_dir,
         environment_id=environment_id,
@@ -1552,6 +1956,66 @@ def overlay_pose_tracks_3d_interpolated_local(
     segment_progress_bar=False,
     notebook=False
 ):
+    """
+    Fetches interpolated 3D pose track data from local files and overlays onto classroom videos.
+
+    Fetches and overlays onto all video clips that overlap with specified start
+    and end (e.g., if start is 10:32:56 and end is 10:33:20, returns videos
+    starting at 10:32:50, 10:33:00 and 10:33:10).
+
+    Script performs a logical AND across all camera specifications. If no camera
+    specifications are given, returns all active cameras in environment (as
+    determined by camera_device_types).
+
+    If keypoint connectors are not specified, script uses default keypoint
+    connectors for specified pose model.
+
+    Colors can be specifed as any string interpretable by
+    matplotlib.colors.to_hex().
+
+    Input data is assumed to be organized as specified by output of
+    interpolate_pose_tracks_3d_local_by_pose_track().
+
+    Args:
+        start (datetime): Start of video overlay
+        end (datetime): End of video overlay
+        pose_track_3d_interpolation_inference_id (str): Inference ID for source position data
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        pose_model_id (str): Honeycomb pose model ID for pose model that defines 2D/3D pose data structure
+        output_directory (str): Path to output directory (default is \'./video_overlays\')
+        output_filename_prefix (str): Filename prefix for output files (default is \'pose_tracks_3d_interpolated\')
+        camera_assignment_ids (sequence of str): List of Honeycomb assignment IDs for target cameras (default is None)
+        camera_device_types (sequence of str): List of Honeycomb device types for target cameras (default is video_io.DEFAULT_CAMERA_DEVICE_TYPES)
+        camera_device_ids (sequence of str): List og Honeycomb device IDs for target cameras (default is None)
+        camera_part_numbers (sequence of str): List of Honeycomb part numbers for target cameras (default is None)
+        camera_names (sequence of str): List of Honeycomb device names for target cameras (default is None)
+        camera_serial_numbers (sequence of str): List of Honeycomb device serial numbers for target cameras (default is None)
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        local_video_directory (str): Path to directory where local copies of Honeycomb videos are stored (default is \'./videos\')
+        video_filename_extension (str): Filename extension for local copies of Honeycomb videos (default is \'mp4\')
+        camera_calibrations (dict): Dict in format {DEVICE_ID: CAMERA_CALIBRATION_DATA} (default is None)
+        keypoint_connectors (array): Array of keypoints to connect with lines to form pose image (default is None)
+        pose_color (str): Color of pose (default is \'green\')
+        keypoint_radius (int): Radius of keypoins in pixels (default is 3)
+        keypoint_alpha (float): Alpha value for keypoints (default is 0.6)
+        keypoint_connector_alpha (float): Alpha value for keypoint connectors (default is 0.6)
+        keypoint_connector_linewidth (float): Line width for keypoint connectors (default is 3.0)
+        pose_label_color (str): Color for pose label text (default is 'white')
+        pose_label_background_alpha (float): Alpha value for pose label background (default is 0.6)
+        pose_label_font_scale (float): Font scale for pose label (default is 1.5)
+        pose_label_line_width (float): Line width for pose label text (default is 1.0)
+        output_filename_datetime_format (str): Datetime format for output filename (default is \'%Y%m%d_%H%M%S_%f\')
+        output_filename_extension (str): Filename extension for output (determines file format) (default is \'avi\')
+        output_fourcc_string (str): FOURCC code for output format (default is \'XVID\')
+        concatenate_videos (bool): Boolean indicating whether to concatenate videos for each camera into single videos (default is True)
+        delete_individual_clips (bool): Boolean indicating whether to delete individual clips after concatenating (default is True)
+        parallel (bool): Boolean indicating whether to use multiple parallel processes (one for each time segment) (default is False)
+        num_parallel_processes (int): Number of parallel processes in pool (otherwise defaults to number of cores - 1) (default is None)
+        task_progress_bar (bool): Boolean indicating whether script should display an overall progress bar (default is False)
+        segment_progress_bar (bool): Boolean indicating whether script should display a progress bar for each clip (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+    """
     pose_tracks_3d_interpolated_df = process_pose_data.local_io.fetch_3d_poses_with_interpolated_tracks_local(
         base_dir=base_dir,
         environment_id=environment_id,
@@ -1660,6 +2124,67 @@ def overlay_pose_tracks_3d_identified_interpolated_local(
     segment_progress_bar=False,
     notebook=False
 ):
+    """
+    Fetches identified, interpolated 3D pose track data from local files and overlays onto classroom videos.
+
+    Fetches and overlays onto all video clips that overlap with specified start
+    and end (e.g., if start is 10:32:56 and end is 10:33:20, returns videos
+    starting at 10:32:50, 10:33:00 and 10:33:10).
+
+    Script performs a logical AND across all camera specifications. If no camera
+    specifications are given, returns all active cameras in environment (as
+    determined by camera_device_types).
+
+    If keypoint connectors are not specified, script uses default keypoint
+    connectors for specified pose model.
+
+    Colors can be specifed as any string interpretable by
+    matplotlib.colors.to_hex().
+
+    Input data is assumed to be organized as specified by output of
+    identify_pose_tracks_3d_local_by_segment().
+
+    Args:
+        start (datetime): Start of video overlay
+        end (datetime): End of video overlay
+        pose_track_3d_identification_inference_id (str): Inference ID for source position data
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        pose_model_id (str): Honeycomb pose model ID for pose model that defines 2D/3D pose data structure
+        output_directory (str): Path to output directory (default is \'./video_overlays\')
+        output_filename_prefix (str): Filename prefix for output files (default is \'pose_tracks_3d_identified_interpolated\')
+        camera_assignment_ids (sequence of str): List of Honeycomb assignment IDs for target cameras (default is None)
+        camera_device_types (sequence of str): List of Honeycomb device types for target cameras (default is video_io.DEFAULT_CAMERA_DEVICE_TYPES)
+        camera_device_ids (sequence of str): List og Honeycomb device IDs for target cameras (default is None)
+        camera_part_numbers (sequence of str): List of Honeycomb part numbers for target cameras (default is None)
+        camera_names (sequence of str): List of Honeycomb device names for target cameras (default is None)
+        camera_serial_numbers (sequence of str): List of Honeycomb device serial numbers for target cameras (default is None)
+        pose_track_label_column (str): Name of person data column to use for pose labels (default is \'short_name\')
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        local_video_directory (str): Path to directory where local copies of Honeycomb videos are stored (default is \'./videos\')
+        video_filename_extension (str): Filename extension for local copies of Honeycomb videos (default is \'mp4\')
+        camera_calibrations (dict): Dict in format {DEVICE_ID: CAMERA_CALIBRATION_DATA} (default is None)
+        keypoint_connectors (array): Array of keypoints to connect with lines to form pose image (default is None)
+        pose_color (str): Color of pose (default is \'green\')
+        keypoint_radius (int): Radius of keypoins in pixels (default is 3)
+        keypoint_alpha (float): Alpha value for keypoints (default is 0.6)
+        keypoint_connector_alpha (float): Alpha value for keypoint connectors (default is 0.6)
+        keypoint_connector_linewidth (float): Line width for keypoint connectors (default is 3.0)
+        pose_label_color (str): Color for pose label text (default is 'white')
+        pose_label_background_alpha (float): Alpha value for pose label background (default is 0.6)
+        pose_label_font_scale (float): Font scale for pose label (default is 1.5)
+        pose_label_line_width (float): Line width for pose label text (default is 1.0)
+        output_filename_datetime_format (str): Datetime format for output filename (default is \'%Y%m%d_%H%M%S_%f\')
+        output_filename_extension (str): Filename extension for output (determines file format) (default is \'avi\')
+        output_fourcc_string (str): FOURCC code for output format (default is \'XVID\')
+        concatenate_videos (bool): Boolean indicating whether to concatenate videos for each camera into single videos (default is True)
+        delete_individual_clips (bool): Boolean indicating whether to delete individual clips after concatenating (default is True)
+        parallel (bool): Boolean indicating whether to use multiple parallel processes (one for each time segment) (default is False)
+        num_parallel_processes (int): Number of parallel processes in pool (otherwise defaults to number of cores - 1) (default is None)
+        task_progress_bar (bool): Boolean indicating whether script should display an overall progress bar (default is False)
+        segment_progress_bar (bool): Boolean indicating whether script should display a progress bar for each clip (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+    """
     pose_tracks_3d_identified_interpolated_df = process_pose_data.local_io.fetch_3d_poses_with_person_info(
         base_dir=base_dir,
         environment_id=environment_id,
