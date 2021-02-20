@@ -4,29 +4,30 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
-* Implement pose track filtering
-* Implement pose track interpolation
-* Parallellize 3D pose overlay function
-* Enable `workers.reconstruct_poses_3d_alphapose_local_by_time_segment()` to be called as library function (as well as executable)
-* Write worker which produces interpolated pose tracks from local 3D pose data
-* Rewrite all log messages so formatting isn't called if log isn't printed
-* Rewrite `overlay.overlay_video_poses_2d()` to match functionality of `overlay.overlay_video_poses_3d()` (e.g., more flexible specification of videos, concatenation)
-* Extend ability to set output container and code to all overlay functions
-* Loosen checks on overlap between pose data and video data (go ahead as long as there is _some_ overlap)
-* Add ability to filter 3D pose tracks on track duration/size
-* Add option to overlay function to first filter on 3D pose track duration/size
-* Add ability to overlay for a time range (batch processing)
-* Add option to concatenate videos across time range for each camera
+* Switch parallel overlay code back to `imap_unordered()` (for less chunky progress bars) but sort output before concatenating
+* Ensure that all visual specs (colors, line widths, etc.) propagate to video overlay
+* Add drawing primitive to `wf-cv-utils` for text with background
+* Use new text-with-background drawing primitive for pose labels
+* Add timestamp to video overlays
+* Consider getting rid of `geom_render` module
+* Fix up progress bars so we can have task-level and segment-level progress bars without logging in notebook
+* Fix up progress bars so they work properly outside of notebook with multiprocessing
+* Add indentation/labeling on segment-level progress bars
+* Clean up argument ordering in `reconstruct_poses_3d_alphapose_local_time_segment`
+* Add `poses_2d_json_format` option to `reconstruct_poses_3d` entry point
+* Add endpoints for all processing functions
+* Add ability to write locally generated object IDs to Honeycomb
+* Create separate workers for uploading to Honeycomb 3D poses, 3D pose tracks, interpolated 3D pose tracks, 3D pose identification, 3D pose track identification
 * Dockerize pipeline
 * Set up pipeline for Airflow
-* Add function to fetch pose tracks from Honeycomb
-* Add progress bar option to `generate_pose_tracks()`
+* Add additional machinery for checking UWB data integrity (e.g., duplicates)
+* Retool `generate_inference_metadata_reconstruct_3d_poses_alphapose_local` to exclude cameras without calibration data
+* Make function to delete Honeycomb inference executions
+* Make function to delete local inference metadata
+* Make function to delete local 3D pose files
+* Make function for deleting local 3D pose data
+* Rewrite all log messages so formatting isn't called if log isn't printed
 * Make functions handle empty poses (all keypoints `NaN`) more gracefully (e.g., `score_pose_pairs()`, `draw_pose_2d()`)
-* Fix up `honeycomb_io` module to match design of `wf-video-io`
-  - Allow user to supply Honeycomb client
-  - Clean up default setting
-  - Other?
-  * Remove unused functions and methods
 * Make visualization functions handle missing fields (e.g., `pose_quality`) more gracefully
 * Figure out inconsistent behavior of `groupby(...).apply(...)` (under what conditions does it add grouping variables to index?)
 * For functions that act on dataframes, make it optional to check dataframe structure (e.g., only one timestamp and camera pair)

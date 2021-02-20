@@ -7,11 +7,13 @@ from uuid import uuid4
 import logging
 import time
 import itertools
+import copy
 
 logger = logging.getLogger(__name__)
 
-def generate_pose_tracks(
+def update_pose_tracks_3d(
     poses_3d_df,
+    pose_tracks_3d=None,
     max_match_distance=1.0,
     max_iterations_since_last_match=20,
     centroid_position_initial_sd=1.0,
@@ -22,113 +24,74 @@ def generate_pose_tracks(
     progress_bar=False,
     notebook=False
 ):
-    num_seconds = (poses_3d_df['timestamp'].max() - poses_3d_df['timestamp'].min()).total_seconds()
-    generate_tracks_start = time.time()
-    logging.info(
-        'Generating pose tracks for %.3f seconds of 3D pose data',
-        num_seconds
-    )
-    poses_3d_df_copy = poses_3d_df.copy()
-    poses_3d_df_copy['pose_track_3d_id'] = None
-    timestamps = np.sort(poses_3d_df['timestamp'].unique())
-    initial_timestamp = timestamps[0]
-    initial_pose_3d_ids = poses_3d_df_copy.loc[
-        poses_3d_df_copy['timestamp'] == initial_timestamp
-    ].index.values.tolist()
-    initial_keypoint_coordinates_3d = poses_3d_df_copy.loc[
-        poses_3d_df_copy['timestamp'] == initial_timestamp,
-        'keypoint_coordinates_3d'
-    ].values.tolist()
-    initial_poses_3d = dict(zip(initial_pose_3d_ids, initial_keypoint_coordinates_3d))
-    pose_tracks_3d = PoseTracks3D(
-        timestamp=initial_timestamp,
-        poses_3d=initial_poses_3d,
-        centroid_position_initial_sd=centroid_position_initial_sd,
-        centroid_velocity_initial_sd=centroid_velocity_initial_sd,
-        reference_delta_t_seconds=reference_delta_t_seconds,
-        reference_velocity_drift=reference_velocity_drift,
-        position_observation_sd=position_observation_sd
-    )
-    if progress_bar:
-        if notebook:
-            timestamp_iterator = tqdm.notebook.tqdm(timestamps[1:])
-        else:
-            timestamp_iterator = tqdm.tqdm(timestamps[1:])
-    else:
-        timestamp_iterator = timestamps[1:]
-    for current_timestamp in timestamp_iterator:
-        current_pose_3d_ids = poses_3d_df_copy.loc[
-            poses_3d_df_copy['timestamp'] == current_timestamp
+    if len(poses_3d_df) == 0:
+        return pose_tracks_3d
+    if pose_tracks_3d is None:
+        initial_timestamp = poses_3d_df['timestamp'].min()
+        initial_pose_3d_ids = poses_3d_df.loc[
+            poses_3d_df['timestamp'] == initial_timestamp
         ].index.values.tolist()
-        current_keypoint_coordinates_3d = poses_3d_df_copy.loc[
-            poses_3d_df_copy['timestamp'] == current_timestamp,
+        initial_keypoint_coordinates_3d = poses_3d_df.loc[
+            poses_3d_df['timestamp'] == initial_timestamp,
             'keypoint_coordinates_3d'
         ].values.tolist()
-        current_poses_3d = dict(zip(current_pose_3d_ids, current_keypoint_coordinates_3d))
-        pose_tracks_3d.update(
-            timestamp=current_timestamp,
-            poses_3d=current_poses_3d
+        initial_poses_3d = dict(zip(initial_pose_3d_ids, initial_keypoint_coordinates_3d))
+        pose_tracks_3d = PoseTracks3D(
+            timestamp=initial_timestamp,
+            poses_3d=initial_poses_3d,
+            centroid_position_initial_sd=centroid_position_initial_sd,
+            centroid_velocity_initial_sd=centroid_velocity_initial_sd,
+            reference_delta_t_seconds=reference_delta_t_seconds,
+            reference_velocity_drift=reference_velocity_drift,
+            position_observation_sd=position_observation_sd
         )
-    for pose_track_3d_id, pose_track_3d in pose_tracks_3d.tracks().items():
-        poses_3d_df_copy.loc[pose_track_3d.pose_3d_ids, 'pose_track_3d_id'] = pose_track_3d_id
-    generate_tracks_time = time.time() - generate_tracks_start
-    logging.info(
-        'Generated pose tracks for %.3f seconds of 3D pose data in %.3f seconds (ratio of %.3f)',
-        num_seconds,
-        generate_tracks_time,
-        generate_tracks_time/num_seconds
-    )
-    return poses_3d_df_copy, pose_tracks_3d
+        pose_tracks_3d.update_df(
+            poses_3d_df=poses_3d_df.loc[poses_3d_df['timestamp'] != initial_timestamp],
+            progress_bar=progress_bar,
+            notebook=notebook
+        )
+    else:
+        pose_tracks_3d.update_df(
+            poses_3d_df=poses_3d_df,
+            progress_bar=progress_bar,
+            notebook=notebook
+        )
+    return pose_tracks_3d
 
-def interpolate_pose_tracks(
-    poses_3d_with_tracks_df
-):
-    poses_3d_with_tracks_interpolated = (
-        poses_3d_with_tracks_df
-        .groupby('pose_track_3d_id')
-        .apply(interpolate_track)
-        .reset_index()
-    )
-    return poses_3d_with_tracks_interpolated
-
-def interpolate_track(pose_track_3d_df):
+def interpolate_pose_track(pose_track_3d_df):
+    if pose_track_3d_df['timestamp'].duplicated().any():
+        raise ValueError('Pose data for single pose track contains duplicate timestamps')
     pose_track_3d_df = pose_track_3d_df.copy()
-    pose_track_3d_df.dropna(subset=['keypoint_coordinates_3d'])
     pose_track_3d_df.sort_values('timestamp', inplace=True)
-    old_num_poses = len(pose_track_3d_df)
-    old_index = pd.DatetimeIndex(pose_track_3d_df['timestamp'])
-    new_index = pd.date_range(
+    old_time_index = pd.DatetimeIndex(pose_track_3d_df['timestamp'])
+    combined_time_index = pd.date_range(
         start=pose_track_3d_df['timestamp'].min(),
         end=pose_track_3d_df['timestamp'].max(),
         freq='100ms',
         name='timestamp'
     )
-    new_num_poses = len(new_index)
-    keypoint_df = pd.DataFrame(
+    new_time_index = combined_time_index.difference(old_time_index)
+    old_num_poses = len(old_time_index)
+    combined_num_poses = len(combined_time_index)
+    new_num_poses = len(new_time_index)
+    keypoints_flattened_df = pd.DataFrame(
         np.stack(pose_track_3d_df['keypoint_coordinates_3d']).reshape((old_num_poses, -1)),
-        index=old_index
+        index=old_time_index
     )
-    keypoint_df_interpolated = keypoint_df.reindex(new_index).interpolate(method='time')
-    keypoint_array = keypoint_df_interpolated.values.reshape((new_num_poses, -1, 3))
-    keypoint_array_unstacked = [keypoint_array[i] for i in range(keypoint_array.shape[0])]
-    pose_track_3d_df_interpolated = pd.Series(
-        keypoint_array_unstacked,
-        index=new_index,
+    keypoints_flattened_interpolated_df = keypoints_flattened_df.reindex(combined_time_index).interpolate(method='time')
+    keypoints_flattened_interpolated_array = keypoints_flattened_interpolated_df.values
+    keypoints_interpolated_array = keypoints_flattened_interpolated_array.reshape((combined_num_poses, -1, 3))
+    keypoints_interpolated_array_unstacked = [keypoints_interpolated_array[i] for i in range(keypoints_interpolated_array.shape[0])]
+    poses_3d_interpolated_df = pd.Series(
+        keypoints_interpolated_array_unstacked,
+        index=combined_time_index,
         name='keypoint_coordinates_3d'
     ).to_frame()
-    return pose_track_3d_df_interpolated
-
-def add_short_track_labels(
-    poses_3d_with_tracks_df
-):
-    pose_track_3d_id_index = poses_3d_with_tracks_df.groupby('pose_track_3d_id').apply(lambda x: x['timestamp'].min()).sort_values().index
-    track_label_lookup = pd.DataFrame(
-        range(1, len(pose_track_3d_id_index)+1),
-        columns=['pose_track_3d_id_short'],
-        index=pose_track_3d_id_index
-    )
-    poses_3d_with_tracks_df = poses_3d_with_tracks_df.join(track_label_lookup, on='pose_track_3d_id')
-    return poses_3d_with_tracks_df
+    poses_3d_new_df = poses_3d_interpolated_df.reindex(new_time_index)
+    pose_3d_ids_new = [uuid4().hex for _ in range(len(poses_3d_new_df))]
+    poses_3d_new_df['pose_3d_id'] = pose_3d_ids_new
+    poses_3d_new_df = poses_3d_new_df.reset_index().set_index('pose_3d_id')
+    return poses_3d_new_df
 
 class PoseTracks3D:
     def __init__(
@@ -153,7 +116,7 @@ class PoseTracks3D:
         self.active_tracks = dict()
         self.inactive_tracks = dict()
         for pose_3d_id, keypoint_coordinates_3d in poses_3d.items():
-            pose_track = PoseTrack3D(
+            pose_track_3d = PoseTrack3D(
                 timestamp=timestamp,
                 pose_3d_id = pose_3d_id,
                 keypoint_coordinates_3d=keypoint_coordinates_3d,
@@ -163,10 +126,35 @@ class PoseTracks3D:
                 reference_velocity_drift=self.reference_velocity_drift,
                 position_observation_sd=self.position_observation_sd
             )
-            self.active_tracks[pose_track.pose_track_3d_id] = pose_track
+            self.active_tracks[pose_track_3d.pose_track_3d_id] = pose_track_3d
 
-    def tracks(self):
-        return {**self.active_tracks, **self.inactive_tracks}
+    def update_df(
+        self,
+        poses_3d_df,
+        progress_bar=False,
+        notebook=False
+    ):
+        timestamps = np.sort(poses_3d_df['timestamp'].unique())
+        if progress_bar:
+            if notebook:
+                timestamp_iterator = tqdm.notebook.tqdm(timestamps)
+            else:
+                timestamp_iterator = tqdm.tqdm(timestamps)
+        else:
+            timestamp_iterator = timestamps
+        for current_timestamp in timestamp_iterator:
+            current_pose_3d_ids = poses_3d_df.loc[
+                poses_3d_df['timestamp'] == current_timestamp
+            ].index.values.tolist()
+            current_keypoint_coordinates_3d = poses_3d_df.loc[
+                poses_3d_df['timestamp'] == current_timestamp,
+                'keypoint_coordinates_3d'
+            ].values.tolist()
+            current_poses_3d = dict(zip(current_pose_3d_ids, current_keypoint_coordinates_3d))
+            self.update(
+                timestamp=current_timestamp,
+                poses_3d=current_poses_3d
+            )
 
     def update(
         self,
@@ -193,12 +181,12 @@ class PoseTracks3D:
         timestamp,
         poses_3d
     ):
-        matches = self.match_observations_to_pose_tracks(
+        matches = self.match_observations_to_pose_tracks_3d(
             poses_3d=poses_3d
         )
-        matched_pose_tracks = set(matches.keys())
+        matched_pose_tracks_3d = set(matches.keys())
         matched_poses = set(matches.values())
-        unmatched_pose_tracks = set(self.active_tracks.keys()) - matched_pose_tracks
+        unmatched_pose_tracks_3d = set(self.active_tracks.keys()) - matched_pose_tracks_3d
         unmatched_poses = set(poses_3d.keys()) - matched_poses
         for pose_track_3d_id, pose_3d_id in matches.items():
             self.active_tracks[pose_track_3d_id].iterations_since_last_match = 0
@@ -206,7 +194,7 @@ class PoseTracks3D:
                 pose_3d_id = pose_3d_id,
                 keypoint_coordinates_3d = poses_3d[pose_3d_id],
             )
-        for pose_track_3d_id in unmatched_pose_tracks:
+        for pose_track_3d_id in unmatched_pose_tracks_3d:
             self.active_tracks[pose_track_3d_id].iterations_since_last_match += 1
             if self.active_tracks[pose_track_3d_id].iterations_since_last_match > self.max_iterations_since_last_match:
                 self.inactive_tracks[pose_track_3d_id] = self.active_tracks.pop(pose_track_3d_id)
@@ -223,7 +211,7 @@ class PoseTracks3D:
             )
             self.active_tracks[pose_track_3d.pose_track_3d_id] = pose_track_3d
 
-    def match_observations_to_pose_tracks(
+    def match_observations_to_pose_tracks_3d(
         self,
         poses_3d
     ):
@@ -252,6 +240,63 @@ class PoseTracks3D:
             set(zip(best_track_for_each_pose.values, best_track_for_each_pose.index))
         )
         return matches
+
+    def filter(
+        self,
+        num_poses_min=11,
+        inplace=False
+    ):
+        if not inplace:
+            new_pose_tracks_3d = copy.deepcopy(self)
+        else:
+            new_pose_tracks_3d = self
+        new_pose_tracks_3d.active_tracks = dict(filter(
+            lambda key_value_tuple: key_value_tuple[1].num_poses() >= num_poses_min,
+            new_pose_tracks_3d.active_tracks.items()
+        ))
+        new_pose_tracks_3d.inactive_tracks = dict(filter(
+            lambda key_value_tuple: key_value_tuple[1].num_poses() >= num_poses_min,
+            new_pose_tracks_3d.inactive_tracks.items()
+        ))
+        if not inplace:
+            return new_pose_tracks_3d
+
+    def extract_pose_tracks_3d(
+        self,
+        poses_3d_df,
+        pose_3d_id_column_name='pose_3d_id',
+        pose_track_3d_id_column_name='pose_track_3d_id'
+    ):
+        input_index_name = poses_3d_df.index.name
+        poses_3d_with_tracks_df = poses_3d_df.join(
+            self.output_df(
+                pose_3d_id_column_name=pose_3d_id_column_name,
+                pose_track_3d_id_column_name=pose_track_3d_id_column_name
+            ),
+            how='inner'
+        )
+        poses_3d_with_tracks_df.index.name = input_index_name
+        return poses_3d_with_tracks_df
+
+    def output(self):
+        output = {pose_track_3d_id: pose_track_3d.output() for pose_track_3d_id, pose_track_3d in self.tracks().items()}
+        return output
+
+    def output_df(
+        self,
+        pose_3d_id_column_name='pose_3d_id',
+        pose_track_3d_id_column_name='pose_track_3d_id'
+    ):
+        df = pd.concat(
+            [pose_track_3d.output_df(
+                pose_3d_id_column_name=pose_3d_id_column_name,
+                pose_track_3d_id_column_name=pose_track_3d_id_column_name
+            ) for pose_track_3d in self.tracks().values()]
+        )
+        return df
+
+    def tracks(self):
+        return {**self.active_tracks, **self.inactive_tracks}
 
     def plot_trajectories(
         self,
@@ -359,6 +404,11 @@ class PoseTrack3D:
         self.centroid_distribution_trajectory['mean'][-1] = self.centroid_distribution.mean
         self.centroid_distribution_trajectory['covariance'][-1] = self.centroid_distribution.covariance
 
+    def num_poses(
+        self
+    ):
+        return(len(self.pose_3d_ids))
+
     def centroid_distribution_trajectory_df(self):
         df = pd.DataFrame({
             'timestamp': self.centroid_distribution_trajectory['timestamp'],
@@ -368,6 +418,25 @@ class PoseTrack3D:
             'covariance': self.centroid_distribution_trajectory['covariance']
         })
         df.set_index('timestamp', inplace=True)
+        return df
+
+    def output(self):
+        output = {
+            'start': pd.to_datetime(self.initial_timestamp).to_pydatetime(),
+            'end': pd.to_datetime(self.latest_timestamp).to_pydatetime(),
+            'pose_3d_ids': self.pose_3d_ids
+        }
+        return output
+
+    def output_df(
+        self,
+        pose_3d_id_column_name='pose_3d_id',
+        pose_track_3d_id_column_name='pose_track_3d_id'
+    ):
+        df = pd.DataFrame([
+            {pose_3d_id_column_name: pose_id, pose_track_3d_id_column_name: self.pose_track_3d_id}
+            for pose_id in self.pose_3d_ids
+        ]).set_index(pose_3d_id_column_name)
         return df
 
     def plot_trajectory(

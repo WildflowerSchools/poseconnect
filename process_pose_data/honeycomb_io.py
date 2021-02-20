@@ -8,6 +8,12 @@ from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_CAMERA_DEVICE_TYPES = [
+    'PI3WITHCAMERA',
+    'PI4WITHCAMERA',
+    'PIZEROWITHCAMERA'
+]
+
 def fetch_2d_pose_data(
     start=None,
     end=None,
@@ -31,6 +37,7 @@ def fetch_2d_pose_data(
     return_pose_model_id=True,
     return_pose_quality=False,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -43,11 +50,12 @@ def fetch_2d_pose_data(
         environment_id=environment_id,
         environment_name=environment_name,
         camera_device_types=camera_device_types,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     camera_ids_from_camera_properties = fetch_camera_ids_from_camera_properties(
         camera_ids=camera_ids,
@@ -55,32 +63,35 @@ def fetch_2d_pose_data(
         camera_part_numbers=camera_part_numbers,
         camera_names=camera_names,
         camera_serial_numbers=camera_serial_numbers,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     pose_model_id = fetch_pose_model_id(
         pose_model_id=pose_model_id,
         pose_model_name=pose_model_name,
         pose_model_variant_name=pose_model_variant_name,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     inference_ids = fetch_inference_ids(
         inference_ids=inference_ids,
         inference_names=inference_names,
         inference_models=inference_models,
         inference_versions=inference_versions,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Building query list for 2D pose search')
     query_list = list()
@@ -148,17 +159,18 @@ def fetch_2d_pose_data(
         query_list=query_list,
         return_data=return_data,
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     data = list()
     logger.info('Parsing {} returned poses'.format(len(result)))
     for datum in result:
         data.append({
-            'pose_id_2d': datum.get('pose_id'),
+            'pose_2d_id': datum.get('pose_id'),
             'timestamp': datum.get('timestamp'),
             'camera_id': (datum.get('camera') if datum.get('camera') is not None else {}).get('device_id'),
             'track_label_2d': datum.get('track_label'),
@@ -176,7 +188,7 @@ def fetch_2d_pose_data(
         raise ValueError('Returned poses are associated with multiple pose models')
     if (poses_2d_df.groupby(['timestamp', 'camera_id'])['inference_id'].nunique() > 1).any():
         raise ValueError('Returned poses have multiple inference IDs for some camera IDs at some timestamps')
-    poses_2d_df.set_index('pose_id_2d', inplace=True)
+    poses_2d_df.set_index('pose_2d_id', inplace=True)
     return_columns = [
         'timestamp',
         'camera_id'
@@ -202,6 +214,7 @@ def search_2d_poses(
     query_list,
     return_data,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -215,10 +228,12 @@ def search_2d_poses(
         return_data=return_data,
         id_field_name='pose_id',
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Fetched {} poses'.format(len(result)))
     return result
@@ -242,6 +257,7 @@ def fetch_3d_pose_data(
     return_pose_model_id=False,
     return_pose_quality=False,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -252,22 +268,24 @@ def fetch_3d_pose_data(
         pose_model_id=pose_model_id,
         pose_model_name=pose_model_name,
         pose_model_variant_name=pose_model_variant_name,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     inference_ids = fetch_inference_ids(
         inference_ids=inference_ids,
         inference_names=inference_names,
         inference_models=inference_models,
         inference_versions=inference_versions,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Building query list for 3D pose search')
     query_list = list()
@@ -324,20 +342,21 @@ def fetch_3d_pose_data(
         query_list=query_list,
         return_data=return_data,
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     data = list()
     logger.info('Parsing {} returned poses'.format(len(result)))
     for datum in result:
         data.append({
-            'pose_id_3d': datum.get('pose_id'),
+            'pose_3d_id': datum.get('pose_id'),
             'timestamp': datum.get('timestamp'),
             'track_label_3d': datum.get('track_label'),
-            'pose_ids_2d': datum.get('poses_2d'),
+            'pose_2d_ids': datum.get('poses_2d'),
             'person_id': (datum.get('person') if datum.get('person') is not None else {}).get('person_id'),
             'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id'),
             'pose_model_id': (datum.get('pose_model') if datum.get('pose_model') is not None else {}).get('pose_model_id'),
@@ -352,14 +371,14 @@ def fetch_3d_pose_data(
         raise ValueError('Returned poses are associated with multiple pose models')
     if (poses_3d_df.groupby('timestamp')['inference_id'].nunique() > 1).any():
         raise ValueError('Returned poses have multiple inference IDs for timestamps')
-    poses_3d_df.set_index('pose_id_3d', inplace=True)
+    poses_3d_df.set_index('pose_3d_id', inplace=True)
     return_columns = [
         'timestamp'
     ]
     if return_track_label:
         return_columns.append('track_label_3d')
     if return_poses_2d:
-        return_columns.append('pose_ids_2d')
+        return_columns.append('pose_2d_ids')
     if return_person_id:
         return_columns.append('person_id')
     if return_inference_id:
@@ -380,6 +399,7 @@ def search_3d_poses(
     query_list,
     return_data,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -393,10 +413,12 @@ def search_3d_poses(
         return_data=return_data,
         id_field_name='pose_id',
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Fetched {} poses'.format(len(result)))
     return result
@@ -407,13 +429,15 @@ def search_objects(
     return_data,
     id_field_name,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
     client_id=None,
     client_secret=None
 ):
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -445,6 +469,7 @@ def fetch_3d_pose_track_data(
     return_track_label=False,
     return_inference_id=False,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -456,11 +481,12 @@ def fetch_3d_pose_track_data(
         inference_names=inference_names,
         inference_models=inference_models,
         inference_versions=inference_versions,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Building query list for 3D pose track search')
     query_list = list()
@@ -480,29 +506,30 @@ def fetch_3d_pose_track_data(
             ]}
         ]}
     ]
-    result = search_3d_pose_tracks(
+    result = search_pose_tracks_3d(
         query_list=query_list,
         return_data=return_data,
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     data = list()
     logger.info('Parsing {} returned pose tracks'.format(len(result)))
     for datum in result:
         data.append({
             'pose_track_3d_id': datum.get('pose_track_id'),
-            'pose_id_3ds': datum.get('poses_3d'),
+            'pose_3d_ids': datum.get('poses_3d'),
             'track_label_3d': datum.get('track_label'),
             'inference_id': (datum.get('source') if datum.get('source') is not None else {}).get('inference_id')
         })
     pose_tracks_3d_df = pd.DataFrame(data)
     pose_tracks_3d_df.set_index('pose_track_3d_id', inplace=True)
     return_columns = [
-        'pose_id_3ds'
+        'pose_3d_ids'
     ]
     if return_track_label:
         return_columns.append('track_label_3d')
@@ -511,10 +538,11 @@ def fetch_3d_pose_track_data(
     pose_tracks_3d_df = pose_tracks_3d_df.reindex(columns=return_columns)
     return pose_tracks_3d_df
 
-def search_3d_pose_tracks(
+def search_pose_tracks_3d(
     query_list,
     return_data,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -528,10 +556,12 @@ def search_3d_pose_tracks(
         return_data=return_data,
         id_field_name='pose_track_id',
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     logger.info('Fetched {} pose tracks'.format(len(result)))
     return result
@@ -542,6 +572,7 @@ def fetch_camera_ids_from_environment(
     environment_id=None,
     environment_name=None,
     camera_device_types=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -549,23 +580,22 @@ def fetch_camera_ids_from_environment(
     client_secret=None
 ):
     if camera_device_types is None:
-        camera_device_types = [
-            'PI3WITHCAMERA',
-            'PIZEROWITHCAMERA'
-        ]
+        camera_device_types = DEFAULT_CAMERA_DEVICE_TYPES
     environment_id = fetch_environment_id(
         environment_id=environment_id,
         environment_name=environment_name,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     if environment_id is None:
         return None
     logger.info('Fetching camera assignments for specified environment and time span')
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -609,9 +639,84 @@ def fetch_camera_ids_from_environment(
     logger.info('Found {} camera assignments for specified environment and time span'.format(len(camera_device_ids)))
     return camera_device_ids
 
+def fetch_camera_assignment_ids_from_environment(
+    start=None,
+    end=None,
+    environment_id=None,
+    environment_name=None,
+    camera_device_types=None,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if camera_device_types is None:
+        camera_device_types = DEFAULT_CAMERA_DEVICE_TYPES
+    environment_id = fetch_environment_id(
+        environment_id=environment_id,
+        environment_name=environment_name,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
+    )
+    if environment_id is None:
+        return None
+    logger.info('Fetching camera assignments for specified environment and time span')
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result = client.request(
+        request_type='query',
+        request_name='getEnvironment',
+        arguments={
+            'environment_id': {
+                'type': 'ID!',
+                'value': environment_id
+            }
+        },
+        return_object=[
+            {'assignments': [
+                'assignment_id',
+                'start',
+                'end',
+                {'assigned': [
+                    {'... on Device': [
+                        'device_id',
+                        'device_type'
+                    ]}
+                ]}
+            ]}
+        ]
+    )
+    filtered_assignments = minimal_honeycomb.filter_assignments(
+        assignments=result.get('assignments'),
+        start_time=start,
+        end_time=end
+    )
+    camera_assignment_ids = list()
+    for assignment in filtered_assignments:
+        device_type = assignment.get('assigned').get('device_type')
+        if device_type is not None and device_type in camera_device_types:
+            camera_assignment_ids.append(assignment.get('assignment_id'))
+    if len(camera_assignment_ids) == 0:
+        raise ValueError('No camera devices found in specified environment for specified time span')
+    logger.info('Found {} camera assignments for specified environment and time span'.format(len(camera_assignment_ids)))
+    return camera_assignment_ids
+
 def fetch_environment_id(
     environment_id=None,
     environment_name=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -624,7 +729,8 @@ def fetch_environment_id(
         return environment_id
     if environment_name is not None:
         logger.info('Fetching environment ID for specified environment name')
-        client = minimal_honeycomb.MinimalHoneycombClient(
+        client = generate_client(
+            client=client,
             uri=uri,
             token_uri=token_uri,
             audience=audience,
@@ -663,6 +769,7 @@ def fetch_camera_ids_from_camera_properties(
     camera_part_numbers=None,
     camera_names=None,
     camera_serial_numbers=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -700,7 +807,8 @@ def fetch_camera_ids_from_camera_properties(
                 'values': camera_serial_numbers
             })
         logger.info('Fetching camera IDs for cameras with specified properties')
-        client = minimal_honeycomb.MinimalHoneycombClient(
+        client = generate_client(
+            client=client,
             uri=uri,
             token_uri=token_uri,
             audience=audience,
@@ -734,6 +842,7 @@ def fetch_pose_model_id(
     pose_model_id=None,
     pose_model_name=None,
     pose_model_variant_name=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -757,7 +866,8 @@ def fetch_pose_model_id(
                 'value': pose_model_variant_name
             }
         logger.info('Fetching pose model ID for pose model with specified properties')
-        client = minimal_honeycomb.MinimalHoneycombClient(
+        client = generate_client(
+            client=client,
             uri=uri,
             token_uri=token_uri,
             audience=audience,
@@ -782,7 +892,8 @@ def fetch_pose_model_id(
     return None
 
 def fetch_pose_model(
-    pose_id_2d,
+    pose_2d_id,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -790,7 +901,8 @@ def fetch_pose_model(
     client_secret=None
 ):
     logger.info('Fetching pose model information for specified pose')
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -803,7 +915,7 @@ def fetch_pose_model(
         arguments={
             'pose_id': {
                 'type': 'ID!',
-                'value': pose_id_2d
+                'value': pose_2d_id
             }
         },
         return_object=[
@@ -821,6 +933,7 @@ def fetch_pose_model(
 
 def fetch_pose_model_by_pose_model_id(
     pose_model_id,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -828,7 +941,8 @@ def fetch_pose_model_by_pose_model_id(
     client_secret=None
 ):
     logger.info('Fetching pose model information for specified pose model ID')
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -860,6 +974,7 @@ def fetch_inference_ids(
     inference_names=None,
     inference_models=None,
     inference_versions=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -891,7 +1006,8 @@ def fetch_inference_ids(
                 'values': inference_versions
             })
         logger.info('Fetching inference IDs for inference runs with specified properties')
-        client = minimal_honeycomb.MinimalHoneycombClient(
+        client = generate_client(
+            client=client,
             uri=uri,
             token_uri=token_uri,
             audience=audience,
@@ -924,13 +1040,15 @@ def fetch_inference_ids(
 def fetch_camera_names(
     camera_ids,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
     client_id=None,
     client_secret=None
 ):
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -966,6 +1084,7 @@ def fetch_camera_calibrations(
     start=None,
     end=None,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -977,22 +1096,24 @@ def fetch_camera_calibrations(
         start=start,
         end=end,
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     extrinsic_calibrations = fetch_extrinsic_calibrations(
         camera_ids=camera_ids,
         start=start,
         end=end,
         chunk_size=chunk_size,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     camera_calibrations = dict()
     for camera_id in camera_ids:
@@ -1014,13 +1135,15 @@ def fetch_intrinsic_calibrations(
     start=None,
     end=None,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
     client_id=None,
     client_secret=None
 ):
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -1082,13 +1205,15 @@ def fetch_extrinsic_calibrations(
     start=None,
     end=None,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
     client_id=None,
     client_secret=None
 ):
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -1159,14 +1284,14 @@ def fetch_camera_device_id_lookup(
     client_id=None,
     client_secret=None
 ):
-    if client is None:
-        client = minimal_honeycomb.MinimalHoneycombClient(
-            uri=uri,
-            token_uri=token_uri,
-            audience=audience,
-            client_id=client_id,
-            client_secret=client_secret
-        )
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
     result = client.bulk_query(
         request_name='searchAssignments',
         arguments={
@@ -1201,6 +1326,7 @@ def create_inference_execution(
     version=None,
     data_sources=None,
     data_results=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -1211,7 +1337,8 @@ def create_inference_execution(
         execution_start = minimal_honeycomb.to_honeycomb_datetime(datetime.datetime.now(tz=datetime.timezone.utc))
     else:
         execution_start = minimal_honeycomb.to_honeycomb_datetime(execution_start)
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -1246,6 +1373,70 @@ def create_inference_execution(
         raise ValueError('Received unexpected response from Honeycomb: {}'.format(result))
     return inference_id
 
+def delete_inference_execution(
+    inference_id,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result = client.request(
+        request_type='mutation',
+        request_name='deleteInferenceExecution',
+        arguments={
+            'inference_id': {
+                'type': 'ID',
+                'value': inference_id
+            }
+        },
+        return_object=['status']
+    )
+    status = result.get('status')
+    return status
+
+def fetch_inference_ids_reconstruct_3d_poses(
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result = client.bulk_query(
+        request_name='findInferenceExecutions',
+        arguments={
+            'name': {
+                'type': 'String',
+                'value': 'Reconstruct 3D poses from 2D poses'
+            }
+        },
+        return_data=[
+            'inference_id'
+        ],
+        id_field_name='inference_id'
+    )
+    inference_ids = [datum.get('inference_id') for datum in result]
+    return inference_ids
+
 def write_3d_pose_data(
     poses_3d_df,
     coordinate_space_id=None,
@@ -1253,6 +1444,7 @@ def write_3d_pose_data(
     source_id=None,
     source_type=None,
     chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -1294,7 +1486,7 @@ def write_3d_pose_data(
         'coordinate_space_id',
         'pose_model_id',
         'keypoint_coordinates_3d',
-        'pose_ids_2d',
+        'pose_2d_ids',
         'source_id',
         'source_type'
     ])
@@ -1303,13 +1495,14 @@ def write_3d_pose_data(
             'coordinate_space_id': 'coordinate_space',
             'pose_model_id': 'pose_model',
             'keypoint_coordinates_3d': 'keypoints',
-            'pose_ids_2d': 'poses_2d',
+            'pose_2d_ids': 'poses_2d',
             'source_id': 'source'
         },
         inplace=True
     )
     poses_3d_list_honeycomb = poses_3d_df_honeycomb.to_dict(orient='records')
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -1331,35 +1524,133 @@ def write_3d_pose_data(
         chunk_size=chunk_size
     )
     try:
-        pose_ids_3d = [datum['pose_id'] for datum in result]
+        pose_3d_ids = [datum['pose_id'] for datum in result]
     except:
         raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
-    return pose_ids_3d
+    return pose_3d_ids
 
-def write_3d_pose_tracks(
-    poses_3d_df,
-    source_id,
-    source_type,
+def delete_3d_pose_data_by_inference_id(
+    inference_id,
+    chunk_size=100,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
     client_id=None,
-    client_secret=None,
-    chunk_size=100
+    client_secret=None
+):
+    pose_ids = fetch_pose_3d_ids(
+        inference_id,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    statuses = delete_3d_pose_data_by_pose_ids(
+        pose_ids,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    return pose_ids
+
+def fetch_pose_3d_ids(
+    inference_id,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    query_list=[{
+        'field': 'source',
+        'operator': 'EQ',
+        'value': inference_id
+    }]
+    return_data=['pose_id']
+    result = search_3d_poses(
+        query_list=query_list,
+        return_data=return_data,
+        chunk_size=chunk_size,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
+    )
+    pose_ids = [datum.get('pose_id') for datum in result]
+    return pose_ids
+
+def delete_3d_pose_data_by_pose_ids(
+    pose_ids,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if len(pose_ids) == 0:
+        return pose_ids
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result = client.bulk_mutation(
+        request_name='deletePose3D',
+        arguments={
+            'pose_id': {
+                'type': 'ID',
+                'value': pose_ids
+            }
+        },
+        return_object=['status'],
+        chunk_size=chunk_size
+    )
+    statuses = [datum.get('status') for datum in result]
+    return statuses
+
+def write_pose_tracks_3d(
+    poses_3d_df,
+    source_id,
+    source_type,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
 ):
     poses_3d_df_copy = poses_3d_df.copy()
     current_index_name = poses_3d_df_copy.index.name
-    poses_3d_df_copy = poses_3d_df_copy.reset_index().rename(columns={current_index_name: 'pose_id_3d'})
+    poses_3d_df_copy = poses_3d_df_copy.reset_index().rename(columns={current_index_name: 'pose_3d_id'})
     pose_tracks_3d_df = poses_3d_df_copy.groupby('pose_track_3d_id').agg(
         poses_3d = pd.NamedAgg(
-            column='pose_id_3d',
+            column='pose_3d_id',
             aggfunc = lambda x: x.tolist()
         )
     )
     pose_tracks_3d_df['source'] = source_id
     pose_tracks_3d_df['source_type'] = source_type
     pose_tracks_3d_list = pose_tracks_3d_df.to_dict(orient='records')
-    client = minimal_honeycomb.MinimalHoneycombClient(
+    client = generate_client(
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -1381,7 +1672,308 @@ def write_3d_pose_tracks(
         chunk_size=chunk_size
     )
     try:
-        pose_track_ids = [datum['pose_track_id'] for datum in result]
+        pose_track_3d_ids = [datum['pose_track_id'] for datum in result]
     except:
         raise ValueError('Received unexpected result from Honeycomb:\n{}'.format(result))
-    return pose_track_ids
+    return pose_track_3d_ids
+
+def fetch_uwb_data_data_id(
+    data_id,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result=client.request(
+        request_type='query',
+        request_name='getDatapoint',
+        arguments={
+            'data_id': {
+                'type': 'ID!',
+                'value': data_id
+            }
+        },
+        return_object = [
+            'timestamp',
+            {'source': [
+                {'... on Assignment': [
+                    'assignment_id'
+                ]}
+            ]},
+            {'file': [
+                'data'
+            ]}
+        ]
+    )
+    datapoint_timestamp=minimal_honeycomb.from_honeycomb_datetime(result.get('timestamp'))
+    assignment_id=result.get('source', {}).get('assignment_id')
+    parsed_blob = client.parse_data_blob(result.get('file', {}).get('data'))
+    df = pd.DataFrame(parsed_blob)
+    original_columns = df.columns.tolist()
+    df['assignment_id'] = assignment_id
+    new_columns = ['assignment_id'] + original_columns
+    df = df.reindex(columns=new_columns)
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
+    if df['timestamp'].isna().any():
+        logger.warn('Returned UWB data is missing some timestamp data')
+    df = df.dropna(subset=['timestamp']).reset_index(drop=True)
+    logger.info('Datapoint {} with timestamp {} yielded {} observations from {} to {}. Serial numbers: {}. Types: {}'.format(
+        data_id,
+        datapoint_timestamp.isoformat(),
+        len(df),
+        df['timestamp'].min().isoformat(),
+        df['timestamp'].max().isoformat(),
+        df['serial_number'].value_counts().to_dict(),
+        df['type'].value_counts().to_dict()
+    ))
+    return df
+
+def extract_position_data(
+    df
+):
+    if len(df) == 0:
+        return df
+    df = df.loc[df['type'] == 'position'].copy().reset_index(drop=True)
+    if len(df) != 0:
+        df['x_position'] = df['x'] / 1000.0
+        df['y_position'] = df['y'] / 1000.0
+        df['z_position'] = df['z'] / 1000.0
+        df['anchor_count'] = pd.to_numeric(df['anchor_count']).astype('Int64')
+        df['quality'] = pd.to_numeric(df['quality']).astype('Int64')
+    df = df.reindex(columns=[
+        'assignment_id',
+        'timestamp',
+        'object_id',
+        'serial_number',
+        'x_position',
+        'y_position',
+        'z_position',
+        'anchor_count',
+        'quality'
+    ])
+    return df
+
+def fetch_uwb_data_ids(
+    datapoint_timestamp_min,
+    datapoint_timestamp_max,
+    assignment_ids,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    query_list = [
+        {'field': 'timestamp', 'operator': 'GTE', 'value': datapoint_timestamp_min},
+        {'field': 'timestamp', 'operator': 'LTE', 'value': datapoint_timestamp_max},
+        {'field': 'source', 'operator': 'IN', 'values': assignment_ids}
+    ]
+    return_data = [
+        'data_id'
+    ]
+    id_field_name='data_id'
+    result = search_objects(
+        request_name='searchDatapoints',
+        query_list=query_list,
+        return_data=return_data,
+        id_field_name=id_field_name,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    data_ids = [datum.get('data_id') for datum in result]
+    return data_ids
+
+def fetch_person_tag_info(
+    start,
+    end,
+    environment_id,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    query_list = [
+        {'field': 'environment', 'operator': 'EQ', 'value': environment_id},
+        {'field': 'start', 'operator': 'LTE', 'value': end},
+        {'operator': 'OR', 'children': [
+            {'field': 'end', 'operator': 'ISNULL'},
+            {'field': 'end', 'operator': 'GTE', 'value': start},
+        ]},
+        {'field': 'assigned_type', 'operator': 'EQ', 'value': 'DEVICE'}
+    ]
+    return_data = [
+        'assignment_id',
+        'start',
+        'end',
+        {'assigned': [
+            {'... on Device': [
+                'device_id',
+                'device_type',
+                'name',
+                'tag_id',
+                {'entity_assignments': [
+                    'start',
+                    'end',
+                    'entity_type',
+                    {'entity': [
+                        {'...on Person': [
+                            'person_id',
+                            'person_type',
+                            'name',
+                            'short_name'
+                        ]}
+                    ]}
+                ]}
+            ]}
+        ]}
+    ]
+    id_field_name='assignment_id'
+    result = search_objects(
+        request_name='searchAssignments',
+        query_list=query_list,
+        return_data=return_data,
+        id_field_name=id_field_name,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result = list(filter(
+        lambda assignment: assignment.get('assigned', {}).get('device_type') == 'UWBTAG',
+        result
+    ))
+    for assignment in result:
+        assignment['assigned']['entity_assignments'] = minimal_honeycomb.filter_assignments(
+            assignments=assignment['assigned']['entity_assignments'],
+            start_time=start,
+            end_time=end
+        )
+        if len(assignment['assigned']['entity_assignments']) > 1:
+            raise ValueError('UWB tag {} has multiple entity assignments in the specified period ({} to {})'.format(
+                assignment.get('assigned', {}).get('name'),
+                start.isoformat(),
+                end.isoformat()
+            ))
+    result = list(filter(
+        lambda assignment: len(assignment.get('assigned', {}).get('entity_assignments')) == 1,
+        result
+    ))
+    result = list(filter(
+        lambda assignment: assignment.get('assigned', {}).get('entity_assignments')[0].get('entity_type') == 'PERSON',
+        result
+    ))
+    data_list=list()
+    for assignment in result:
+        data_list.append({
+            'assignment_id': assignment.get('assignment_id'),
+            'device_id': assignment.get('assigned', {}).get('device_id'),
+            'device_name': assignment.get('assigned', {}).get('name'),
+            'tag_id': assignment.get('assigned', {}).get('tag_id'),
+            'person_id': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('person_id'),
+            'person_type': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('person_type'),
+            'person_name': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('name'),
+            'short_name': assignment.get('assigned', {}).get('entity_assignments')[0].get('entity', {}).get('short_name')
+        })
+    df = pd.DataFrame(data_list)
+    df.set_index('assignment_id', inplace=True)
+    return df
+
+def add_person_tag_info(
+    uwb_data_df,
+    person_tag_info_df
+):
+    uwb_data_df = uwb_data_df.join(person_tag_info_df, on='assignment_id')
+    return uwb_data_df
+
+def fetch_person_info(
+    environment_id,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    client = generate_client(
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    result = client.bulk_query(
+        request_name='findAssignments',
+        arguments={
+            'environment': {
+                'type': 'ID',
+                'value': environment_id
+            },
+            'assigned_type': {
+                'type': 'AssignableTypeEnum',
+                'value': 'PERSON'
+            },
+        },
+        return_data=[
+            'assignment_id',
+            {'assigned': [
+                {'... on Person': [
+                    'person_id',
+                    'name',
+                    'short_name'
+                ]}
+            ]}
+        ],
+        id_field_name='assignment_id'
+    )
+    data_list = list()
+    for assignment in result:
+        data_list.append({
+            'person_id': assignment.get('assigned', {}).get('person_id'),
+            'name': assignment.get('assigned', {}).get('name'),
+            'short_name': assignment.get('assigned', {}).get('short_name')
+        })
+    person_info_df = pd.DataFrame(data_list)
+    person_info_df.set_index('person_id', inplace=True)
+    return person_info_df
+
+def generate_client(
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    if client is None:
+        client=minimal_honeycomb.MinimalHoneycombClient(
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    return client

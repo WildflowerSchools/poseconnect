@@ -11,153 +11,19 @@ import matplotlib.colors
 import seaborn as sns
 import tqdm
 import slugify
+import functools
 import datetime
 import string
 import logging
+import multiprocessing
 import os
 
 logger = logging.getLogger(__name__)
 
-def overlay_video_poses_2d(
-    poses_2d_df,
-    video_start,
-    pose_model_id=None,
-    camera_names=None,
-    camera_calibrations=None,
-    draw_keypoint_connectors=True,
-    keypoint_connectors=None,
-    pose_label=None,
-    pose_color='green',
-    keypoint_radius=3,
-    keypoint_alpha=0.6,
-    keypoint_connector_alpha=0.6,
-    keypoint_connector_linewidth=3,
-    pose_label_color='white',
-    pose_label_background_alpha=0.6,
-    pose_label_font_scale=2.0,
-    pose_label_line_width=2,
-    output_directory='.',
-    output_filename_prefix='poses_2d_overlay',
-    output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
-    output_filename_extension='mp4',
-    output_fourcc_string=None,
-    progress_bar=False,
-    notebook=False
-):
-    camera_ids = poses_2d_df['camera_id'].unique()
-    if pose_model_id is not None:
-        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
-            pose_model_id
-        )
-        if keypoint_connectors is None:
-            keypoint_connectors = pose_model.get('keypoint_connectors')
-    if camera_names is None:
-        camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
-            camera_ids
-        )
-    if camera_calibrations is None:
-        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
-            camera_ids,
-            start=video_start,
-            end=video_start
-        )
-    for camera_id in camera_ids:
-        camera_name = camera_names[camera_id]
-        camera_calibration = camera_calibrations[camera_id]
-        logger.info('Overlaying poses for {}'.format(camera_name))
-        video_metadata_with_local_paths = video_io.fetch_videos(
-            video_timestamps=[video_start],
-            camera_device_ids=[camera_id],
-        )
-        if len(video_metadata_with_local_paths) > 1:
-            raise ValueError('More than one video found for camera ID {} and video start {}'.format(
-                camera_id,
-                video_start.isoformat()
-            ))
-        input_path = video_metadata_with_local_paths[0]['video_local_path']
-        logger.info('Video input path: {}'.format(input_path))
-        output_path = os.path.join(
-            output_directory,
-            '{}_{}_{}.{}'.format(
-                output_filename_prefix,
-                video_start.strftime(output_filename_datetime_format),
-                slugify.slugify(camera_name),
-                output_filename_extension
-            )
-        )
-        logger.info('Video output path: {}'.format(output_path))
-        if keypoint_connectors is not None:
-            draw_keypoint_connectors = True
-        else:
-            draw_keypoint_connectors = False
-        video_input = cv_utils.VideoInput(
-            input_path=input_path,
-            start_time=video_start
-        )
-        video_start_time = video_input.video_parameters.start_time
-        video_fps = video_input.video_parameters.fps
-        video_frame_count = video_input.video_parameters.frame_count
-        logger.info('Opened video input. Start time: {}. FPS: {}. Frame count: {}'.format(
-            video_start_time.isoformat(),
-            video_fps,
-            video_frame_count
-        ))
-        if video_fps != 10.0:
-            raise ValueError('Overlay function expects 10 FPS but video has {} FPS'.format(video_fps))
-        if pd.to_datetime(video_start_time, utc=True) < poses_2d_df['timestamp'].min():
-            raise ValueError('Video starts at {} but 2D pose data starts at {}'.format(
-                video_start_time.isoformat(),
-                poses_2d_df['timestamp'].min().isoformat()
-            ))
-        video_end_time = video_start_time + datetime.timedelta(milliseconds=(video_frame_count - 1)*100)
-        if pd.to_datetime(video_end_time, utc=True) > poses_2d_df['timestamp'].max():
-            raise ValueError('Video ends at {} but 2D pose data ends at {}'.format(
-                video_end_time.isoformat(),
-                poses_2d_df['timestamp'].max().isoformat()
-            ))
-        video_output_parameters = video_input.video_parameters
-        if output_fourcc_string is not None:
-            video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(output_fourcc_string)
-        video_output = cv_utils.VideoOutput(
-            output_path,
-            video_parameters=video_output_parameters
-        )
-        if progress_bar:
-            if notebook:
-                t = tqdm.tqdm_notebook(total=video_frame_count)
-            else:
-                t = tqdm.tqdm(total=video_frame_count)
-        for frame_index in range(video_frame_count):
-            timestamp = video_start + datetime.timedelta(milliseconds=frame_index*100)
-            timestamp_pandas = pd.to_datetime(timestamp, utc=True)
-            frame = video_input.get_frame()
-            if frame is None:
-                raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
-            for pose_id_2d, row in poses_2d_df.loc[
-                (poses_2d_df['timestamp'] == timestamp_pandas) &
-                (poses_2d_df['camera_id'] == camera_id)
-            ].iterrows():
-                keypoint_coordinates_2d = row['keypoint_coordinates_2d']
-                frame=draw_pose_2d_opencv(
-                    image=frame,
-                    keypoint_coordinates=keypoint_coordinates_2d,
-                    draw_keypoint_connectors=draw_keypoint_connectors,
-                    keypoint_connectors=keypoint_connectors,
-                    keypoint_alpha=keypoint_alpha,
-                    keypoint_connector_alpha=keypoint_connector_alpha,
-                    keypoint_connector_linewidth=keypoint_connector_linewidth,
-                )
-            video_output.write_frame(frame)
-            if progress_bar:
-                t.update()
-        video_input.close()
-        video_output.close()
-
-def overlay_video_poses_3d(
-    poses_3d_df,
+def overlay_poses(
+    poses_df,
     start=None,
     end=None,
-    video_timestamps=None,
     camera_assignment_ids=None,
     environment_id=None,
     environment_name=None,
@@ -167,7 +33,7 @@ def overlay_video_poses_3d(
     camera_names=None,
     camera_serial_numbers=None,
     chunk_size=100,
-    minimal_honeycomb_client=None,
+    client=None,
     uri=None,
     token_uri=None,
     audience=None,
@@ -177,9 +43,8 @@ def overlay_video_poses_3d(
     video_filename_extension='mp4',
     pose_model_id=None,
     camera_calibrations=None,
-    draw_keypoint_connectors=True,
-    keypoint_connectors=None,
     pose_label_column=None,
+    keypoint_connectors=None,
     pose_color='green',
     keypoint_radius=3,
     keypoint_alpha=0.6,
@@ -187,22 +52,39 @@ def overlay_video_poses_3d(
     keypoint_connector_linewidth=3,
     pose_label_color='white',
     pose_label_background_alpha=0.6,
-    pose_label_font_scale=2.0,
-    pose_label_line_width=2,
-    output_directory='.',
-    output_filename_prefix='poses_3d_overlay',
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1,
+    output_directory='./video_overlays',
+    output_filename_prefix='poses',
     output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
-    output_filename_extension='mp4',
-    output_fourcc_string=None,
+    output_filename_extension='avi',
+    output_fourcc_string='XVID',
     concatenate_videos=True,
     delete_individual_clips=True,
-    progress_bar=False,
+    parallel=False,
+    num_parallel_processes=None,
+    task_progress_bar=False,
+    segment_progress_bar=False,
     notebook=False
 ):
+    poses_df_columns = poses_df.columns.tolist()
+    if 'keypoint_coordinates_3d' in poses_df_columns and 'camera_id' not in poses_df_columns:
+        logger.info('Poses appear to be 3D poses. Projecting into each camera view')
+        poses_3d = True
+        poses_2d = False
+    elif 'keypoint_coordinates_3d' not in poses_df_columns and 'camera_id' in poses_df_columns:
+        logger.info('Poses appear to be 2D poses. Subsetting poses foreach camera view')
+        poses_3d = False
+        poses_2d = True
+    elif len(poses_df) == 0:
+        logger.warn('Pose dataframe is empty')
+        return
+    else:
+        raise ValueError('Cannot parse pose dataframe')
     video_metadata_with_local_paths = video_io.fetch_videos(
         start=start,
         end=end,
-        video_timestamps=video_timestamps,
+        video_timestamps=None,
         camera_assignment_ids=camera_assignment_ids,
         environment_id=environment_id,
         environment_name=environment_name,
@@ -212,7 +94,7 @@ def overlay_video_poses_3d(
         camera_names=camera_names,
         camera_serial_numbers=camera_serial_numbers,
         chunk_size=chunk_size,
-        minimal_honeycomb_client=minimal_honeycomb_client,
+        client=client,
         uri=uri,
         token_uri=token_uri,
         audience=audience,
@@ -222,28 +104,23 @@ def overlay_video_poses_3d(
         video_filename_extension=video_filename_extension
     )
     video_metadata_dict = dict()
-    video_timestamp_min = None
-    video_timestamp_max = None
     for datum in video_metadata_with_local_paths:
         camera_id = datum.get('device_id')
         video_timestamp = datum.get('video_timestamp')
         if camera_id not in video_metadata_dict.keys():
             video_metadata_dict[camera_id] = dict()
         video_metadata_dict[camera_id][video_timestamp] = datum
-        if video_timestamp_min is None or video_timestamp < video_timestamp_min:
-            video_timestamp_min = video_timestamp
-        if video_timestamp_max is None or video_timestamp > video_timestamp_max:
-            video_timestamp_max = video_timestamp
     camera_ids = list(video_metadata_dict.keys())
     camera_name_dict = process_pose_data.honeycomb_io.fetch_camera_names(
         camera_ids
     )
-    if camera_calibrations is None:
-        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
-            camera_ids,
-            start=video_timestamp_min,
-            end=video_timestamp_max
-        )
+    if poses_3d:
+        if camera_calibrations is None:
+            camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+                camera_ids,
+                start=start,
+                end=end
+            )
     if pose_model_id is not None:
         pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
             pose_model_id
@@ -254,113 +131,132 @@ def overlay_video_poses_3d(
         draw_keypoint_connectors = True
     else:
         draw_keypoint_connectors = False
+    overlay_poses_camera_time_segment_partial = functools.partial(
+        overlay_poses_camera_time_segment,
+        video_metadata_dict=video_metadata_dict,
+        camera_name_dict=camera_name_dict,
+        pose_label_column=pose_label_column,
+        draw_keypoint_connectors=draw_keypoint_connectors,
+        keypoint_connectors=keypoint_connectors,
+        pose_color=pose_color,
+        keypoint_radius=keypoint_radius,
+        keypoint_alpha=keypoint_alpha,
+        keypoint_connector_alpha=keypoint_connector_alpha,
+        keypoint_connector_linewidth=keypoint_connector_linewidth,
+        pose_label_color=pose_label_color,
+        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_font_scale=pose_label_font_scale,
+        pose_label_line_width=pose_label_line_width,
+        output_directory=output_directory,
+        output_filename_prefix=output_filename_prefix,
+        output_filename_datetime_format=output_filename_datetime_format,
+        output_filename_extension=output_filename_extension,
+        output_fourcc_string=output_fourcc_string,
+        progress_bar=segment_progress_bar,
+        notebook=notebook
+    )
+    input_parameters_list = list()
+    output_parameters_list = list()
     for camera_id in camera_ids:
-        camera_name = camera_name_dict[camera_id]
-        camera_calibration = camera_calibrations[camera_id]
-        logger.info('Overlaying poses for {}'.format(camera_name))
+        if poses_3d:
+            camera_calibration = camera_calibrations[camera_id]
+            project_points_partial = functools.partial(
+                cv_utils.project_points,
+                rotation_vector=camera_calibration['rotation_vector'],
+                translation_vector=camera_calibration['translation_vector'],
+                camera_matrix=camera_calibration['camera_matrix'],
+                distortion_coefficients=camera_calibration['distortion_coefficients'],
+                remove_behind_camera=True,
+                remove_outside_frame=True,
+                image_corners=[
+                    [0,0],
+                    [camera_calibration['image_width'], camera_calibration['image_height']]
+                ]
+            )
+        logger.info('Overlaying poses for {}'.format(camera_name_dict[camera_id]))
         video_timestamps = sorted(video_metadata_dict[camera_id].keys())
-        output_paths = list()
         for video_timestamp in video_timestamps:
-            logger.info('Overlaying poses for video starting at {}'.format(video_timestamp.isoformat()))
-            input_path = video_metadata_dict[camera_id][video_timestamp]['video_local_path']
-            logger.info('Video input path: {}'.format(input_path))
-            output_path = os.path.join(
-                output_directory,
-                '{}_{}_{}.{}'.format(
-                    output_filename_prefix,
-                    video_timestamp.strftime(output_filename_datetime_format),
-                    slugify.slugify(camera_name),
-                    output_filename_extension
-                )
-            )
-            output_paths.append(output_path)
-            logger.info('Video output path: {}'.format(output_path))
-            video_input = cv_utils.VideoInput(
-                input_path=input_path,
-                start_time=video_timestamp
-            )
-            video_start_time = video_input.video_parameters.start_time
-            video_fps = video_input.video_parameters.fps
-            video_frame_count = video_input.video_parameters.frame_count
-            logger.info('Opened video input. Start time: {}. FPS: {}. Frame count: {}'.format(
-                video_start_time.isoformat(),
-                video_fps,
-                video_frame_count
+            # Add an extra second to capture extra frames in video
+            poses_time_segment_df = poses_df.loc[
+                (poses_df['timestamp'] >= video_timestamp )&
+                (poses_df['timestamp'] < video_timestamp + datetime.timedelta(seconds=11))
+            ].copy()
+            if poses_3d:
+                poses_time_segment_df['keypoint_coordinates_2d'] = poses_time_segment_df['keypoint_coordinates_3d'].apply(project_points_partial)
+            if poses_2d:
+                poses_time_segment_df = poses_time_segment_df.loc[poses_time_segment_df['camera_id'] == camera_id].copy()
+            input_parameters_list.append({
+                'poses_df': poses_time_segment_df,
+                'camera_id': camera_id,
+                'video_timestamp': video_timestamp
+            })
+    if parallel:
+        logger.info('Attempting to launch parallel processes')
+        if num_parallel_processes is None:
+            num_cpus=multiprocessing.cpu_count()
+            num_processes = num_cpus - 1
+            logger.info('Number of parallel processes not specified. {} CPUs detected. Launching {} processes'.format(
+                num_cpus,
+                num_processes
             ))
-            if video_fps != 10.0:
-                raise ValueError('Overlay function expects 10 FPS but video has {} FPS'.format(video_fps))
-            if pd.to_datetime(video_start_time, utc=True) < poses_3d_df['timestamp'].min():
-                raise ValueError('Video starts at {} but 3D pose data starts at {}'.format(
-                    video_start_time.isoformat(),
-                    poses_3d_df['timestamp'].min().isoformat()
-                ))
-            video_end_time = video_start_time + datetime.timedelta(milliseconds=(video_frame_count - 1)*100)
-            if pd.to_datetime(video_end_time, utc=True) > poses_3d_df['timestamp'].max():
-                raise ValueError('Video ends at {} but 3D pose data ends at {}'.format(
-                    video_end_time.isoformat(),
-                    poses_3d_df['timestamp'].max().isoformat()
-                ))
-            video_output_parameters = video_input.video_parameters
-            if output_fourcc_string is not None:
-                video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(output_fourcc_string)
-            video_output = cv_utils.VideoOutput(
-                output_path,
-                video_parameters=video_output_parameters
-            )
-            if progress_bar:
+        with multiprocessing.Pool(num_processes) as p:
+            if task_progress_bar:
                 if notebook:
-                    t = tqdm.tqdm_notebook(total=video_frame_count)
+                    output_parameters_list = list(tqdm.notebook.tqdm(
+                        p.imap(
+                            overlay_poses_camera_time_segment_partial,
+                            input_parameters_list
+                        ),
+                        total=len(input_parameters_list)
+                    ))
                 else:
-                    t = tqdm.tqdm(total=video_frame_count)
-            for frame_index in range(video_frame_count):
-                timestamp = video_timestamp + datetime.timedelta(milliseconds=frame_index*100)
-                timestamp_pandas = pd.to_datetime(timestamp, utc=True)
-                frame = video_input.get_frame()
-                if frame is None:
-                    raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
-                for pose_id_3d, row in poses_3d_df.loc[poses_3d_df['timestamp'] == timestamp_pandas].iterrows():
-                    keypoint_coordinates_2d = cv_utils.project_points(
-                        object_points=row['keypoint_coordinates_3d'],
-                        rotation_vector=camera_calibration['rotation_vector'],
-                        translation_vector=camera_calibration['translation_vector'],
-                        camera_matrix=camera_calibration['camera_matrix'],
-                        distortion_coefficients=camera_calibration['distortion_coefficients'],
-                        remove_behind_camera=True,
-                        remove_outside_frame=True,
-                        image_corners=[
-                            [0,0],
-                            [camera_calibration['image_width'], camera_calibration['image_height']]
-                        ]
+                    output_parameters_list = list(tqdm.tqdm(
+                        p.imap(
+                            overlay_poses_camera_time_segment_partial,
+                            input_parameters_list
+                        ),
+                        total=len(input_parameters_list)
+                    ))
+            else:
+                output_parameters_list = list(
+                    p.imap(
+                        overlay_poses_camera_time_segment_partial,
+                        input_parameters_list
                     )
-                    if pose_label_column is not None:
-                        pose_label = row[pose_label_column]
-                    else:
-                        pose_label = None
-                    frame=draw_pose_2d_opencv(
-                        image=frame,
-                        keypoint_coordinates=keypoint_coordinates_2d,
-                        pose_label=pose_label,
-                        draw_keypoint_connectors=draw_keypoint_connectors,
-                        keypoint_connectors=keypoint_connectors,
-                        keypoint_alpha=keypoint_alpha,
-                        keypoint_connector_alpha=keypoint_connector_alpha,
-                        keypoint_connector_linewidth=keypoint_connector_linewidth,
-                        pose_label_font_scale=pose_label_font_scale,
-                        pose_label_line_width=pose_label_line_width
-                    )
-                video_output.write_frame(frame)
-                if progress_bar:
-                    t.update()
-            video_input.close()
-            video_output.close()
-        if concatenate_videos:
+                )
+    else:
+        if task_progress_bar:
+            if notebook:
+                output_parameters_list = list(map(
+                    overlay_poses_camera_time_segment_partial,
+                    tqdm.notebook.tqdm(input_parameters_list)
+                ))
+            else:
+                output_parameters_list = list(map(
+                    overlay_poses_camera_time_segment_partial,
+                    tqdm.tqdm(input_parameters_list)
+                ))
+        else:
+            output_parameters_list = list(map(
+                overlay_poses_camera_time_segment_partial,
+                input_parameters_list
+            ))
+    if concatenate_videos:
+        output_path_dict = dict()
+        for output_parameters in output_parameters_list:
+            camera_id = output_parameters['camera_id']
+            output_path = output_parameters['output_path']
+            if camera_id not in output_path_dict.keys():
+                output_path_dict[camera_id] = list()
+            output_path_dict[camera_id].append(output_path)
+        for camera_id, output_paths in output_path_dict.items():
             concat_output_path = os.path.join(
                 output_directory,
                 '{}_{}_{}_{}.{}'.format(
                     output_filename_prefix,
                     video_timestamps[0].strftime(output_filename_datetime_format),
                     video_timestamps[-1].strftime(output_filename_datetime_format),
-                    slugify.slugify(camera_name),
+                    slugify.slugify(camera_name_dict[camera_id]),
                     output_filename_extension
                 )
             )
@@ -375,6 +271,402 @@ def overlay_video_poses_3d(
                 delete_input_videos=delete_individual_clips
             )
 
+def overlay_poses_camera_time_segment(
+    input_parameters,
+    video_metadata_dict,
+    camera_name_dict,
+    pose_label_column=None,
+    draw_keypoint_connectors=False,
+    keypoint_connectors=None,
+    pose_color='green',
+    keypoint_radius=3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.6,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1,
+    output_directory='.',
+    output_filename_prefix='poses_overlay',
+    output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
+    output_filename_extension='mp4',
+    output_fourcc_string=None,
+    progress_bar=False,
+    notebook=False
+):
+    poses_df = input_parameters['poses_df']
+    camera_id = input_parameters['camera_id']
+    video_timestamp = input_parameters['video_timestamp']
+    camera_name = camera_name_dict[camera_id]
+    video_local_path = video_metadata_dict[camera_id][video_timestamp]['video_local_path']
+    logger.info('Overlaying poses for video starting at {}'.format(video_timestamp.isoformat()))
+    logger.info('Video input path: {}'.format(video_local_path))
+    output_path = os.path.join(
+        output_directory,
+        '{}_{}_{}.{}'.format(
+            output_filename_prefix,
+            video_timestamp.strftime(output_filename_datetime_format),
+            slugify.slugify(camera_name),
+            output_filename_extension
+        )
+    )
+    logger.info('Video output path: {}'.format(output_path))
+    video_input = cv_utils.VideoInput(
+        input_path=video_local_path,
+        start_time=video_timestamp
+    )
+    video_start_time = video_input.video_parameters.start_time
+    video_fps = video_input.video_parameters.fps
+    video_frame_count = video_input.video_parameters.frame_count
+    logger.info('Opened video input. Start time: {}. FPS: {}. Frame count: {}'.format(
+        video_start_time.isoformat(),
+        video_fps,
+        video_frame_count
+    ))
+    if video_fps != 10.0:
+        raise ValueError('Overlay function expects 10 FPS but video has {} FPS'.format(video_fps))
+    if pd.to_datetime(video_start_time, utc=True) > poses_df['timestamp'].max():
+        raise ValueError('Video starts at {} but 3D pose data ends at {}'.format(
+            video_start_time.isoformat(),
+            poses_df['timestamp'].max().isoformat()
+        ))
+    video_end_time = video_start_time + datetime.timedelta(milliseconds=(video_frame_count - 1)*100)
+    if pd.to_datetime(video_end_time, utc=True) < poses_df['timestamp'].min():
+        raise ValueError('Video ends at {} but 3D pose data starts at {}'.format(
+            video_end_time.isoformat(),
+            poses_df['timestamp'].min().isoformat()
+        ))
+    video_output_parameters = video_input.video_parameters
+    if output_fourcc_string is not None:
+        video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(output_fourcc_string)
+    os.makedirs(output_directory, exist_ok=True)
+    video_output = cv_utils.VideoOutput(
+        output_path,
+        video_parameters=video_output_parameters
+    )
+    if progress_bar:
+        if notebook:
+            t = tqdm.tqdm_notebook(total=video_frame_count)
+        else:
+            t = tqdm.tqdm(total=video_frame_count)
+    for frame_index in range(video_frame_count):
+        timestamp = video_timestamp + datetime.timedelta(milliseconds=frame_index*100)
+        timestamp_pandas = pd.to_datetime(timestamp, utc=True)
+        frame = video_input.get_frame()
+        if frame is None:
+            raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
+        for pose_id, row in poses_df.loc[poses_df['timestamp'] == timestamp_pandas].iterrows():
+            keypoint_coordinates_2d = row['keypoint_coordinates_2d']
+            if pose_label_column is not None:
+                pose_label = row[pose_label_column]
+            else:
+                pose_label = None
+            frame=draw_pose_2d_opencv(
+                image=frame,
+                keypoint_coordinates=keypoint_coordinates_2d,
+                pose_label=pose_label,
+                draw_keypoint_connectors=draw_keypoint_connectors,
+                keypoint_connectors=keypoint_connectors,
+                keypoint_alpha=keypoint_alpha,
+                keypoint_connector_alpha=keypoint_connector_alpha,
+                keypoint_connector_linewidth=keypoint_connector_linewidth,
+                pose_label_font_scale=pose_label_font_scale,
+                pose_label_line_width=pose_label_line_width
+            )
+        video_output.write_frame(frame)
+        if progress_bar:
+            t.update()
+    video_input.close()
+    video_output.close()
+    output_parameters = {
+        'camera_id': camera_id,
+        'video_timestamp': video_timestamp,
+        'output_path': output_path
+    }
+    return output_parameters
+
+def visualize_3d_pose_reconstruction(
+    pose_3d_id,
+    pose_model_id,
+    floor_height=0.0,
+    poses_3d_df=None,
+    pose_reconstruction_3d_inference_id=None,
+    pose_3d_timestamp=None,
+    poses_2d_df=None,
+    pose_extraction_2d_inference_id=None,
+    base_dir=None,
+    environment_id=None,
+    pose_processing_subdirectory='pose_processing',
+    camera_device_id_lookup=None,
+    camera_calibrations=None,
+    camera_names=None,
+    local_image_directory='./images',
+    image_filename_extension='png',
+    local_video_directory='./videos',
+    video_filename_extension='mp4',
+    pose_3d_color='green',
+    pose_3d_footprint_color='green',
+    pose_3d_footprint_alpha=0.5,
+    constituent_pose_2d_color='blue',
+    non_constituent_pose_2d_color='red',
+    keypoint_connectors=None,
+    keypoint_radius=3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
+    keypoint_connector_linewidth=3,
+    timestamp_text_color='white',
+    timestamp_background_color='black',
+    timestamp_background_alpha=0.3,
+    timestamp_font_scale=1.5,
+    timestamp_line_width=1,
+    output_directory='./image_overlays',
+    output_filename_stem='pose_3d_reconstruction',
+    output_filename_extension='png',
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    pass
+    # Fetch 3D poses (if necessary)
+    if poses_3d_df is None:
+        if (
+            base_dir is None or
+            environment_id is None or
+            pose_reconstruction_3d_inference_id is None or
+            pose_3d_timestamp is None
+        ):
+            raise ValueError('If poses_3d_df not supplied, must specify base_dir, and environment_id, pose_reconstruction_3d_inference_id, and pose_3d_timestamp')
+        poses_3d_df = process_pose_data.local_io.fetch_data_local_by_time_segment(
+            start=pose_3d_timestamp,
+            end=pose_3d_timestamp,
+            base_dir=base_dir,
+            pipeline_stage='pose_reconstruction_3d',
+            environment_id=environment_id,
+            filename_stem='poses_3d',
+            inference_ids=pose_reconstruction_3d_inference_id,
+            data_ids=[pose_3d_id],
+            sort_field=None,
+            object_type='dataframe',
+            pose_processing_subdirectory='pose_processing'
+        )
+    # Extract 3D pose
+    if pose_3d_id not in poses_3d_df.index:
+        raise ValueError('3D pose {} not found in 3D poses'.format(
+            pose_3d_id
+        ))
+    pose_3d = poses_3d_df.loc[pose_3d_id]
+    pose_3d_timestamp = pose_3d['timestamp']
+    pose_3d_keypoint_coordinates_3d = pose_3d['keypoint_coordinates_3d']
+    pose_3d_pose_2d_ids = pose_3d['pose_2d_ids']
+    # Calculate 3D pose footprint
+    x_min = np.nanmin(pose_3d_keypoint_coordinates_3d[:, 0])
+    x_max = np.nanmax(pose_3d_keypoint_coordinates_3d[:, 0])
+    y_min = np.nanmin(pose_3d_keypoint_coordinates_3d[:, 1])
+    y_max = np.nanmax(pose_3d_keypoint_coordinates_3d[:, 1])
+    pose_3d_footprint_vertices_3d = np.array([
+        [x_min, y_min, floor_height],
+        [x_min, y_max, floor_height],
+        [x_max, y_max, floor_height],
+        [x_max, y_min, floor_height]
+    ])
+    # Fetch 2D poses (if necessary)
+    if poses_2d_df is None:
+        if (
+            base_dir is None or
+            environment_id is None or
+            pose_extraction_2d_inference_id is None or
+            pose_3d_timestamp is None
+        ):
+            raise ValueError('If poses_2d_df not supplied, must specify base_dir, environment_id, pose_extraction_2d_inference_id, and pose_3d_timestamp')
+        poses_2d_df = process_pose_data.local_io.fetch_data_local_by_time_segment(
+            start=pose_3d_timestamp,
+            end=pose_3d_timestamp,
+            base_dir=base_dir,
+            pipeline_stage='pose_extraction_2d',
+            environment_id=environment_id,
+            filename_stem='poses_2d',
+            inference_ids=pose_extraction_2d_inference_id,
+            data_ids=None,
+            sort_field=None,
+            object_type='dataframe',
+            pose_processing_subdirectory='pose_processing'
+        )
+    # Extract 2D poses from the same timestamp as the 3D pose
+    poses_2d_df = poses_2d_df.loc[poses_2d_df['timestamp'] == pose_3d_timestamp].copy()
+    if len(poses_2d_df) == 0:
+        raise ValueError('Timestamp associated with 3D pose {} not found in 2D poses'.format(
+            pose_3d_timestamp.isoformat()
+        ))
+    # Convert assignment IDs to device IDs for cameras
+    poses_2d_df = process_pose_data.local_io.convert_assignment_ids_to_camera_device_ids(
+        poses_2d_df=poses_2d_df,
+        camera_device_id_lookup=camera_device_id_lookup,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    camera_ids = poses_2d_df['camera_id'].unique().tolist()
+    # Fetch camera names (if necessary)
+    if camera_names is None:
+        camera_names = process_pose_data.honeycomb_io.fetch_camera_names(
+            camera_ids=camera_ids,
+            chunk_size=chunk_size,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    # Fetch camera calibrations (if necessary)
+    if camera_calibrations is None:
+        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+            camera_ids=camera_ids,
+            start=pose_3d_timestamp,
+            end=pose_3d_timestamp,
+            chunk_size=chunk_size,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    # Download images
+    image_metadata_with_local_paths = video_io.fetch_images(
+        image_timestamps=[pose_3d_timestamp],
+        camera_device_ids=camera_ids,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret,
+        local_image_directory=local_image_directory,
+        image_filename_extension=image_filename_extension,
+        local_video_directory=local_video_directory,
+        video_filename_extension=video_filename_extension
+    )
+    image_metadata_dict = {
+        image_metadatum['device_id']: image_metadatum
+        for image_metadatum in image_metadata_with_local_paths
+    }
+    # Fetch information for keypoint connectors (if necessary)
+    if pose_model_id is not None:
+        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
+            pose_model_id
+        )
+        if keypoint_connectors is None:
+            keypoint_connectors = pose_model.get('keypoint_connectors')
+    if keypoint_connectors is not None:
+        draw_keypoint_connectors = True
+    else:
+        draw_keypoint_connectors = False
+    # Create overlays
+    for camera_id in camera_ids:
+        # Project 3D pose into this camera
+        pose_3d_keypoint_coordinates_2d = cv_utils.project_points(
+            object_points=pose_3d_keypoint_coordinates_3d,
+            rotation_vector = camera_calibrations[camera_id]['rotation_vector'],
+            translation_vector = camera_calibrations[camera_id]['translation_vector'],
+            camera_matrix = camera_calibrations[camera_id]['camera_matrix'],
+            distortion_coefficients = camera_calibrations[camera_id]['distortion_coefficients'],
+            remove_behind_camera=True,
+            remove_outside_frame=True,
+            image_corners=[
+                [0,0],
+                [camera_calibrations[camera_id]['image_width'], camera_calibrations[camera_id]['image_height']]
+            ]
+        )
+        # Project 3D pose footprint into this camera
+        pose_3d_footprint_vertices_2d = cv_utils.project_points(
+            object_points=pose_3d_footprint_vertices_3d,
+            rotation_vector=camera_calibrations[camera_id]['rotation_vector'],
+            translation_vector=camera_calibrations[camera_id]['translation_vector'],
+            camera_matrix=camera_calibrations[camera_id]['camera_matrix'],
+            distortion_coefficients=camera_calibrations[camera_id]['distortion_coefficients'],
+            remove_behind_camera=True,
+            remove_outside_frame=True,
+            image_corners=[
+                [0,0],
+                [camera_calibrations[camera_id]['image_width'], camera_calibrations[camera_id]['image_height']]
+            ]
+        )
+        # Load image into memory
+        image = cv.imread(image_metadata_dict.get(camera_id).get('image_local_path'))
+        # Draw projected 3D pose in one color
+        image = draw_pose_2d_opencv(
+            image=image,
+            keypoint_coordinates=pose_3d_keypoint_coordinates_2d,
+            draw_keypoint_connectors=draw_keypoint_connectors,
+            keypoint_connectors=keypoint_connectors,
+            pose_label=None,
+            pose_color=pose_3d_color,
+            keypoint_radius=keypoint_radius,
+            keypoint_alpha=keypoint_alpha,
+            keypoint_connector_alpha=keypoint_connector_alpha,
+            keypoint_connector_linewidth=keypoint_connector_linewidth
+        )
+        # Draw floor box underneath 3D pose in same color color
+        if np.all(np.isfinite(pose_3d_footprint_vertices_2d)):
+            image = draw_polygon_2d_opencv(
+                image=image,
+                vertices=pose_3d_footprint_vertices_2d,
+                fill_color=pose_3d_footprint_color,
+                fill_alpha=pose_3d_footprint_alpha
+            )
+        # Draw 2D poses
+        poses_2d_camera_df = poses_2d_df.loc[poses_2d_df['camera_id'] == camera_id]
+        for pose_2d_id, pose_2d in poses_2d_camera_df.iterrows():
+            if pose_2d_id in pose_3d_pose_2d_ids:
+                pose_2d_color = constituent_pose_2d_color
+            else:
+                pose_2d_color = non_constituent_pose_2d_color
+            image = draw_pose_2d_opencv(
+                image=image,
+                keypoint_coordinates=pose_2d['keypoint_coordinates_2d'],
+                draw_keypoint_connectors=draw_keypoint_connectors,
+                keypoint_connectors=keypoint_connectors,
+                pose_label=None,
+                pose_color=pose_2d_color,
+                keypoint_radius=keypoint_radius,
+                keypoint_alpha=keypoint_alpha,
+                keypoint_connector_alpha=keypoint_connector_alpha,
+                keypoint_connector_linewidth=keypoint_connector_linewidth
+            )
+        # Write timestamp in the corner
+        image = draw_timestamp_opencv(
+            image=image,
+            timestamp=pose_3d_timestamp,
+            text_color=timestamp_text_color,
+            background_color=timestamp_background_color,
+            background_alpha=timestamp_background_alpha,
+            font_scale=timestamp_font_scale,
+            line_width=timestamp_line_width
+        )
+        # Build image save path
+        output_path = os.path.join(
+            output_directory,
+            '{}_{}_{}.{}'.format(
+                output_filename_stem,
+                pose_3d_id,
+                slugify.slugify(camera_names[camera_id]),
+                output_filename_extension
+            )
+        )
+        # Create directory if necessary
+        os.makedirs(output_directory, exist_ok=True)
+        # Save image
+        cv.imwrite(output_path, image)
 
 
 def draw_poses_2d_timestamp_camera_pair_opencv(
@@ -389,8 +681,8 @@ def draw_poses_2d_timestamp_camera_pair_opencv(
     keypoint_connector_linewidth=3,
     pose_label_color='white',
     pose_label_background_alpha=0.6,
-    pose_label_font_scale=2.0,
-    pose_label_line_width=2,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1,
     show=True,
     fig_width_inches=10.5,
     fig_height_inches=8
@@ -407,38 +699,38 @@ def draw_poses_2d_timestamp_camera_pair_opencv(
     if annotate_matches:
         num_matches = df['match'].sum()
         for camera_letter in ['a', 'b']:
-            pose_ids = dfs_single_camera[camera_letter].index.values.tolist()
-            pose_label_maps[camera_letter] = {pose_id: '' for pose_id in pose_ids}
+            pose_2d_ids = dfs_single_camera[camera_letter].index.values.tolist()
+            pose_label_maps[camera_letter] = {pose_2d_id: '' for pose_2d_id in pose_2d_ids}
             if not generate_match_aliases:
                 if 'track_label_2d' in dfs_single_camera[camera_letter].columns:
                     pose_labels = dfs_single_camera[camera_letter]['track_label_2d'].values.tolist()
-                elif len(pose_ids) <= 26:
-                    pose_labels = string.ascii_uppercase[:len(pose_ids)]
+                elif len(pose_2d_ids) <= 26:
+                    pose_labels = string.ascii_uppercase[:len(pose_2d_ids)]
                 else:
-                    pose_labels = range(len(pose_ids))
-                pose_label_maps[camera_letter] = dict(zip(pose_ids, pose_labels))
-            pose_color_maps[camera_letter] = {pose_id: 'grey' for pose_id in pose_ids}
+                    pose_labels = range(len(pose_2d_ids))
+                pose_label_maps[camera_letter] = dict(zip(pose_2d_ids, pose_labels))
+            pose_color_maps[camera_letter] = {pose_2d_id: 'grey' for pose_2d_id in pose_2d_ids}
         match_aliases = iter(list(string.ascii_uppercase[:num_matches]))
         match_colors = iter(sns.color_palette('husl', n_colors=num_matches))
-        for (pose_id_a, pose_id_b), row in df.iterrows():
+        for (pose_2d_id_a, pose_2d_id_b), row in df.iterrows():
             if row['match']:
-                old_label_a = pose_label_maps['a'][pose_id_a]
-                old_label_b = pose_label_maps['b'][pose_id_b]
-                pose_label_maps['a'][pose_id_a] = '{} ({})'.format(
+                old_label_a = pose_label_maps['a'][pose_2d_id_a]
+                old_label_b = pose_label_maps['b'][pose_2d_id_b]
+                pose_label_maps['a'][pose_2d_id_a] = '{} ({})'.format(
                     old_label_a,
                     old_label_b
                 )
-                pose_label_maps['b'][pose_id_b] = '{} ({})'.format(
+                pose_label_maps['b'][pose_2d_id_b] = '{} ({})'.format(
                     old_label_b,
                     old_label_a
                 )
                 if generate_match_aliases:
                     match_alias = next(match_aliases)
-                    pose_label_maps['a'][pose_id_a] = match_alias
-                    pose_label_maps['b'][pose_id_b] = match_alias
+                    pose_label_maps['a'][pose_2d_id_a] = match_alias
+                    pose_label_maps['b'][pose_2d_id_b] = match_alias
                 pose_color = next(match_colors)
-                pose_color_maps['a'][pose_id_a] = pose_color
-                pose_color_maps['b'][pose_id_b] = pose_color
+                pose_color_maps['a'][pose_2d_id_a] = pose_color
+                pose_color_maps['b'][pose_2d_id_b] = pose_color
     for camera_letter in ['a', 'b']:
         draw_poses_2d_timestamp_camera_opencv(
             df=dfs_single_camera[camera_letter],
@@ -469,8 +761,8 @@ def draw_poses_2d_timestamp_camera_opencv(
     keypoint_connector_linewidth=3,
     pose_label_color='white',
     pose_label_background_alpha=0.6,
-    pose_label_font_scale=2.0,
-    pose_label_line_width=2,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1,
     show=True,
     fig_width_inches=10.5,
     fig_height_inches=8
@@ -485,22 +777,22 @@ def draw_poses_2d_timestamp_camera_opencv(
     camera_id = camera_ids[0]
     camera_identifier = camera_id
     df = df.sort_index()
-    pose_ids = df.index.tolist()
+    pose_2d_ids = df.index.tolist()
     if pose_label_map is None:
         if 'track_label_2d' in df.columns:
             pose_labels = df['track_label_2d'].values.tolist()
-        elif len(pose_ids) <= 26:
-            pose_labels = string.ascii_uppercase[:len(pose_ids)]
+        elif len(pose_2d_ids) <= 26:
+            pose_labels = string.ascii_uppercase[:len(pose_2d_ids)]
         else:
-            pose_labels = range(len(pose_ids))
-        pose_label_map = dict(zip(pose_ids, pose_labels))
+            pose_labels = range(len(pose_2d_ids))
+        pose_label_map = dict(zip(pose_2d_ids, pose_labels))
     if pose_color_map is None:
-        pose_colors = sns.color_palette('husl', n_colors=len(pose_ids))
-        pose_color_map = dict(zip(pose_ids, pose_colors))
+        pose_colors = sns.color_palette('husl', n_colors=len(pose_2d_ids))
+        pose_color_map = dict(zip(pose_2d_ids, pose_colors))
     if draw_keypoint_connectors:
         if keypoint_connectors is None:
             pose_model = process_pose_data.honeycomb_io.fetch_pose_model(
-                pose_id=pose_ids[0]
+                pose_2d_id=pose_2d_ids[0]
             )
             keypoint_connectors = pose_model.get('keypoint_connectors')
     if background_image is None:
@@ -511,14 +803,14 @@ def draw_poses_2d_timestamp_camera_opencv(
         image_local_path = image_metadata[0]['image_local_path']
         background_image = cv_utils.fetch_image_from_local_drive(image_local_path)
     new_image = background_image
-    for pose_id, row in df.iterrows():
+    for pose_2d_id, row in df.iterrows():
         new_image = process_pose_data.draw_pose_2d_opencv(
             image=new_image,
             keypoint_coordinates=row['keypoint_coordinates_2d'],
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
-            pose_label=pose_label_map[pose_id],
-            pose_color=pose_color_map[pose_id],
+            pose_label=pose_label_map[pose_2d_id],
+            pose_color=pose_color_map[pose_2d_id],
             keypoint_alpha=keypoint_alpha,
             keypoint_connector_alpha=keypoint_connector_alpha,
             keypoint_connector_linewidth=keypoint_connector_linewidth,
@@ -548,8 +840,8 @@ def draw_pose_2d_opencv(
     keypoint_connector_linewidth=3,
     pose_label_color='white',
     pose_label_background_alpha=0.6,
-    pose_label_font_scale=2.0,
-    pose_label_line_width=2
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1
 ):
     pose_color = matplotlib.colors.to_hex(pose_color, keep_alpha=False)
     pose_label_color = matplotlib.colors.to_hex(pose_label_color, keep_alpha=False)
@@ -584,7 +876,7 @@ def draw_pose_2d_opencv(
                     color=pose_color,
                     alpha=keypoint_connector_alpha
                 )
-    if pose_label is not None:
+    if pd.notna(pose_label):
         pose_label_anchor = np.nanmean(keypoint_coordinates, axis=0)
         text_box_size, baseline = cv.getTextSize(
             text=str(pose_label),
@@ -621,6 +913,72 @@ def draw_pose_2d_opencv(
             color=pose_label_color
         )
     return new_image
+
+def draw_polygon_2d_opencv(
+    image,
+    vertices,
+    fill_color='white',
+    fill_alpha=0.5
+):
+    fill_color = matplotlib.colors.to_hex(fill_color, keep_alpha=False)
+    image = cv_utils.draw_polygon(
+        original_image=image,
+        vertices=vertices,
+        color=fill_color,
+        alpha=fill_alpha
+    )
+    return image
+
+def draw_timestamp_opencv(
+    image,
+    timestamp,
+    text_color='white',
+    background_color='black',
+    background_alpha=0.3,
+    font_scale=1.5,
+    line_width=1,
+    padding = 5
+):
+    text_color = matplotlib.colors.to_hex(text_color, keep_alpha=False)
+    background_color = matplotlib.colors.to_hex(background_color, keep_alpha=False)
+    image_height, image_width, image_depth = image.shape
+    upper_right_coordinates = [image_width - padding, padding]
+    timestamp_text = timestamp.isoformat()
+    text_box_size, baseline = cv.getTextSize(
+        text=str(timestamp_text),
+        fontFace=cv.FONT_HERSHEY_PLAIN,
+        fontScale=font_scale,
+        thickness=line_width
+    )
+    image=cv_utils.draw_rectangle(
+        original_image=image,
+        coordinates=[
+            [
+                upper_right_coordinates[0] - text_box_size[0],
+                upper_right_coordinates[1]
+            ],
+            [
+                upper_right_coordinates[0],
+                upper_right_coordinates[1] + text_box_size[1]
+            ]
+        ],
+        line_width=0,
+        color=background_color,
+        fill=True,
+        alpha=background_alpha
+    )
+    image = cv_utils.draw_text(
+        original_image=image,
+        coordinates=upper_right_coordinates,
+        text=timestamp.isoformat(),
+        horizontal_alignment='right',
+        vertical_alignment='top',
+        font_face=cv.FONT_HERSHEY_PLAIN,
+        font_scale=font_scale,
+        line_width=line_width,
+        color=text_color
+    )
+    return image
 
 def draw_poses_3d_timestamp_camera_opencv(
     df,
@@ -674,7 +1032,7 @@ def draw_poses_3d_timestamp_camera_opencv(
         image_local_path = image_metadata[0]['image_local_path']
         background_image = cv_utils.fetch_image_from_local_drive(image_local_path)
         new_image = background_image
-        for pose_id_3d, row in df.iterrows():
+        for pose_3d_id, row in df.iterrows():
             keypoint_coordinates_2d = cv_utils.project_points(
                 object_points=row['keypoint_coordinates_3d'],
                 rotation_vector=camera_calibration['rotation_vector'],
@@ -749,38 +1107,38 @@ def draw_poses_2d_timestamp_camera_pair(
     if annotate_matches:
         num_matches = df['match'].sum()
         for camera_letter in ['a', 'b']:
-            pose_ids = dfs_single_camera[camera_letter].index.values.tolist()
-            pose_label_maps[camera_letter] = {pose_id: '' for pose_id in pose_ids}
+            pose_2d_ids = dfs_single_camera[camera_letter].index.values.tolist()
+            pose_label_maps[camera_letter] = {pose_2d_id: '' for pose_2d_id in pose_2d_ids}
             if not generate_match_aliases:
                 if 'track_label_2d' in dfs_single_camera[camera_letter].columns:
                     pose_labels = dfs_single_camera[camera_letter]['track_label_2d'].values.tolist()
-                elif len(pose_ids) <= 26:
-                    pose_labels = string.ascii_uppercase[:len(pose_ids)]
+                elif len(pose_2d_ids) <= 26:
+                    pose_labels = string.ascii_uppercase[:len(pose_2d_ids)]
                 else:
-                    pose_labels = range(len(pose_ids))
-                pose_label_maps[camera_letter] = dict(zip(pose_ids, pose_labels))
-            pose_color_maps[camera_letter] = {pose_id: 'grey' for pose_id in pose_ids}
+                    pose_labels = range(len(pose_2d_ids))
+                pose_label_maps[camera_letter] = dict(zip(pose_2d_ids, pose_labels))
+            pose_color_maps[camera_letter] = {pose_2d_id: 'grey' for pose_2d_id in pose_2d_ids}
         match_aliases = iter(list(string.ascii_uppercase[:num_matches]))
         match_colors = iter(sns.color_palette('husl', n_colors=num_matches))
-        for (pose_id_a, pose_id_b), row in df.iterrows():
+        for (pose_2d_id_a, pose_2d_id_b), row in df.iterrows():
             if row['match']:
-                old_label_a = pose_label_maps['a'][pose_id_a]
-                old_label_b = pose_label_maps['b'][pose_id_b]
-                pose_label_maps['a'][pose_id_a] = '{} ({})'.format(
+                old_label_a = pose_label_maps['a'][pose_2d_id_a]
+                old_label_b = pose_label_maps['b'][pose_2d_id_b]
+                pose_label_maps['a'][pose_2d_id_a] = '{} ({})'.format(
                     old_label_a,
                     old_label_b
                 )
-                pose_label_maps['b'][pose_id_b] = '{} ({})'.format(
+                pose_label_maps['b'][pose_2d_id_b] = '{} ({})'.format(
                     old_label_b,
                     old_label_a
                 )
                 if generate_match_aliases:
                     match_alias = next(match_aliases)
-                    pose_label_maps['a'][pose_id_a] = match_alias
-                    pose_label_maps['b'][pose_id_b] = match_alias
+                    pose_label_maps['a'][pose_2d_id_a] = match_alias
+                    pose_label_maps['b'][pose_2d_id_b] = match_alias
                 pose_color = next(match_colors)
-                pose_color_maps['a'][pose_id_a] = pose_color
-                pose_color_maps['b'][pose_id_b] = pose_color
+                pose_color_maps['a'][pose_2d_id_a] = pose_color
+                pose_color_maps['b'][pose_2d_id_b] = pose_color
     for camera_letter in ['a', 'b']:
         draw_poses_2d_timestamp_camera(
             df=dfs_single_camera[camera_letter],
@@ -865,31 +1223,31 @@ def draw_poses_2d_timestamp_camera(
         filename_extension
     )
     df = df.sort_index()
-    pose_ids = df.index.tolist()
+    pose_2d_ids = df.index.tolist()
     if pose_label_map is None:
         if 'track_label_2d' in df.columns:
             pose_labels = df['track_label_2d'].values.tolist()
-        elif len(pose_ids) <= 26:
-            pose_labels = string.ascii_uppercase[:len(pose_ids)]
+        elif len(pose_2d_ids) <= 26:
+            pose_labels = string.ascii_uppercase[:len(pose_2d_ids)]
         else:
-            pose_labels = range(len(pose_ids))
-        pose_label_map = dict(zip(pose_ids, pose_labels))
+            pose_labels = range(len(pose_2d_ids))
+        pose_label_map = dict(zip(pose_2d_ids, pose_labels))
     if pose_color_map is None:
-        pose_colors = sns.color_palette('husl', n_colors=len(pose_ids))
-        pose_color_map = dict(zip(pose_ids, pose_colors))
+        pose_colors = sns.color_palette('husl', n_colors=len(pose_2d_ids))
+        pose_color_map = dict(zip(pose_2d_ids, pose_colors))
     if draw_keypoint_connectors:
         if keypoint_connectors is None:
             pose_model = process_pose_data.honeycomb_io.fetch_pose_model(
-                pose_id=pose_ids[0]
+                pose_2d_id=pose_2d_ids[0]
             )
             keypoint_connectors = pose_model.get('keypoint_connectors')
-    for pose_id, row in df.iterrows():
+    for pose_2d_id, row in df.iterrows():
         process_pose_data.draw_pose_2d(
             row['keypoint_coordinates_2d'],
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
-            pose_label=pose_label_map[pose_id],
-            pose_color=pose_color_map[pose_id],
+            pose_label=pose_label_map[pose_2d_id],
+            pose_color=pose_color_map[pose_2d_id],
             keypoint_alpha=keypoint_alpha,
             keypoint_connector_alpha=keypoint_connector_alpha,
             keypoint_connector_linewidth=keypoint_connector_linewidth,
@@ -1016,7 +1374,7 @@ def draw_poses_3d_timestamp_camera(
             cv.cvtColor(background_image, cv.COLOR_BGR2RGB),
             alpha=background_image_alpha
         )
-        for pose_id_3d, row in df.iterrows():
+        for pose_3d_id, row in df.iterrows():
             keypoint_coordinates_2d = cv_utils.project_points(
                 object_points=row['keypoint_coordinates_3d'],
                 rotation_vector=camera_calibration['rotation_vector'],
@@ -1127,7 +1485,7 @@ def draw_poses_3d_consecutive_timestamps(
                 cv.cvtColor(background_image, cv.COLOR_BGR2RGB),
                 alpha=background_image_alpha
             )
-            for pose_id_3d, row in poses_3d_df[poses_3d_df['timestamp'] == selected_timestamp].iterrows():
+            for pose_3d_id, row in poses_3d_df[poses_3d_df['timestamp'] == selected_timestamp].iterrows():
                 keypoint_coordinates_2d = cv_utils.project_points(
                     object_points=row['keypoint_coordinates_3d'],
                     rotation_vector=camera_calibration['rotation_vector'],
@@ -1284,8 +1642,8 @@ def visualize_pose_pair(
     fig_suptitle = timestamp.strftime(plot_title_datetime_format)
     save_filename = '{}_{}_{}.{}'.format(
         filename_prefix,
-        slugify.slugify(pose_pair['pose_id_a']),
-        slugify.slugify(pose_pair['pose_id_b']),
+        slugify.slugify(pose_pair['pose_2d_id_a']),
+        slugify.slugify(pose_pair['pose_2d_id_b']),
         filename_extension
     )
     centroid_3d = np.nanmean(pose_pair['keypoint_coordinates_3d'], axis=0)
@@ -1418,15 +1776,15 @@ def extract_single_camera_data(
     df = df.reset_index()
     dfs = dict()
     for camera_letter in ['a', 'b']:
-        extraction_columns = ['pose_id_' + camera_letter, 'timestamp']
+        extraction_columns = ['pose_2d_id_' + camera_letter, 'timestamp']
         extraction_columns.extend([single_camera_column + '_' + camera_letter for single_camera_column in single_camera_columns])
-        target_columns = ['pose_id', 'timestamp']
+        target_columns = ['pose_2d_id', 'timestamp']
         target_columns.extend(single_camera_columns)
         column_map = dict(zip(extraction_columns, target_columns))
         df_single_camera = df.reindex(columns=extraction_columns)
         df_single_camera.rename(columns=column_map, inplace=True)
-        df_single_camera.drop_duplicates(subset='pose_id', inplace=True)
-        df_single_camera.set_index('pose_id', inplace=True)
+        df_single_camera.drop_duplicates(subset='pose_2d_id', inplace=True)
+        df_single_camera.set_index('pose_2d_id', inplace=True)
         dfs[camera_letter] = df_single_camera
     return dfs
 
@@ -1446,6 +1804,7 @@ def concat_videos(
     fp.close()
     stream  = ffmpeg.input(temp_file_list_path, format='concat', safe=0)
     stream = ffmpeg.output(stream, output_video_path, c='copy')
+    stream = ffmpeg.overwrite_output(stream)
     ffmpeg.run(stream)
     if delete_input_videos:
         for input_video_path in input_videos_path_list:

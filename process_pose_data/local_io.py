@@ -6,20 +6,31 @@ from uuid import uuid4
 import datetime
 import os
 import glob
+import pickle
 import re
 import json
 import math
 
 logger = logging.getLogger(__name__)
 
+class CustomJSONEncoder(json.JSONEncoder):
+        def default(self, obj):
+                if isinstance(obj, datetime.datetime):
+                        return obj.isoformat()
+                if isinstance(obj, np.ndarray):
+                        return obj.tolist()
+                return json.JSONEncoder.default(self, obj)
+
 def fetch_2d_pose_data_alphapose_local_time_segment(
     base_dir,
     environment_id,
     time_segment_start,
-    file_name='alphapose-results.json'
+    alphapose_subdirectory='prepared',
+    filename='alphapose-results.json',
+    json_format='cmu'
 ):
     time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
-    df = fetch_2d_pose_data_alphapose_local(
+    glob_pattern = alphapose_data_file_glob_pattern(
         base_dir=base_dir,
         environment_id=environment_id,
         camera_assignment_id=None,
@@ -29,37 +40,13 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
         hour=time_segment_start_utc.hour,
         minute=time_segment_start_utc.minute,
         second=time_segment_start_utc.second,
-        file_name=file_name
-    )
-    return df
-
-def fetch_2d_pose_data_alphapose_local(
-    base_dir,
-    environment_id=None,
-    camera_assignment_id=None,
-    year=None,
-    month=None,
-    day=None,
-    hour=None,
-    minute=None,
-    second=None,
-    file_name='alphapose-results.json'
-):
-    glob_pattern = alphapose_data_file_glob_pattern(
-        base_dir=base_dir,
-        environment_id=environment_id,
-        camera_assignment_id=camera_assignment_id,
-        year=year,
-        month=month,
-        day=day,
-        hour=hour,
-        minute=minute,
-        second=second,
-        file_name=file_name
+        alphapose_subdirectory=alphapose_subdirectory,
+        filename=filename
     )
     re_pattern = alphapose_data_file_re_pattern(
         base_dir=base_dir,
-        file_name=file_name
+        alphapose_subdirectory=alphapose_subdirectory,
+        filename=filename
     )
     data_list = list()
     for path in glob.iglob(glob_pattern):
@@ -77,27 +64,50 @@ def fetch_2d_pose_data_alphapose_local(
             tzinfo=datetime.timezone.utc
         )
         with open(path, 'r') as fp:
-            pose_data_dict = json.load(fp)
-        if len(pose_data_dict) == 0:
+            pose_data_object = json.load(fp)
+        if len(pose_data_object) == 0:
             continue
-        for image_filename, pose_data in pose_data_dict.items():
-            frame_number = int(image_filename.split('.')[0])
-            timestamp = timestamp_video_file + datetime.timedelta(microseconds = 10**5*frame_number)
-            for pose in pose_data['bodies']:
-                keypoint_data_array = np.asarray(pose['joints']).reshape((-1 , 3))
+        if json_format == 'cmu':
+            # JSON is a dict structure with an entry for each image
+            for image_filename, pose_data in pose_data_object.items():
+                frame_number = int(image_filename.split('.')[0])
+                timestamp = timestamp_video_file + datetime.timedelta(microseconds = 10**5*frame_number)
+                for pose in pose_data['bodies']:
+                    keypoint_data_array = np.asarray(pose['joints']).reshape((-1 , 3))
+                    keypoints = keypoint_data_array[:, :2]
+                    keypoint_quality = keypoint_data_array[:, 2]
+                    keypoints = np.where(keypoints == 0.0, np.nan, keypoints)
+                    keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
+                    pose_quality = pose.get('score')
+                    data_list.append({
+                        'pose_2d_id': uuid4().hex,
+                        'timestamp': pd.to_datetime(timestamp),
+                        'assignment_id': assignment_id,
+                        'keypoint_coordinates_2d': keypoints,
+                        'keypoint_quality_2d': keypoint_quality,
+                        'pose_quality_2d': pose_quality
+                    })
+        elif json_format == 'list':
+            # JSON is a list structure with an item for each pose
+            for pose_data in pose_data_object:
+                frame_number = int(pose_data.get('image_id').split('.')[0])
+                timestamp = timestamp_video_file + datetime.timedelta(microseconds = 10**5*frame_number)
+                keypoint_data_array = np.asarray(pose_data['keypoints']).reshape((-1 , 3))
                 keypoints = keypoint_data_array[:, :2]
                 keypoint_quality = keypoint_data_array[:, 2]
                 keypoints = np.where(keypoints == 0.0, np.nan, keypoints)
                 keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
-                pose_quality = pose.get('score')
+                pose_quality = pose_data.get('score')
                 data_list.append({
-                    'pose_id_2d': uuid4().hex,
+                    'pose_2d_id': uuid4().hex,
                     'timestamp': pd.to_datetime(timestamp),
                     'assignment_id': assignment_id,
                     'keypoint_coordinates_2d': keypoints,
                     'keypoint_quality_2d': keypoint_quality,
                     'pose_quality_2d': pose_quality
                 })
+        else:
+            raise ValueError('JSON format specifier \'{}\' not recognized'.format(json_format))
     df = pd.DataFrame(data_list)
     if len(df) == 0:
         logger.warning('No poses found for time segment starting at %04d/%02d/%02dT%02d:%02d:%02d. Returning empty data frame',
@@ -109,72 +119,524 @@ def fetch_2d_pose_data_alphapose_local(
             second
         )
         return df
-    df.set_index('pose_id_2d', inplace=True)
+    df.set_index('pose_2d_id', inplace=True)
     df.sort_values(['timestamp', 'assignment_id'], inplace=True)
     return df
 
-def write_3d_pose_data_local_time_segment(
-    poses_3d_df,
+def fetch_3d_poses_with_person_info(
     base_dir,
     environment_id,
-    time_segment_start,
-    directory_name='poses_3d',
-    file_name='poses_3d.pkl'
+    pose_track_3d_identification_inference_id,
+    start=None,
+    end=None,
+    pose_processing_subdirectory='pose_processing',
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
 ):
-    directory_path = pose_3d_data_directory_path_time_segment(
+    poses_3d_with_tracks_identified_df = fetch_3d_poses_with_identified_tracks_local(
         base_dir=base_dir,
         environment_id=environment_id,
-        time_segment_start=time_segment_start,
-        directory_name=directory_name
+        pose_track_3d_identification_inference_id=pose_track_3d_identification_inference_id,
+        start=start,
+        end=end,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
-    os.makedirs(directory_path, exist_ok=True)
-    file_path = os.path.join(
-        directory_path,
-        file_name
+    person_info_df = process_pose_data.honeycomb_io.fetch_person_info(
+        environment_id=environment_id,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
     )
-    poses_3d_df.to_pickle(file_path)
+    poses_3d_with_person_info_df = poses_3d_with_tracks_identified_df.join(
+        person_info_df,
+        on='person_id'
+    )
+    return poses_3d_with_person_info_df
 
-def fetch_3d_pose_data_local(
-    start,
-    end,
+def fetch_3d_poses_with_identified_tracks_local(
     base_dir,
     environment_id,
-    directory_name='poses_3d',
-    file_name='poses_3d.pkl'
+    pose_track_3d_identification_inference_id,
+    start=None,
+    end=None,
+    pose_processing_subdirectory='pose_processing'
 ):
+    pose_track_3d_identification_metadata = process_pose_data.local_io.fetch_data_local(
+        base_dir=base_dir,
+        pipeline_stage='pose_track_3d_identification',
+        environment_id=environment_id,
+        filename_stem='pose_track_3d_identification_metadata',
+        inference_ids=pose_track_3d_identification_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    if start is None:
+        start = pose_track_3d_identification_metadata['parameters']['start']
+    if end is None:
+        end = pose_track_3d_identification_metadata['parameters']['end']
+    pose_track_3d_interpolation_inference_id = pose_track_3d_identification_metadata['parameters']['pose_track_3d_interpolation_inference_id']
+    poses_3d_with_tracks_df = fetch_3d_poses_with_interpolated_tracks_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        pose_track_3d_interpolation_inference_id=pose_track_3d_interpolation_inference_id,
+        start=start,
+        end=end,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    pose_track_identification_df = fetch_data_local(
+        base_dir=base_dir,
+        pipeline_stage='pose_track_3d_identification',
+        environment_id=environment_id,
+        filename_stem='pose_track_3d_identification',
+        inference_ids=pose_track_3d_identification_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dataframe',
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    poses_3d_with_tracks_identified_df = (
+        poses_3d_with_tracks_df
+        .join(
+            pose_track_identification_df
+            .set_index('pose_track_3d_id'),
+            on='pose_track_3d_id'
+        )
+    )
+    return poses_3d_with_tracks_identified_df
+
+def fetch_3d_poses_with_interpolated_tracks_local(
+    base_dir,
+    environment_id,
+    pose_track_3d_interpolation_inference_id,
+    start=None,
+    end=None,
+    pose_processing_subdirectory='pose_processing'
+):
+    pose_track_3d_interpolation_metadata = process_pose_data.local_io.fetch_data_local(
+        base_dir=base_dir,
+        pipeline_stage='pose_track_3d_interpolation',
+        environment_id=environment_id,
+        filename_stem='pose_track_3d_interpolation_metadata',
+        inference_ids=pose_track_3d_interpolation_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    if start is None:
+        start = pose_track_3d_interpolation_metadata['parameters']['start']
+    if end is None:
+        end = pose_track_3d_interpolation_metadata['parameters']['end']
+    pose_tracking_3d_inference_id = pose_track_3d_interpolation_metadata['parameters']['pose_tracking_3d_inference_id']
+    pose_reconstruction_3d_inference_id = pose_track_3d_interpolation_metadata['parameters']['pose_reconstruction_3d_inference_id']
+    poses_3d_with_tracks_before_interpolation_df = fetch_3d_poses_with_tracks_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        pose_reconstruction_3d_inference_id=pose_reconstruction_3d_inference_id,
+        pose_tracking_3d_inference_id=pose_tracking_3d_inference_id,
+        start=start,
+        end=end,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    poses_3d_with_tracks_from_interpolation_df = fetch_3d_poses_with_tracks_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        pose_reconstruction_3d_inference_id=pose_track_3d_interpolation_inference_id,
+        pose_tracking_3d_inference_id=pose_track_3d_interpolation_inference_id,
+        start=start,
+        end=end,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    poses_3d_with_tracks_df = pd.concat((
+        poses_3d_with_tracks_before_interpolation_df,
+        poses_3d_with_tracks_from_interpolation_df
+    )).sort_values(['pose_track_3d_id', 'timestamp'])
+    return poses_3d_with_tracks_df
+
+def fetch_3d_poses_with_uninterpolated_tracks_local(
+    base_dir,
+    environment_id,
+    pose_tracking_3d_inference_id,
+    start=None,
+    end=None,
+    pose_processing_subdirectory='pose_processing'
+):
+    pose_tracks_3d_metadata = process_pose_data.local_io.fetch_data_local(
+        base_dir=base_dir,
+        pipeline_stage='pose_tracking_3d',
+        environment_id=environment_id,
+        filename_stem='pose_tracking_3d_metadata',
+        inference_ids=pose_tracking_3d_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    if start is None:
+        start = pose_tracks_3d_metadata['parameters']['start']
+    if end is None:
+        end = pose_tracks_3d_metadata['parameters']['end']
+    pose_reconstruction_3d_inference_id = pose_tracks_3d_metadata['parameters']['pose_reconstruction_3d_inference_id']
+    poses_3d_with_tracks_df = fetch_3d_poses_with_tracks_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        pose_reconstruction_3d_inference_id=pose_reconstruction_3d_inference_id,
+        pose_tracking_3d_inference_id=pose_tracking_3d_inference_id,
+        start=start,
+        end=end,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    return poses_3d_with_tracks_df
+
+def fetch_3d_poses_with_tracks_local(
+    base_dir,
+    environment_id,
+    start,
+    end,
+    pose_reconstruction_3d_inference_id,
+    pose_tracking_3d_inference_id,
+    pose_processing_subdirectory='pose_processing'
+):
+    poses_3d_df = fetch_data_local_by_time_segment(
+        start=start,
+        end=end,
+        base_dir=base_dir,
+        pipeline_stage='pose_reconstruction_3d',
+        environment_id=environment_id,
+        filename_stem='poses_3d',
+        inference_ids=pose_reconstruction_3d_inference_id,
+        data_ids=None,
+        sort_field=None,
+        object_type='dataframe',
+        pose_processing_subdirectory='pose_processing'
+    )
+    pose_tracks_3d = fetch_data_local(
+        base_dir=base_dir,
+        pipeline_stage='pose_tracking_3d',
+        environment_id=environment_id,
+        filename_stem='pose_tracks_3d',
+        inference_ids=pose_tracking_3d_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=None,
+        object_type='dict',
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    pose_tracks_3d_df = convert_pose_tracks_3d_to_df(pose_tracks_3d)
+    poses_3d_with_tracks_df = poses_3d_df.join(
+        pose_tracks_3d_df,
+        how='inner'
+    )
+    return poses_3d_with_tracks_df
+
+def write_data_local_by_time_segment(
+    data_object,
+    base_dir,
+    pipeline_stage,
+    environment_id,
+    filename_stem,
+    inference_id,
+    object_type='dataframe',
+    append=False,
+    sort_field=None,
+    pose_processing_subdirectory='pose_processing'
+):
+    if object_type != 'dataframe':
+        raise ValueError('Writing data by time segment only available for dataframe objects')
+    if 'timestamp' not in data_object.columns.tolist():
+        raise ValueError('Writing data by time segment only available for dataframes with a \'timestamp\' field')
+    start = pd.to_datetime(data_object['timestamp'].min()).to_pydatetime()
+    end = pd.to_datetime(data_object['timestamp'].max()).to_pydatetime()
     time_segment_start_list = generate_time_segment_start_list(
         start,
         end
     )
-    poses_3d_df_list = list()
     for time_segment_start in time_segment_start_list:
-        poses_3d_df_time_segment = fetch_3d_pose_data_local_time_segment(
-            time_segment_start,
+        data_object_time_segment = data_object.loc[
+            (data_object['timestamp'] >= time_segment_start) &
+            (data_object['timestamp'] < time_segment_start + datetime.timedelta(seconds=10))
+        ]
+        write_data_local(
+            data_object=data_object_time_segment,
             base_dir=base_dir,
+            pipeline_stage=pipeline_stage,
             environment_id=environment_id,
-            directory_name=directory_name,
-            file_name=file_name
+            filename_stem=filename_stem,
+            inference_id=inference_id,
+            time_segment_start=time_segment_start,
+            object_type=object_type,
+            append=append,
+            sort_field=sort_field,
+            pose_processing_subdirectory=pose_processing_subdirectory
         )
-        poses_3d_df_list.append(poses_3d_df_time_segment)
-    poses_3d_df = pd.concat(poses_3d_df_list)
-    return poses_3d_df
 
-def fetch_3d_pose_data_local_time_segment(
-    time_segment_start,
+
+def write_data_local(
+    data_object,
     base_dir,
+    pipeline_stage,
     environment_id,
-    directory_name='poses_3d',
-    file_name='poses_3d.pkl'
+    filename_stem,
+    inference_id,
+    time_segment_start=None,
+    object_type='dataframe',
+    append=False,
+    sort_field=None,
+    pose_processing_subdirectory='pose_processing'
 ):
-    path=pose_3d_data_path_time_segment(
+    directory_path, filename = data_file_path(
         base_dir=base_dir,
+        pipeline_stage=pipeline_stage,
         environment_id=environment_id,
+        filename_stem=filename_stem,
+        inference_id=inference_id,
         time_segment_start=time_segment_start,
-        directory_name=directory_name,
-        file_name=file_name
+        object_type=object_type,
+        pose_processing_subdirectory=pose_processing_subdirectory
     )
-    poses_3d_df_time_segment = pd.read_pickle(path)
-    return poses_3d_df_time_segment
+    os.makedirs(directory_path, exist_ok=True)
+    file_path = os.path.join(
+        directory_path,
+        filename
+    )
+    if append and os.path.exists(file_path):
+        if object_type != 'dataframe':
+            raise ValueError('Append and sort field options only available for dataframe objects')
+        existing_data_object = fetch_data_local(
+            base_dir=base_dir,
+            pipeline_stage=pipeline_stage,
+            environment_id=environment_id,
+            filename_stem=filename_stem,
+            inference_ids=inference_id,
+            time_segment_start=time_segment_start,
+            object_type=object_type,
+            pose_processing_subdirectory=pose_processing_subdirectory
+        )
+        data_object = pd.concat((existing_data_object, data_object))
+        if sort_field is not None:
+            data_object.sort_values(sort_field, inplace=True)
+    if object_type == 'dataframe':
+        data_object.to_pickle(file_path)
+    elif object_type == 'dict':
+        with open(file_path, 'wb') as fp:
+            pickle.dump(data_object, fp)
+    else:
+        raise ValueError('Only allowed object types are \'dataframe\' and \'dict\'')
+
+def fetch_data_local_by_time_segment(
+    start,
+    end,
+    base_dir,
+    pipeline_stage,
+    environment_id,
+    filename_stem,
+    inference_ids,
+    data_ids=None,
+    sort_field=None,
+    object_type='dataframe',
+    pose_processing_subdirectory='pose_processing'
+):
+    if object_type != 'dataframe':
+        raise ValueError('Fetching data by time segment only available for dataframe objects')
+    time_segment_start_list = generate_time_segment_start_list(
+        start,
+        end
+    )
+    data_object_list = list()
+    for time_segment_start in time_segment_start_list:
+        data_object_time_segment = fetch_data_local(
+            base_dir=base_dir,
+            pipeline_stage=pipeline_stage,
+            environment_id=environment_id,
+            filename_stem=filename_stem,
+            inference_ids=inference_ids,
+            data_ids=data_ids,
+            sort_field=sort_field,
+            time_segment_start=time_segment_start,
+            object_type=object_type,
+            pose_processing_subdirectory=pose_processing_subdirectory
+        )
+        data_object_list.append(data_object_time_segment)
+    data_object = pd.concat(data_object_list)
+    if sort_field is not None:
+        data_object.sort_values(sort_field, inplace=True)
+    return data_object
+
+def fetch_data_local(
+    base_dir,
+    pipeline_stage,
+    environment_id,
+    filename_stem,
+    inference_ids,
+    data_ids=None,
+    sort_field=None,
+    time_segment_start=None,
+    object_type='dataframe',
+    pose_processing_subdirectory='pose_processing'
+):
+    if isinstance(inference_ids, str):
+        inference_ids = [inference_ids]
+    elif isinstance(inference_ids, (list, tuple, set)):
+        pass
+    else:
+        raise ValueError('Specified inference IDs must be of type str, list, tuple, or set')
+    if len(inference_ids) == 0:
+        raise ValueError('Must specify at least one inference ID')
+    data_object_list = list()
+    for inference_id in inference_ids:
+        directory_path, filename = data_file_path(
+            base_dir=base_dir,
+            pipeline_stage=pipeline_stage,
+            environment_id=environment_id,
+            filename_stem=filename_stem,
+            inference_id=inference_id,
+            time_segment_start=time_segment_start,
+            object_type=object_type,
+            pose_processing_subdirectory=pose_processing_subdirectory
+        )
+        file_path = os.path.join(
+            directory_path,
+            filename
+        )
+        if object_type == 'dataframe':
+            if os.path.exists(file_path):
+                data_object_item = pd.read_pickle(file_path)
+                if data_ids is not None:
+                    data_object_item = data_object_item.reindex(
+                        data_object_item.index.intersection(data_ids)
+                    )
+            else:
+                data_object_item = pd.DataFrame()
+        elif object_type == 'dict':
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as fp:
+                    data_object_item = pickle.load(fp)
+                if data_ids is not None:
+                    raise ValueError('Specification of data IDs is only available for dataframe objects')
+            else:
+                data_object_item = dict()
+        else:
+            raise ValueError('Only allowed object types are \'dataframe\' and \'dict\'')
+        data_object_list.append(data_object_item)
+    if len(data_object_list) == 1:
+        data_object = data_object_list[0]
+        return data_object
+    else:
+        if object_type != 'dataframe':
+            raise ValueError('Specification of multiple inference IDs is only available for dataframe objects')
+        data_object = pd.concat(data_object_list)
+        if sort_field is not None:
+            data_object.sort_values(sort_field, inplace=True)
+    return data_object
+
+def delete_data_local(
+    base_dir,
+    pipeline_stage,
+    environment_id,
+    filename_stem,
+    inference_ids,
+    time_segment_start=None,
+    object_type='dataframe',
+    pose_processing_subdirectory='pose_processing'
+):
+    if isinstance(inference_ids, str):
+        inference_ids = [inference_ids]
+    elif isinstance(inference_ids, (list, tuple, set)):
+        pass
+    else:
+        raise ValueError('Specified inference IDs must be of type str, list, tuple, or set')
+    for inference_id in inference_ids:
+        directory_path, filename = data_file_path(
+            base_dir=base_dir,
+            pipeline_stage=pipeline_stage,
+            environment_id=environment_id,
+            filename_stem=filename_stem,
+            inference_id=inference_id,
+            time_segment_start=time_segment_start,
+            object_type=object_type,
+            pose_processing_subdirectory=pose_processing_subdirectory
+        )
+        file_path = os.path.join(
+            directory_path,
+            filename
+        )
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+def data_file_path(
+    base_dir,
+    pipeline_stage,
+    environment_id,
+    filename_stem,
+    inference_id,
+    time_segment_start=None,
+    object_type='dataframe',
+    pose_processing_subdirectory='pose_processing'
+):
+    directory_path = os.path.join(
+        base_dir,
+        pose_processing_subdirectory,
+        pipeline_stage,
+        environment_id
+    )
+    if time_segment_start is not None:
+        time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
+        directory_path = os.path.join(
+            directory_path,
+            '{:04d}'.format(time_segment_start_utc.year),
+            '{:02d}'.format(time_segment_start_utc.month),
+            '{:02d}'.format(time_segment_start_utc.day),
+            '{:02d}-{:02d}-{:02d}'.format(
+                time_segment_start_utc.hour,
+                time_segment_start_utc.minute,
+                time_segment_start_utc.second,
+            )
+        )
+    filename = '{}_{}.pkl'.format(
+        filename_stem,
+        inference_id
+    )
+    return directory_path, filename
+
+def convert_pose_tracks_3d_to_df(
+    pose_tracks_3d
+):
+    pose_3d_ids_with_tracks_df_list = list()
+    for pose_track_3d_id, pose_track_3d in pose_tracks_3d.items():
+        pose_3d_ids_with_tracks_single_track_df = pd.DataFrame(
+            {'pose_track_3d_id': pose_track_3d_id},
+            index=pose_track_3d['pose_3d_ids']
+        )
+        pose_3d_ids_with_tracks_single_track_df.index.name='pose_3d_id'
+        pose_3d_ids_with_tracks_df_list.append(pose_3d_ids_with_tracks_single_track_df)
+    pose_3d_ids_with_tracks_df = pd.concat(pose_3d_ids_with_tracks_df_list)
+    return pose_3d_ids_with_tracks_df
+
+def add_short_track_labels(
+    poses_3d_with_tracks_df,
+    pose_track_3d_id_column_name='pose_track_3d_id'
+):
+    pose_track_3d_id_index = poses_3d_with_tracks_df.groupby(pose_track_3d_id_column_name).apply(lambda x: x['timestamp'].min()).sort_values().index
+    track_label_lookup = pd.DataFrame(
+        range(1, len(pose_track_3d_id_index)+1),
+        columns=['pose_track_3d_id_short'],
+        index=pose_track_3d_id_index
+    )
+    poses_3d_with_tracks_df = poses_3d_with_tracks_df.join(track_label_lookup, on='pose_track_3d_id')
+    return poses_3d_with_tracks_df
 
 def alphapose_data_file_glob_pattern(
     base_dir,
@@ -186,9 +648,11 @@ def alphapose_data_file_glob_pattern(
     hour=None,
     minute=None,
     second=None,
-    file_name='alphapose-results.json'
+    alphapose_subdirectory='prepared',
+    filename='alphapose-results.json'
 ):
     base_dir_string = base_dir
+    alphapose_subdirectory_string = alphapose_subdirectory
     if environment_id is not None:
         environment_id_string = environment_id
     else:
@@ -223,72 +687,34 @@ def alphapose_data_file_glob_pattern(
         second_string = '??'
     glob_pattern = os.path.join(
         base_dir_string,
+        alphapose_subdirectory_string,
         environment_id_string,
         camera_assignment_id_string,
         year_string,
         month_string,
         day_string,
         '-'.join([hour_string, minute_string, second_string]),
-        file_name
+        filename
     )
     return glob_pattern
 
 def alphapose_data_file_re_pattern(
     base_dir,
-    file_name='alphapose-results.json'
+    alphapose_subdirectory='prepared',
+    filename='alphapose-results.json'
 ):
     re_pattern = os.path.join(
         base_dir,
+        alphapose_subdirectory,
         '(?P<environment_id>.+)',
         '(?P<assignment_id>.+)',
         '(?P<year_string>[0-9]{4})',
         '(?P<month_string>[0-9]{2})',
         '(?P<day_string>[0-9]{2})',
         '(?P<hour_string>[0-9]{2})\-(?P<minute_string>[0-9]{2})\-(?P<second_string>[0-9]{2})',
-        file_name
+        filename
     )
     return re_pattern
-
-def pose_3d_data_path_time_segment(
-    base_dir,
-    environment_id,
-    time_segment_start,
-    directory_name='poses_3d',
-    file_name='poses_3d.pkl'
-):
-    directory_path = pose_3d_data_directory_path_time_segment(
-        base_dir=base_dir,
-        environment_id=environment_id,
-        time_segment_start=time_segment_start,
-        directory_name=directory_name
-    )
-    path = os.path.join(
-        directory_path,
-        file_name
-    )
-    return path
-
-def pose_3d_data_directory_path_time_segment(
-    base_dir,
-    environment_id,
-    time_segment_start,
-    directory_name='poses_3d'
-):
-    time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
-    path = os.path.join(
-        base_dir,
-        environment_id,
-        directory_name,
-        '{:04d}'.format(time_segment_start_utc.year),
-        '{:02d}'.format(time_segment_start_utc.month),
-        '{:02d}'.format(time_segment_start_utc.day),
-        '{:02d}-{:02d}-{:02d}'.format(
-            time_segment_start_utc.hour,
-            time_segment_start_utc.minute,
-            time_segment_start_utc.second,
-        )
-    )
-    return path
 
 def convert_assignment_ids_to_camera_device_ids(
     poses_2d_df,
@@ -334,40 +760,6 @@ def generate_time_segment_start_list(
         second=10*(start_utc.second // 10),
         tzinfo=start_utc.tzinfo
     )
-    num_time_segments = math.ceil((end_utc - start_utc_floor).seconds / 10.0)
+    num_time_segments = math.ceil((end_utc - start_utc_floor).total_seconds()  / 10.0)
     time_segment_start_list = [start_utc_floor + i*datetime.timedelta(seconds=10) for i in range(num_time_segments)]
     return time_segment_start_list
-
-# def fetch_2d_pose_data_from_local_json(
-#     directory_path
-# ):
-#     data = list()
-#     for directory_entry in os.listdir(directory_path):
-#         if re.match(r'.*\.json', directory_entry):
-#             logger.info('Retrieving pose data from {}'.format(directory_entry))
-#             with open(os.path.join(directory_path, directory_entry), 'r') as fh:
-#                 data_this_file = json.load(fh)
-#             logger.info('Retrieved {} poses from {}'.format(
-#                 len(data_this_file),
-#                 directory_entry
-#             ))
-#             data.extend(data_this_file)
-#     logger.info('Retrieved {} poses overall. Parsing')
-#     parsed_data = list()
-#     for datum in data:
-#         parsed_data.append({
-#             'pose_id_2d': uuid4().hex,
-#             'timestamp': datum.get('timestamp'),
-#             'camera_id': datum.get('camera'),
-#             'track_label_2d': datum.get('track_label'),
-#             'pose_model_id': datum.get('pose_model'),
-#             'keypoint_coordinates_2d': np.asarray([keypoint.get('coordinates') for keypoint in datum.get('keypoints')]),
-#             'keypoint_quality_2d': np.asarray([keypoint.get('quality') for keypoint in datum.get('keypoints')]),
-#             'pose_quality_2d': datum.get('quality')
-#         })
-#     poses_2d_df = pd.DataFrame(parsed_data)
-#     poses_2d_df['timestamp'] = pd.to_datetime(poses_2d_df['timestamp'])
-#     if poses_2d_df['pose_model_id'].nunique() > 1:
-#         raise ValueError('Returned poses are associated with multiple pose models')
-#     poses_2d_df.set_index('pose_id_2d', inplace=True)
-#     return poses_2d_df
