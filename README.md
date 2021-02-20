@@ -4,6 +4,7 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 
 ## Task list
 
+* Switch parallel overlay code back to `imap_unordered()` (for less chunky progress bars) but sort output before concatenating
 * Ensure that all visual specs (colors, line widths, etc.) propagate to video overlay
 * Add drawing primitive to `wf-cv-utils` for text with background
 * Use new text-with-background drawing primitive for pose labels

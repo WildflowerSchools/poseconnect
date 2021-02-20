@@ -203,7 +203,7 @@ def overlay_poses(
             if task_progress_bar:
                 if notebook:
                     output_parameters_list = list(tqdm.notebook.tqdm(
-                        p.imap_unordered(
+                        p.imap(
                             overlay_poses_camera_time_segment_partial,
                             input_parameters_list
                         ),
@@ -211,7 +211,7 @@ def overlay_poses(
                     ))
                 else:
                     output_parameters_list = list(tqdm.tqdm(
-                        p.imap_unordered(
+                        p.imap(
                             overlay_poses_camera_time_segment_partial,
                             input_parameters_list
                         ),
@@ -219,7 +219,7 @@ def overlay_poses(
                     ))
             else:
                 output_parameters_list = list(
-                    p.imap_unordered(
+                    p.imap(
                         overlay_poses_camera_time_segment_partial,
                         input_parameters_list
                     )
