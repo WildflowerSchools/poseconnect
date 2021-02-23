@@ -1,8 +1,9 @@
 import process_pose_data.local_io
-import process_pose_data.honeycomb_io
 import process_pose_data.reconstruct
 import process_pose_data.track_poses
 import process_pose_data.identify
+import process_pose_data.overlay
+import honeycomb_io
 import video_io
 import pandas as pd
 import tqdm
@@ -295,7 +296,7 @@ def reconstruct_poses_3d_local_by_time_segment(
     logger.info('Generating metadata')
     if camera_assignment_ids is None:
         logger.info('Camera assignment IDs not specified. Fetching camera assignment IDs from Honeycomb based on environmen and time span')
-        camera_assignment_ids = process_pose_data.honeycomb_io.fetch_camera_assignment_ids_from_environment(
+        camera_assignment_ids = honeycomb_io.fetch_camera_assignment_ids_from_environment(
             start=start,
             end=end,
             environment_id=environment_id,
@@ -307,7 +308,7 @@ def reconstruct_poses_3d_local_by_time_segment(
         )
     if camera_device_id_lookup is None:
         logger.info('Camera device ID lookup table not specified. Fetching camera device ID info from Honeycomb based on camera assignment IDs')
-        camera_device_id_lookup = process_pose_data.honeycomb_io.fetch_camera_device_id_lookup(
+        camera_device_id_lookup = honeycomb_io.fetch_camera_device_id_lookup(
             assignment_ids=camera_assignment_ids,
             client=client,
             uri=uri,
@@ -319,7 +320,7 @@ def reconstruct_poses_3d_local_by_time_segment(
     camera_device_ids = list(camera_device_id_lookup.values())
     if camera_calibrations is None:
         logger.info('Camera calibration parameters not specified. Fetching camera calibration parameters from Honeycomb based on camera device IDs and time span')
-        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+        camera_calibrations = honeycomb_io.fetch_camera_calibrations(
             camera_ids=camera_device_ids,
             start=start,
             end=end,
@@ -1073,7 +1074,7 @@ def download_position_data_by_datapoint(
         time_segment_start_list[-1].isoformat()
     ))
     logger.info('Fetching person tag info from Honeycomb for specified environment and time span')
-    person_tag_info_df = process_pose_data.honeycomb_io.fetch_person_tag_info(
+    person_tag_info_df = honeycomb_io.fetch_person_tag_info(
         start=start,
         end=end,
         environment_id=environment_id,
@@ -1090,7 +1091,7 @@ def download_position_data_by_datapoint(
         len(assignment_ids)
     ))
     logger.info('Fetching UWB datapoint IDs for these tags and specified datapoint timestamp min/max')
-    data_ids = process_pose_data.honeycomb_io.fetch_uwb_data_ids(
+    data_ids = honeycomb_io.fetch_uwb_data_ids(
         datapoint_timestamp_min=datapoint_timestamp_min,
         datapoint_timestamp_max=datapoint_timestamp_max,
         assignment_ids=assignment_ids,
@@ -1114,7 +1115,7 @@ def download_position_data_by_datapoint(
     else:
         data_id_iterator = data_ids
     for data_id in data_id_iterator:
-        position_data_df = process_pose_data.honeycomb_io.fetch_uwb_data_data_id(
+        position_data_df = honeycomb_io.fetch_uwb_data_data_id(
             data_id=data_id,
             client=None,
             uri=None,
@@ -1125,7 +1126,7 @@ def download_position_data_by_datapoint(
         )
         if len(position_data_df) == 0:
             continue
-        position_data_df = process_pose_data.honeycomb_io.extract_position_data(
+        position_data_df = honeycomb_io.extract_position_data(
             df=position_data_df
         )
         if len(position_data_df) == 0:
@@ -1144,7 +1145,7 @@ def download_position_data_by_datapoint(
             ],
             timestamp_field_name='timestamp'
         )
-        position_data_df = process_pose_data.honeycomb_io.add_person_tag_info(
+        position_data_df = honeycomb_io.add_person_tag_info(
             uwb_data_df=position_data_df,
             person_tag_info_df=person_tag_info_df
         )
@@ -2280,7 +2281,7 @@ def generate_pose_3d_limits(
     client_id=None,
     client_secret=None
 ):
-    pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(
+    pose_model = honeycomb_io.fetch_pose_model_by_pose_model_id(
         pose_model_id,
         uri=uri,
         token_uri=token_uri,

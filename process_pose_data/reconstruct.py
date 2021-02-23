@@ -1,4 +1,5 @@
-import process_pose_data.honeycomb_io
+import process_pose_data.filter
+import honeycomb_io
 import cv_utils
 import cv2 as cv
 import pandas as pd
@@ -49,7 +50,7 @@ def reconstruct_poses_3d(
     if camera_calibrations is None:
         start = poses_2d_df['timestamp'].min().to_pydatetime()
         end = poses_2d_df['timestamp'].max().to_pydatetime()
-        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+        camera_calibrations = honeycomb_io.fetch_camera_calibrations(
             camera_ids=camera_ids,
             start=start,
             end=end
@@ -80,7 +81,7 @@ def reconstruct_poses_3d(
             if len(pose_model_ids) > 1:
                 raise ValueError('Multiple pose model IDs found in 2D pose data')
             pose_model_id = pose_model_ids[0]
-        pose_model = process_pose_data.honeycomb_io.fetch_pose_model_by_pose_model_id(pose_model_id)
+        pose_model = honeycomb_io.fetch_pose_model_by_pose_model_id(pose_model_id)
         pose_model_name = pose_model.get('model_name')
         pose_3d_limits = pose_3d_limits_by_pose_model(
             room_x_limits=room_x_limits,
@@ -357,7 +358,7 @@ def calculate_3d_poses(
         ).tolist()
         start = pose_pairs_2d_df['timestamp'].min().to_pydatetime()
         end = pose_pairs_2d_df['timestamp'].max().to_pydatetime()
-        camera_calibrations = process_pose_data.honeycomb_io.fetch_camera_calibrations(
+        camera_calibrations = honeycomb_io.fetch_camera_calibrations(
             camera_ids=camera_ids,
             start=start,
             end=end
