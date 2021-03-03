@@ -28,7 +28,7 @@ def overlay_poses(
     camera_assignment_ids=None,
     environment_id=None,
     environment_name=None,
-    camera_device_types=video_io.DEFAULT_CAMERA_DEVICE_TYPES,
+    camera_device_types=None,
     camera_device_ids=None,
     camera_part_numbers=None,
     camera_names=None,
