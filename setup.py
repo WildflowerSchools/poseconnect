@@ -12,8 +12,8 @@ def get_version():
 
 # Dependencies (format is 'PYPI_PACKAGE_NAME[>]=VERSION_NUMBER')
 BASE_DEPENDENCIES = [
-    'wf-minimal-honeycomb-python>=0.6.0',
-    'wf-smc-kalman>-0.1.0',
+    'wf-honeycomb-io>=0.0.1',
+    'wf-smc-kalman>=0.1.0',
     'wf-cv-utils>=3.0.0',
     'wf-video-io>=1.0.0',
     'wf-geom-render>=0.3.0',

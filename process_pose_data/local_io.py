@@ -1,4 +1,4 @@
-import process_pose_data.honeycomb_io
+import honeycomb_io
 import pandas as pd
 import numpy as np
 import logging
@@ -145,7 +145,7 @@ def fetch_3d_poses_with_person_info(
         end=end,
         pose_processing_subdirectory=pose_processing_subdirectory
     )
-    person_info_df = process_pose_data.honeycomb_io.fetch_person_info(
+    person_info_df = honeycomb_io.fetch_person_info(
         environment_id=environment_id,
         client=client,
         uri=uri,
@@ -168,7 +168,7 @@ def fetch_3d_poses_with_identified_tracks_local(
     end=None,
     pose_processing_subdirectory='pose_processing'
 ):
-    pose_track_3d_identification_metadata = process_pose_data.local_io.fetch_data_local(
+    pose_track_3d_identification_metadata = fetch_data_local(
         base_dir=base_dir,
         pipeline_stage='pose_track_3d_identification',
         environment_id=environment_id,
@@ -223,7 +223,7 @@ def fetch_3d_poses_with_interpolated_tracks_local(
     end=None,
     pose_processing_subdirectory='pose_processing'
 ):
-    pose_track_3d_interpolation_metadata = process_pose_data.local_io.fetch_data_local(
+    pose_track_3d_interpolation_metadata = fetch_data_local(
         base_dir=base_dir,
         pipeline_stage='pose_track_3d_interpolation',
         environment_id=environment_id,
@@ -273,7 +273,7 @@ def fetch_3d_poses_with_uninterpolated_tracks_local(
     end=None,
     pose_processing_subdirectory='pose_processing'
 ):
-    pose_tracks_3d_metadata = process_pose_data.local_io.fetch_data_local(
+    pose_tracks_3d_metadata = fetch_data_local(
         base_dir=base_dir,
         pipeline_stage='pose_tracking_3d',
         environment_id=environment_id,
@@ -728,7 +728,7 @@ def convert_assignment_ids_to_camera_device_ids(
 ):
     if camera_device_id_lookup is None:
         assignment_ids = poses_2d_df['assignment_id'].unique().tolist()
-        camera_device_id_lookup = process_pose_data.honeycomb_io.fetch_camera_device_id_lookup(
+        camera_device_id_lookup = honeycomb_io.fetch_camera_device_id_lookup(
             assignment_ids=assignment_ids,
             client=client,
             uri=uri,
