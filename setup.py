@@ -25,7 +25,8 @@ BASE_DEPENDENCIES = [
     'seaborn>=0.11.1',
     'ffmpeg-python>=0.2.0',
     'tqdm>=4.57.0',
-    'python-slugify>=4.0.1'
+    'python-slugify>=4.0.1',
+    'python-dateutil>=2.8'
 ]
 
 # TEST_DEPENDENCIES = [
