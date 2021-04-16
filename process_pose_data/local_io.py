@@ -72,7 +72,7 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
                 pose_data_object = json.load(fp)
             if len(pose_data_object) == 0:
                 continue
-            timestamp_json_string = datetime.datetime.fromisoformat(pose_data_object.get('timestamp'))
+            timestamp_json_string = pose_data_object.get('timestamp')
             assignment_id_json = pose_data_object.get('assignment_id')
             environment_id_json = pose_data_object.get('environment_id')
             try:
