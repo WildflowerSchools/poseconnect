@@ -813,7 +813,7 @@ def alphapose_data_file_re_pattern(
             '(?P<month_string>[0-9]{2})',
             '(?P<day_string>[0-9]{2})',
             '(?P<hour_string>[0-9]{2})\-(?P<minute_string>[0-9]{2})\-(?P<second_string>[0-9]{2})',
-            'poses-(?P<frame_number_string>[0-9]+\.json)'
+            'poses-(?P<frame_number_string>[0-9])+\.json'
         )
     elif tree_structure=='file-per-segment':
         re_pattern = os.path.join(
