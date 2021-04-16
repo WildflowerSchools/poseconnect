@@ -4,6 +4,7 @@ import numpy as np
 import logging
 from uuid import uuid4
 import datetime
+import dateutil
 import os
 import glob
 import pickle
@@ -76,9 +77,9 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
             assignment_id_json = pose_data_object.get('assignment_id')
             environment_id_json = pose_data_object.get('environment_id')
             try:
-                timestamp_json = datetime.datetime.fromisoformat(timestamp_json_string)
+                timestamp_json = dateutil.parser.isoparse(timestamp_json_string)
             except:
-                raise ValueError('Timestamp string in JSON \'{}\' cannot be parsed by datetime.datetime.fromisoformat()'.format(
+                raise ValueError('Timestamp string in JSON \'{}\' cannot be parsed by dateutil.parser.isoparse()'.format(
                     timestamp_json_string
                 ))
             timestamp_path = timestamp_video_file + datetime.timedelta(microseconds = 10**5*frame_number)
