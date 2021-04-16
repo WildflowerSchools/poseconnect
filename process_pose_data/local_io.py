@@ -106,8 +106,8 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
             if len(poses) == 0:
                 continue
             for pose in poses:
-                keypoints = np.asarray([[keypoint.get('x'), keypoint.get('y')] for keypoint in pose.get('keypoints')]
-                keypoint_quality = np.asarray([keypoint.get('quality')for keypoint in pose.get('keypoints')]
+                keypoints = np.asarray([[keypoint.get('x'), keypoint.get('y')] for keypoint in pose.get('keypoints')])
+                keypoint_quality = np.asarray([keypoint.get('quality')for keypoint in pose.get('keypoints')])
                 keypoints = np.where(keypoints == 0.0, np.nan, keypoints)
                 keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
                 pose_quality = pose.get('quality')
