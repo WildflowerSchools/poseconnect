@@ -84,10 +84,12 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
                 ))
             timestamp_path = timestamp_video_file + datetime.timedelta(microseconds = 10**5*frame_number)
             if timestamp_json != timestamp_path:
-                raise ValueError('Timestamp in JSON \'{}\' does not match timestamp inferred from path \'{}\' for file \'{}\''.format(
+                raise ValueError('Timestamp in JSON \'{}\' does not match timestamp inferred from path \'{}\' for file \'{}\' (extracted frame number string \'{}\' resulting in frame number {})'.format(
                     timestamp_json.isoformat(),
                     timestamp_path.isoformat(),
-                    path
+                    path,
+                    m.group('frame_number_string'),
+                    frame_number
                 ))
             if assignment_id_json != assignment_id:
                 raise ValueError('Assignment ID in JSON \'{}\' does not match assignment ID inferred from path \'{}\' for file \'{}\''.format(
