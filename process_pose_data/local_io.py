@@ -726,7 +726,7 @@ def alphapose_data_file_glob_pattern(
     second=None,
     frame_number=None,
     alphapose_subdirectory='prepared',
-    tree_structure='file-per-frame'
+    tree_structure='file-per-frame',
     filename='alphapose-results.json'
 ):
     base_dir_string = base_dir
