@@ -187,12 +187,12 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
     df = pd.DataFrame(data_list)
     if len(df) == 0:
         logger.warning('No poses found for time segment starting at %04d/%02d/%02dT%02d:%02d:%02d. Returning empty data frame',
-            year,
-            month,
-            day,
-            hour,
-            minute,
-            second
+            time_segment_start_utc.year,
+            time_segment_start_utc.month,
+            time_segment_start_utc.day,
+            time_segment_start_utc.hour,
+            time_segment_start_utc.minute,
+            time_segment_start_utc.second
         )
         return df
     df.set_index('pose_2d_id', inplace=True)
