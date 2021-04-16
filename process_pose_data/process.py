@@ -22,6 +22,7 @@ def extract_poses_2d_alphapose_local_by_time_segment(
     base_dir,
     environment_id,
     alphapose_subdirectory='prepared',
+    tree_structure='file-per-frame',
     poses_2d_file_name='alphapose-results.json',
     poses_2d_json_format='cmu',
     pose_processing_subdirectory='pose_processing',
@@ -121,6 +122,7 @@ def extract_poses_2d_alphapose_local_by_time_segment(
             environment_id=environment_id,
             time_segment_start=time_segment_start,
             alphapose_subdirectory=alphapose_subdirectory,
+            tree_structure=tree_structure,
             filename=poses_2d_file_name,
             json_format=poses_2d_json_format
         )
