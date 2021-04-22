@@ -1471,6 +1471,7 @@ def identify_pose_tracks_3d_local_by_segment(
             object_type='dataframe',
             pose_processing_subdirectory=pose_processing_subdirectory
         )
+        print(uwb_data_resampled_time_segment_df.info())
         # Identify poses
         if return_match_statistics:
             pose_identification_time_segment_df, match_statistics_time_segment_df = process_pose_data.identify.identify_poses(

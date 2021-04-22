@@ -105,8 +105,11 @@ def identify_poses(
     pose_identification_timestamp_df_list = list()
     if return_match_statistics:
         match_statistics_list = list()
+    print(uwb_data_resampled_df.info())
     for timestamp, poses_3d_with_tracks_and_sensor_positions_timestamp_df in poses_3d_with_tracks_and_sensor_positions_df.groupby('timestamp'):
+        print(timestamp)
         uwb_data_resampled_timestamp_df = uwb_data_resampled_df.loc[uwb_data_resampled_df['timestamp'] == timestamp]
+        print(uwb_data_resampled_timestamp_df)
         if return_match_statistics:
             pose_identification_timestamp_df, match_statistics = identify_poses_timestamp(
                 poses_3d_with_tracks_and_sensor_positions_timestamp_df=poses_3d_with_tracks_and_sensor_positions_timestamp_df,
@@ -174,7 +177,7 @@ def identify_poses_timestamp(
         if return_match_statistics:
             match_statistics = [num_poses, num_persons, num_matches]
             return pd.DataFrame(), match_statistics
-        return pd.DataFrame(), [num_pose_tracks, num_persons, num_matches]
+        return pd.DataFrame()
     if num_poses != 0 and num_persons != 0 and timestamp_poses_3d != timestamp_uwb_data:
         raise ValueError('Timestamp in 3D pose data is {} but timestamp in UWB data is {}'.format(
             timestamp_poses_3d.isoformat(),
