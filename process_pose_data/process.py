@@ -1105,8 +1105,8 @@ def download_position_data_by_datapoint(
             time_segment_start_iterator = time_segment_start_list
         for time_segment_start in time_segment_start_iterator:
             position_data_df = honeycomb_io.fetch_cuwb_position_data(
-                start=time_segment_start,
-                end=time_segment_start + datetime.timedelta(seconds=10),
+                start=time_segment_start - datetime.timedelta(milliseconds=500),
+                end=time_segment_start + datetime.timedelta(milliseconds=10500),
                 device_ids=device_ids,
                 environment_id=None,
                 environment_name=None,
@@ -1166,6 +1166,10 @@ def download_position_data_by_datapoint(
                 ],
                 timestamp_field_name='timestamp'
             )
+            position_data_df = position_data_df.loc[
+                (position_data_df['timestamp'] >= time_segment_start) &
+                (position_data_df['timestamp'] < time_segment_start + datetime.timedelta(seconds=10))
+            ]
             process_pose_data.local_io.write_data_local(
                 data_object=position_data_df,
                 base_dir=base_dir,
@@ -1471,7 +1475,6 @@ def identify_pose_tracks_3d_local_by_segment(
             object_type='dataframe',
             pose_processing_subdirectory=pose_processing_subdirectory
         )
-        print(uwb_data_resampled_time_segment_df.info())
         # Identify poses
         if return_match_statistics:
             pose_identification_time_segment_df, match_statistics_time_segment_df = process_pose_data.identify.identify_poses(
