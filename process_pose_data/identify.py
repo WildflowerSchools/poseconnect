@@ -174,7 +174,7 @@ def identify_poses_timestamp(
         if return_match_statistics:
             match_statistics = [num_poses, num_persons, num_matches]
             return pd.DataFrame(), match_statistics
-        return pd.DataFrame(), [num_pose_tracks, num_persons, num_matches]
+        return pd.DataFrame()
     if num_poses != 0 and num_persons != 0 and timestamp_poses_3d != timestamp_uwb_data:
         raise ValueError('Timestamp in 3D pose data is {} but timestamp in UWB data is {}'.format(
             timestamp_poses_3d.isoformat(),
