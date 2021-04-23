@@ -70,7 +70,10 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
             )
             frame_number = int(m.group('frame_number_string'))
             with open(path, 'r') as fp:
-                pose_data_object = json.load(fp)
+                try:
+                    pose_data_object = json.load(fp)
+                except:
+                    raise ValueError('Error reading JSON from file {}'.format(path))
             if len(pose_data_object) == 0:
                 continue
             timestamp_json_string = pose_data_object.get('timestamp')
@@ -139,7 +142,10 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
                 tzinfo=datetime.timezone.utc
             )
             with open(path, 'r') as fp:
-                pose_data_object = json.load(fp)
+                try:
+                    pose_data_object = json.load(fp)
+                except:
+                    raise ValueError('Error reading JSON from file {}'.format(path))
             if len(pose_data_object) == 0:
                 continue
             if json_format == 'cmu':
