@@ -327,7 +327,7 @@ def overlay_poses_timestamp(
     else:
         raise ValueError('Cannot parse pose dataframe')
     if timestamp is None:
-        timestamps = poses_df['timestamp'].unique().tolist()
+        timestamps = list(poses_df['timestamp'].unique())
         if len(timestamps) > 1:
             raise ValueError('Timestamp not specified and supplied poses contain {} timestamps'.format(
                 len(timestamps)
