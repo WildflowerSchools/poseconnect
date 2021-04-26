@@ -431,7 +431,7 @@ def overlay_poses_timestamp(
             output_directory,
             '{}_{}_{}.{}'.format(
                 output_filename_prefix,
-                image_timestamp.strftime(output_filename_datetime_format),
+                timestamp.strftime(output_filename_datetime_format),
                 slugify.slugify(camera_name),
                 output_filename_extension
             )
