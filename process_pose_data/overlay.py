@@ -371,8 +371,8 @@ def overlay_poses_timestamp(
         if camera_calibrations is None:
             camera_calibrations = honeycomb_io.fetch_camera_calibrations(
                 camera_ids,
-                start=start,
-                end=end
+                start=timestamp,
+                end=timestamp
             )
     if pose_model_id is not None:
         pose_model = honeycomb_io.fetch_pose_model_by_pose_model_id(
