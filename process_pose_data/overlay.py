@@ -415,7 +415,7 @@ def overlay_poses_timestamp(
                 pose_label = row[pose_label_column]
             else:
                 pose_label = None
-            frame=draw_pose_2d_opencv(
+            image=draw_pose_2d_opencv(
                 image=image,
                 keypoint_coordinates=keypoint_coordinates_2d,
                 pose_label=pose_label,
