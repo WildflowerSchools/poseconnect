@@ -389,9 +389,9 @@ def overlay_poses_timestamp(
         camera_name = camera_name_dict[camera_id]
         logger.info('Overlaying poses for {}'.format(camera_name))
         if poses_2d:
-            poses_camera_df = poses_timestamp_df.loc[poses_timestamp_df['camera_id'] == camera_id].copy()
+            poses_camera_df = poses_df_timestamp.loc[poses_df_timestamp['camera_id'] == camera_id].copy()
         if poses_3d:
-            poses_camera_df = poses_timestamp_df.copy()
+            poses_camera_df = poses_df_timestamp.copy()
             camera_calibration = camera_calibrations[camera_id]
             project_points_partial = functools.partial(
                 cv_utils.project_points,
