@@ -521,7 +521,8 @@ def reconstruct_poses_3d_local_timestamp(
     pose_3d_limits=None,
     pose_3d_graph_initial_edge_threshold=2,
     pose_3d_graph_max_dispersion=0.20,
-    include_track_labels=False
+    include_track_labels=False,
+    return_diagnostics=False
 ):
     if timestamp.tzinfo is None:
         logger.info('Specified timestamp is timezone-naive. Assuming UTC')
@@ -658,7 +659,8 @@ def reconstruct_poses_3d_local_timestamp(
         pose_3d_limits=pose_3d_limits,
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
-        include_track_labels=include_track_labels
+        include_track_labels=include_track_labels,
+        return_diagnostics=return_diagnostics
     )
     return poses_3d_df_timestamp
 
