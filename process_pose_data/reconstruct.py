@@ -328,7 +328,7 @@ def reconstruct_poses_3d_timestamp(
             validate_df=validate_df,
             return_diagnostics=return_diagnostics
         )
-        return_diagnostics.update(pose_graph_diagnostics)
+        diagnostics.update(pose_graph_diagnostics)
     else:
         poses_3d_df_timestamp = generate_3d_poses_timestamp(
             pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
