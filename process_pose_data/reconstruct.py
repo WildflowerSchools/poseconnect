@@ -318,14 +318,26 @@ def reconstruct_poses_3d_timestamp(
     )
     if return_diagnostics:
         diagnostics['pose_pair_ids_2d_after_best_match_filter'] = pose_pairs_2d_df_timestamp.index
-    poses_3d_df_timestamp = generate_3d_poses_timestamp(
-        pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
-        pose_2d_ids_column_name=pose_2d_ids_column_name,
-        initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
-        max_dispersion=pose_3d_graph_max_dispersion,
-        include_track_labels=include_track_labels,
-        validate_df=validate_df
-    )
+    if return_diagnostics:
+        poses_3d_df_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp(
+            pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+            pose_2d_ids_column_name=pose_2d_ids_column_name,
+            initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+            max_dispersion=pose_3d_graph_max_dispersion,
+            include_track_labels=include_track_labels,
+            validate_df=validate_df,
+            return_diagnostics=return_diagnostics
+        )
+        return_diagnostics.update(pose_graph_diagnostics)
+    else:
+        poses_3d_df_timestamp = generate_3d_poses_timestamp(
+            pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+            pose_2d_ids_column_name=pose_2d_ids_column_name,
+            initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+            max_dispersion=pose_3d_graph_max_dispersion,
+            include_track_labels=include_track_labels,
+            validate_df=validate_df
+        )
     if len(poses_3d_df_timestamp) == 0:
         return poses_3d_df_timestamp
     poses_3d_df_timestamp.set_index('pose_3d_id', inplace=True)
@@ -630,7 +642,8 @@ def generate_3d_poses_timestamp(
     initial_edge_threshold=2,
     max_dispersion=0.20,
     include_track_labels=False,
-    validate_df=True
+    validate_df=True,
+    return_diagnostics=False
 ):
     if len(pose_pairs_2d_df_timestamp) == 0:
         return pd.DataFrame()
@@ -643,11 +656,21 @@ def generate_3d_poses_timestamp(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
         include_track_labels=include_track_labels
     )
-    subgraph_list = generate_k_edge_subgraph_list_iteratively(
-        pose_graph=pose_graph,
-        initial_edge_threshold=initial_edge_threshold,
-        max_dispersion=max_dispersion
-    )
+    if return_diagnostics:
+        diagnostics = {'initial_pose_graph': pose_graph}
+        subgraph_list, k_edge_subgraph_diagnostics = generate_k_edge_subgraph_list_iteratively(
+            pose_graph=pose_graph,
+            initial_edge_threshold=initial_edge_threshold,
+            max_dispersion=max_dispersion,
+            return_diagnostics=return_diagnostics
+        )
+        diagnostics.update(k_edge_subgraph_diagnostics)
+    else:
+        subgraph_list = generate_k_edge_subgraph_list_iteratively(
+            pose_graph=pose_graph,
+            initial_edge_threshold=initial_edge_threshold,
+            max_dispersion=max_dispersion
+        )
     pose_3d_ids = list()
     keypoint_coordinates_3d = list()
     pose_2d_ids = list()
@@ -691,7 +714,10 @@ def generate_3d_poses_timestamp(
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
             pose_2d_ids_column_name: pose_2d_ids
         })
-    return poses_3d_df_timestamp
+    if return_diagnostics:
+        return poses_3d_df_timestamp, diagnostics
+    else:
+        return poses_3d_df_timestamp
 
 def generate_pose_graph(
     pose_pairs_2d_df_timestamp,
@@ -720,25 +746,69 @@ def generate_pose_graph(
 def generate_k_edge_subgraph_list_iteratively(
     pose_graph,
     initial_edge_threshold=2,
-    max_dispersion=0.20
+    max_dispersion=0.20,
+    return_diagnostics=False
 ):
     subgraph_list = list()
+    if return_diagnostics:
+        diagnostics = {'subgraph_list': list()}
     for nodes in nx.k_edge_components(pose_graph, initial_edge_threshold):
         if len(nodes) < 2:
+            if return_diagnostics:
+                diagnostics['subgraph_list'].append({
+                    'edge_threshold': initial_edge_threshold,
+                    'nodes': nodes,
+                    'dispersion': None,
+                    'status': 'less_than_two_nodes'
+                })
             continue
         subgraph = pose_graph.subgraph(nodes)
-        if subgraph.number_of_edges() ==0:
+        if subgraph.number_of_edges() == 0:
+            if return_diagnostics:
+                diagnostics['subgraph_list'].append({
+                    'edge_threshold': initial_edge_threshold,
+                    'nodes': nodes,
+                    'dispersion': None,
+                    'status': 'zero_edges'
+                })
             continue
         dispersion = pose_3d_dispersion(subgraph)
         if max_dispersion is None or dispersion <= max_dispersion:
+            if return_diagnostics:
+                diagnostics['subgraph_list'].append({
+                    'edge_threshold': initial_edge_threshold,
+                    'nodes': nodes,
+                    'dispersion': dispersion,
+                    'status': 'pass'
+                })
             subgraph_list.append(subgraph)
             continue
-        subgraph_list.extend(generate_k_edge_subgraph_list_iteratively(
-            pose_graph=subgraph,
-            initial_edge_threshold=initial_edge_threshold + 1,
-            max_dispersion=max_dispersion
-        ))
-    return subgraph_list
+        if return_diagnostics:
+            diagnostics['subgraph_list'].append({
+                'edge_threshold': initial_edge_threshold,
+                'nodes': nodes,
+                'dispersion': dispersion,
+                'status': 'iterating'
+            })
+            subgraph_list_next_level, subgraph_diagnostics_next_level = generate_k_edge_subgraph_list_iteratively(
+                pose_graph=subgraph,
+                initial_edge_threshold=initial_edge_threshold + 1,
+                max_dispersion=max_dispersion,
+                return_diagnostics=return_diagnostics
+            )
+            diagnostics['subgraph_list'].extend(subgraph_diagnostics_next_level['subgraph_list'])
+            subgraph_list.extend(subgraph_list_next_level)
+        else:
+            subgraph_list_next_level = generate_k_edge_subgraph_list_iteratively(
+                pose_graph=subgraph,
+                initial_edge_threshold=initial_edge_threshold + 1,
+                max_dispersion=max_dispersion
+            )
+            subgraph_list.extend(subgraph_list_next_level)
+    if return_diagnostics:
+        return subgraph_list, diagnostics
+    else:
+        return subgraph_list
 
 def pose_3d_dispersion(pose_graph):
     return np.linalg.norm(
