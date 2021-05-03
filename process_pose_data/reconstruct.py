@@ -677,6 +677,7 @@ def generate_3d_poses_timestamp(
             max_dispersion=max_dispersion,
             iterate_subgraph_analysis=iterate_subgraph_analysis
         )
+    print('Finished subgraph analysis. Returned subgraphs of sizes: {}'.format([subgraph.number_of_nodes() for subgraph in subgraph_list]))
     pose_3d_ids = list()
     keypoint_coordinates_3d = list()
     pose_2d_ids = list()
@@ -757,11 +758,13 @@ def generate_k_edge_subgraph_list_iteratively(
     max_iterations=5,
     return_diagnostics=False
 ):
+    print('Starting function. Pose graph of size {}'.format(pose_graph.number_of_nodes()))
     subgraph_list = list()
     if return_diagnostics:
         diagnostics = {'subgraph_list': list()}
     iteration_index = 0
     while True:
+        print('k: {}. Iteration: {}. Iterate: {}'.format(initial_edge_threshold, iteration_index, iterate_subgraph_analysis))
         iteration_subgraph_list = list()
         for nodes in nx.k_edge_components(pose_graph, initial_edge_threshold):
             subgraph = pose_graph.subgraph(nodes)
@@ -795,6 +798,7 @@ def generate_k_edge_subgraph_list_iteratively(
                         'dispersion': dispersion,
                         'status': 'saved'
                     })
+                print('Adding subgraph of size {}'.format(len(subgraph.number_of_nodes())))
                 iteration_subgraph_list.append(subgraph)
                 continue
             if return_diagnostics:
@@ -830,6 +834,7 @@ def generate_k_edge_subgraph_list_iteratively(
         if iteration_index == max_iterations - 1:
             break
         for iteration_subgraph in iteration_subgraph_list:
+            print('Removing {} nodes'.format(iteration_subgraph.number_of_nodes()))
             pose_graph.remove_nodes_from(iteration_subgraph.nodes())
         iteration_index += 1
     if return_diagnostics:
