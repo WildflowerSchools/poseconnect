@@ -753,21 +753,21 @@ def generate_k_edge_subgraph_list_iteratively(
     if return_diagnostics:
         diagnostics = {'subgraph_list': list()}
     for nodes in nx.k_edge_components(pose_graph, initial_edge_threshold):
+        subgraph = pose_graph.subgraph(nodes)
         if len(nodes) < 2:
             if return_diagnostics:
                 diagnostics['subgraph_list'].append({
                     'edge_threshold': initial_edge_threshold,
-                    'nodes': nodes,
+                    'subgraph': subgraph,
                     'dispersion': None,
                     'status': 'less_than_two_nodes'
                 })
             continue
-        subgraph = pose_graph.subgraph(nodes)
         if subgraph.number_of_edges() == 0:
             if return_diagnostics:
                 diagnostics['subgraph_list'].append({
                     'edge_threshold': initial_edge_threshold,
-                    'nodes': nodes,
+                    'subgraph': subgraph,
                     'dispersion': None,
                     'status': 'zero_edges'
                 })
@@ -777,18 +777,18 @@ def generate_k_edge_subgraph_list_iteratively(
             if return_diagnostics:
                 diagnostics['subgraph_list'].append({
                     'edge_threshold': initial_edge_threshold,
-                    'nodes': nodes,
+                    'subgraph': subgraph,
                     'dispersion': dispersion,
-                    'status': 'pass'
+                    'status': 'saved'
                 })
             subgraph_list.append(subgraph)
             continue
         if return_diagnostics:
             diagnostics['subgraph_list'].append({
                 'edge_threshold': initial_edge_threshold,
-                'nodes': nodes,
+                'subgraph': subgraph,
                 'dispersion': dispersion,
-                'status': 'iterating'
+                'status': 'too much dispersion; iterating'
             })
             subgraph_list_next_level, subgraph_diagnostics_next_level = generate_k_edge_subgraph_list_iteratively(
                 pose_graph=subgraph,
