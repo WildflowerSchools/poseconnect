@@ -11,6 +11,7 @@ from uuid import uuid4
 import logging
 import time
 import itertools
+import copy
 from functools import partial
 
 logger = logging.getLogger(__name__)
