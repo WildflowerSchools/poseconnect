@@ -798,7 +798,7 @@ def generate_k_edge_subgraph_list_iteratively(
                         'dispersion': dispersion,
                         'status': 'saved'
                     })
-                print('Adding subgraph of size {}'.format(len(subgraph.number_of_nodes())))
+                print('Adding subgraph of size {}'.format(subgraph.number_of_nodes()))
                 iteration_subgraph_list.append(subgraph)
                 continue
             if return_diagnostics:
