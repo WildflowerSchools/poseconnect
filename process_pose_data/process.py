@@ -491,6 +491,179 @@ def reconstruct_poses_3d_local_by_time_segment(
     ))
     return inference_id
 
+def reconstruct_poses_3d_local_timestamp_new(
+    timestamp,
+    base_dir,
+    environment_id,
+    pose_extraction_2d_inference_id,
+    pose_model_id,
+    room_x_limits,
+    room_y_limits,
+    camera_assignment_ids=None,
+    camera_device_id_lookup=None,
+    camera_calibrations=None,
+    coordinate_space_id=None,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None,
+    pose_processing_subdirectory='pose_processing',
+    min_keypoint_quality=None,
+    min_num_keypoints=None,
+    min_pose_quality=None,
+    min_pose_pair_score=None,
+    max_pose_pair_score=25.0,
+    pose_pair_score_distance_method='pixels',
+    pose_pair_score_pixel_distance_scale=5.0,
+    pose_pair_score_summary_method='rms',
+    pose_3d_limits=None,
+    pose_3d_graph_initial_edge_threshold=2,
+    pose_3d_graph_max_dispersion=0.20,
+    include_track_labels=False,
+    return_diagnostics=False
+):
+    if timestamp.tzinfo is None:
+        logger.info('Specified timestamp is timezone-naive. Assuming UTC')
+        timestamp=timestamp.replace(tzinfo=datetime.timezone.utc)
+    logger.info('Reconstructing 3D poses from local 2D pose data. Base directory: {}. Pose processing data subdirectory: {}. Environment ID: {}. Timestamp: {}'.format(
+        base_dir,
+        pose_processing_subdirectory,
+        environment_id,
+        timestamp
+    ))
+    if camera_assignment_ids is None:
+        logger.info('Camera assignment IDs not specified. Fetching camera assignment IDs from Honeycomb based on environmen and time span')
+        camera_assignment_ids = honeycomb_io.fetch_camera_assignment_ids_from_environment(
+            start=timestamp,
+            end=timestamp,
+            environment_id=environment_id,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    if camera_device_id_lookup is None:
+        logger.info('Camera device ID lookup table not specified. Fetching camera device ID info from Honeycomb based on camera assignment IDs')
+        camera_device_id_lookup = honeycomb_io.fetch_camera_device_id_lookup(
+            assignment_ids=camera_assignment_ids,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    camera_device_ids = list(camera_device_id_lookup.values())
+    if camera_calibrations is None:
+        logger.info('Camera calibration parameters not specified. Fetching camera calibration parameters from Honeycomb based on camera device IDs and time span')
+        camera_calibrations = honeycomb_io.fetch_camera_calibrations(
+            camera_ids=camera_device_ids,
+            start=timestamp,
+            end=timestamp,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    if coordinate_space_id is None:
+        coordinate_space_id = extract_coordinate_space_id_from_camera_calibrations(camera_calibrations)
+    if pose_3d_limits is None:
+        logger.info('3D pose spatial limits not specified. Generating default spatial limits based on specified room spatial limits and specified pose model')
+        pose_3d_limits = generate_pose_3d_limits(
+            pose_model_id=pose_model_id,
+            room_x_limits=room_x_limits,
+            room_y_limits=room_y_limits,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+    time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
+        start=timestamp,
+        end=timestamp
+    )
+    if len(time_segment_start_list) != 1:
+        raise ValueError('Processing single timestamp but generated time segment start list of length {}'.format(
+            len(time_segment_start_list)
+        ))
+    time_segment_start = time_segment_start_list[0]
+    logger.info('Processing 2D poses from local Alphapose output files for time segment starting at {}'.format(time_segment_start.isoformat()))
+    logger.info('Fetching 2D pose data for time segment starting at {}'.format(time_segment_start.isoformat()))
+    poses_2d_df_time_segment = process_pose_data.local_io.fetch_data_local(
+        base_dir=base_dir,
+        pipeline_stage='pose_extraction_2d',
+        environment_id=environment_id,
+        filename_stem='poses_2d',
+        inference_ids=pose_extraction_2d_inference_id,
+        data_ids=None,
+        sort_field=None,
+        time_segment_start=time_segment_start,
+        object_type='dataframe',
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    if len(poses_2d_df_time_segment) == 0:
+        logger.info('No 2D poses found for time segment starting at %s', time_segment_start.isoformat())
+        return
+    logger.info('Fetched 2D pose data for time segment starting at {}'.format(time_segment_start.isoformat()))
+    logger.info('Extracting 2D pose data for timestamp {}'.format(timestamp.isoformat()))
+    poses_2d_df_timestamp = poses_2d_df_time_segment.loc[poses_2d_df_time_segment['timestamp'] == timestamp].copy()
+    if len(poses_2d_df_timestamp) == 0:
+        logger.info('No 2D poses found for timestamp %s', timestamp.isoformat())
+        return
+    logger.info('Converting camera assignment IDs to camera device IDs for timestamp {}'.format(timestamp.isoformat()))
+    poses_2d_df_timestamp = process_pose_data.local_io.convert_assignment_ids_to_camera_device_ids(
+        poses_2d_df=poses_2d_df_timestamp,
+        camera_device_id_lookup=camera_device_id_lookup,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    logger.info('Converted camera assignment IDs to camera device IDs for timestamp {}'.format(timestamp.isoformat()))
+    camera_ids_in_data = poses_2d_df_timestamp['camera_id'].unique().tolist()
+    missing_cameras = list()
+    for camera_id in camera_ids_in_data:
+        for calibration_parameter in [
+            'camera_matrix',
+            'distortion_coefficients',
+            'rotation_vector',
+            'translation_vector'
+        ]:
+            if camera_calibrations.get(camera_id, {}).get(calibration_parameter) is None:
+                logger.warning('Camera {} in data is missing calibration information. Excluding these poses.'.format(
+                    camera_id
+                ))
+                missing_cameras.append(camera_id)
+                break
+    if len(missing_cameras) > 0:
+        poses_2d_df_timestamp = poses_2d_df_timestamp.loc[~poses_2d_df_timestamp['camera_id'].isin(missing_cameras)]
+    poses_3d_df_timestamp = process_pose_data.reconstruct.reconstruct_poses_3d_timestamp_new(
+        poses_2d_df_timestamp=poses_2d_df_timestamp,
+        camera_calibrations=camera_calibrations,
+        min_keypoint_quality=min_keypoint_quality,
+        min_num_keypoints=min_num_keypoints,
+        min_pose_quality=min_pose_quality,
+        min_pose_pair_score=min_pose_pair_score,
+        max_pose_pair_score=max_pose_pair_score,
+        pose_pair_score_distance_method=pose_pair_score_distance_method,
+        pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
+        pose_pair_score_summary_method=pose_pair_score_summary_method,
+        pose_3d_limits=pose_3d_limits,
+        pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+        pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
+        include_track_labels=include_track_labels,
+        return_diagnostics=return_diagnostics
+    )
+    return poses_3d_df_timestamp
+
 def reconstruct_poses_3d_local_timestamp(
     timestamp,
     base_dir,
