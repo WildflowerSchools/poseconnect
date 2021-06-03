@@ -1025,11 +1025,7 @@ def analyze_pose_graph(
             'action': 'Decomposing into {}-edge-connected components'.format(initial_edge_threshold),
             'component_sizes': list(map(len, components))
         }]
-    print(len(components))
-    print(list(map(len, components)))
     for component_index, component in enumerate(components):
-        print(component_index)
-        print(len(component))
         pose_subgraph = pose_graph.subgraph(component)
         if return_diagnostics:
             subgraph_list_component, subgraph_analysis_diagnostics_list = analyze_pose_subgraph(
@@ -1048,7 +1044,6 @@ def analyze_pose_graph(
                 depth=1,
                 return_diagnostics=return_diagnostics
             )
-        print(len(subgraph_list_component))
         subgraph_list.extend(subgraph_list_component)
     if return_diagnostics:
         graph_analysis_diagnostics = {'graph_analysis': graph_analysis_diagnostics_list}
@@ -1215,7 +1210,11 @@ def analyze_pose_subgraph(
             k=k+1
             continue
         if return_diagnostics:
-            subgraph_analysis_diagnostics_item['action'] = 'Could not find single node that sufficiently reduced dispersion or splits subgraph. Increasing k to {}'.format(k)
+            subgraph_analysis_diagnostics_item['action'] = 'Could not find single node that sufficiently reduced dispersion or splits subgraph. Increasing k to {} splits subgraph into {} components with sizes {}'.format(
+                k,
+                len(components),
+                list(map(len, componens))
+            )
         subgraph_list = list()
         if return_diagnostics:
             subgraph_analysis_list = [subgraph_analysis_diagnostics_item]
