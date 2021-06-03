@@ -1065,8 +1065,8 @@ def analyze_pose_subgraph(
 ):
     subgraph_analysis_diagnostics_item = {
         'depth': depth,
-        'num_nodes': pose_graph.number_of_nodes(),
-        'num_edges': pose_graph.number_of_edges(),
+        'num_nodes': pose_subgraph.number_of_nodes(),
+        'num_edges': pose_subgraph.number_of_edges(),
 
     }
     logger.debug('Depth: {}'.format(depth))
