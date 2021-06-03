@@ -1026,7 +1026,7 @@ def analyze_pose_graph(
             'component_sizes': list(map(len, components))
         }]
     print(len(components))
-    print(list(map(len,components))
+    print(list(map(len, components)))
     for component_index, component in enumerate(components):
         print(component_index)
         print(len(component))
