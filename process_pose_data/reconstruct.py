@@ -1026,6 +1026,8 @@ def analyze_pose_graph(
             'component_sizes': list(map(len, components))
         }]
     for component_index, component in enumerate(components):
+        print(component_index)
+        print(len(component))
         pose_subgraph = pose_graph.subgraph(component)
         if return_diagnostics:
             subgraph_list_component, subgraph_analysis_diagnostics_list = analyze_pose_subgraph(
