@@ -810,7 +810,7 @@ def generate_3d_poses_timestamp_new(
             initial_edge_threshold=initial_edge_threshold,
             max_dispersion=max_dispersion
         )
-    print('Finished graph analysis. Returned subgraphs of sizes: {}'.format([subgraph.number_of_nodes() for subgraph in subgraph_list]))
+    logger.debug('Finished graph analysis. Returned subgraphs of sizes: {}'.format([subgraph.number_of_nodes() for subgraph in subgraph_list]))
     pose_3d_ids = list()
     keypoint_coordinates_3d = list()
     pose_2d_ids = list()
@@ -894,7 +894,7 @@ def generate_3d_poses_timestamp(
             initial_edge_threshold=initial_edge_threshold,
             max_dispersion=max_dispersion
         )
-    print('Finished subgraph analysis. Returned subgraphs of sizes: {}'.format([subgraph.number_of_nodes() for subgraph in subgraph_list]))
+    logger.debug('Finished subgraph analysis. Returned subgraphs of sizes: {}'.format([subgraph.number_of_nodes() for subgraph in subgraph_list]))
     pose_3d_ids = list()
     keypoint_coordinates_3d = list()
     pose_2d_ids = list()
@@ -1008,16 +1008,12 @@ def analyze_pose_graph(
     max_dispersion=0.20,
     return_diagnostics=False
 ):
-    print('Starting with initial graph')
+    logger.debug('Starting with initial graph')
     graph_analysis_diagnostics = {}
     num_graph_nodes = pose_graph.number_of_nodes()
-    # node_labels = [pose_2d_label_lookup[pose_2d_id] for pose_2d_id in pose_graph.nodes]
-    # ground_truth = [pose_2d_ground_truth[pose_2d_id] for pose_2d_id in pose_graph.nodes]
-    print('Number of nodes: {}'.format(num_graph_nodes))
-    # print('Node labels: {}'.format(node_labels))
-    # print('Ground truth: {}'.format(ground_truth))
-    print('k: {}'.format(initial_edge_threshold))
-    print('Dividing into {}-edge-connected components'.format(initial_edge_threshold))
+    logger.debug('Number of nodes: {}'.format(num_graph_nodes))
+    logger.debug('k: {}'.format(initial_edge_threshold))
+    logger.debug('Dividing into {}-edge-connected components'.format(initial_edge_threshold))
     subgraph_list = list()
     components = nx.k_edge_components(pose_graph, initial_edge_threshold)
     for component_index, component in enumerate(components):
@@ -1043,46 +1039,40 @@ def analyze_pose_subgraph(
     return_diagnostics=False
 ):
     subgraph_analysis_diagnostics = {}
-    print('\n{}Depth: {}'.format(' '*depth*2, depth))
-    print('{}k: {}'.format(' '*depth*2, initial_edge_threshold))
+    logger.debug('Depth: {}'.format(depth))
+    logger.debug('k: {}'.format(initial_edge_threshold))
     num_subgraph_nodes = pose_subgraph.number_of_nodes()
     num_subgraph_edges = pose_subgraph.number_of_edges()
-    # node_labels = [pose_2d_label_lookup[pose_2d_id] for pose_2d_id in pose_subgraph.nodes]
-    # ground_truth = [pose_2d_ground_truth[pose_2d_id] for pose_2d_id in pose_subgraph.nodes]
-    print('{}Number of nodes: {}'.format(' '*depth*2, num_subgraph_nodes))
-    print('{}Number of edges: {}'.format(' '*depth*2, num_subgraph_edges))
-    # print('{}Node labels: {}'.format(' '*depth*2, node_labels))
-    # print('{}Ground truth: {}'.format(' '*depth*2, ground_truth))
+    logger.debug('Number of nodes: {}'.format(num_subgraph_nodes))
+    logger.debug('Number of edges: {}'.format(num_subgraph_edges))
     if num_subgraph_nodes == 1:
-        print('{}Only one node'.format(' '*(depth*2)))
+        logger.debug('Only one node')
         if return_diagnostics:
             return list(), subgraph_analysis_diagnostics
         else:
             return list()
     if num_subgraph_edges == 0:
-        print('{}No edges'.format(' '*(depth*2)))
+        logger.debug('No edges')
         if return_diagnostics:
             return list(), subgraph_analysis_diagnostics
         else:
             return list()
     if num_subgraph_edges == 1:
-        print(['Only one edge. Done'])
+        logger.debug('Only one edge. Done')
         if return_diagnostics:
             return [pose_subgraph], subgraph_analysis_diagnostics
         else:
             return [pose_subgraph]
     dispersion = process_pose_data.pose_3d_dispersion(pose_subgraph)
-    print('{}Dispersion: {}'.format(' '*(depth*2), dispersion))
+    logger.debug('Dispersion: {}'.format(dispersion))
     if dispersion < max_dispersion:
-        print('{}Dispersion meets threshold. Done.'.format(' '*(depth*2)))
+        logger.debug('Dispersion meets threshold. Done.')
         if return_diagnostics:
             return [pose_subgraph], subgraph_analysis_diagnostics
         else:
             return [pose_subgraph]
-    print('{}Dispersion is above threshold'.format(' '*(depth*2)))
-    print('{}Checking to see if removal of a single node can bring dispersion below threshold or split the graph'.format(
-        ' '*(depth*2)
-    ))
+    logger.debug('Dispersion is above threshold')
+    logger.debug('Checking to see if removal of a single node can bring dispersion below threshold or split the graph')
     best_dispersion_reducing_node = None
     best_dispersion_reducing_subgraph = None
     best_dispersion = None
@@ -1126,11 +1116,8 @@ def analyze_pose_subgraph(
             best_splitting_num_components = num_components_node_removed
             best_splitting_pose_quality = pose_quality_removed_node
     if best_dispersion_reducing_subgraph is not None:
-        print('{}Removing node {} resulted in dispersion {}. Done'.format(
-            ' '*(depth*2),
+        logger.debug('Removing node {} resulted in dispersion {}. Done'.format(
             best_dispersion_reducing_node,
-            # pose_2d_label_lookup[best_dispersion_reducing_node],
-            # pose_2d_ground_truth[best_dispersion_reducing_node],
             best_dispersion
         ))
         if return_diagnostics:
@@ -1138,10 +1125,8 @@ def analyze_pose_subgraph(
         else:
             return [best_dispersion_reducing_subgraph]
     if best_splitting_subgraph is not None:
-        print('{}Removing node {} of pose_quality {} results in {} components with k={}. Analyzing each component'.format(
-            ' '*(depth*2),
+        logger.debug('Removing node {} of pose_quality {} results in {} components with k={}. Analyzing each component'.format(
             best_splitting_node,
-            # pose_2d_label_lookup[best_splitting_node],
             best_splitting_pose_quality,
             best_splitting_num_components,
             initial_edge_threshold
@@ -1159,21 +1144,13 @@ def analyze_pose_subgraph(
             return subgraph_list, subgraph_analysis_diagnostics
         else:
             return subgraph_list
-    print('{}Could not find single node that sufficiently reduced dispersion or splits subgraph. Increasing k'.format(
-        ' '*(depth*2)
-    ))
+    logger.debug('Could not find single node that sufficiently reduced dispersion or splits subgraph. Increasing k')
     k = initial_edge_threshold + 1
     while True:
-        print('{}Trying k={}'.format(
-            ' '*(depth*2),
-            k
-        ))
+        logger.debug('Trying k={}'.format(k))
         components = list(nx.k_edge_components(pose_subgraph, k))
         if len(components) == 1:
-            print('{}k={} insufficient'.format(
-                ' '*(depth*2),
-                k
-            ))
+            logger.debug('k={} insufficient'.format(k))
             k=k+1
             continue
         subgraph_list = list()
@@ -1197,7 +1174,7 @@ def generate_k_edge_subgraph_list_iteratively(
     max_iterations=5,
     return_diagnostics=False
 ):
-    print('Starting function. k: {}. Pose graph of size {}'.format(
+    logger.debug('Starting function. k: {}. Pose graph of size {}'.format(
         initial_edge_threshold,
         pose_graph.number_of_nodes()
     ))
@@ -1205,7 +1182,7 @@ def generate_k_edge_subgraph_list_iteratively(
     if return_diagnostics:
         diagnostics = {'subgraph_list': list()}
     iteration_index = 0
-    print('Starting. k: {}. Pose graph of size {}. Iteration {}'.format(
+    logger.debug('Starting. k: {}. Pose graph of size {}. Iteration {}'.format(
         initial_edge_threshold,
         pose_graph.number_of_nodes(),
         iteration_index
@@ -1213,7 +1190,7 @@ def generate_k_edge_subgraph_list_iteratively(
     iteration_subgraph_list = list()
     for nodes in nx.k_edge_components(pose_graph, initial_edge_threshold):
         subgraph = pose_graph.subgraph(nodes)
-        print('Analyzing subgraph of size {}'.format(subgraph.number_of_nodes()))
+        logger.debug('Analyzing subgraph of size {}'.format(subgraph.number_of_nodes()))
         if len(nodes) < 2:
             if return_diagnostics:
                 diagnostics['subgraph_list'].append({
@@ -1223,7 +1200,7 @@ def generate_k_edge_subgraph_list_iteratively(
                     'dispersion': None,
                     'status': 'less_than_two_nodes'
                 })
-            print('Fewer than 2 nodes. Continuing.')
+            logger.debug('Fewer than 2 nodes. Continuing.')
             continue
         if subgraph.number_of_edges() == 0:
             if return_diagnostics:
@@ -1234,7 +1211,7 @@ def generate_k_edge_subgraph_list_iteratively(
                     'dispersion': None,
                     'status': 'zero_edges'
                 })
-            print('Zero edges. Continuing')
+            logger.debug('Zero edges. Continuing')
             continue
         dispersion = pose_3d_dispersion(subgraph)
         if max_dispersion is None or dispersion <= max_dispersion:
@@ -1246,10 +1223,10 @@ def generate_k_edge_subgraph_list_iteratively(
                     'dispersion': dispersion,
                     'status': 'saved'
                 })
-            print('Success. Adding subgraph of size {} to iteration list'.format(subgraph.number_of_nodes()))
+            logger.debug('Success. Adding subgraph of size {} to iteration list'.format(subgraph.number_of_nodes()))
             iteration_subgraph_list.append(subgraph)
             continue
-        print('Dispersion too great. Increasing k')
+        logger.debug('Dispersion too great. Increasing k')
         if return_diagnostics:
             diagnostics['subgraph_list'].append({
                 'overall_iteration': iteration_index,
@@ -1273,7 +1250,7 @@ def generate_k_edge_subgraph_list_iteratively(
                 max_dispersion=max_dispersion,
             )
             iteration_subgraph_list.extend(subgraph_list_next_level)
-    print('Done. Adding {} subgraphs to overall list'.format(
+    logger.debug('Done. Adding {} subgraphs to overall list'.format(
         len(iteration_subgraph_list)
     ))
     subgraph_list.extend(iteration_subgraph_list)
