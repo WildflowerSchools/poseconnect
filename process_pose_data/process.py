@@ -491,7 +491,7 @@ def reconstruct_poses_3d_local_by_time_segment(
     ))
     return inference_id
 
-def reconstruct_poses_3d_local_timestamp_new(
+def reconstruct_poses_3d_local_timestamp(
     timestamp,
     base_dir,
     environment_id,
@@ -664,7 +664,7 @@ def reconstruct_poses_3d_local_timestamp_new(
     )
     return poses_3d_df_timestamp
 
-def reconstruct_poses_3d_local_timestamp(
+def reconstruct_poses_3d_local_timestamp_legacy(
     timestamp,
     base_dir,
     environment_id,
@@ -818,7 +818,7 @@ def reconstruct_poses_3d_local_timestamp(
                 break
     if len(missing_cameras) > 0:
         poses_2d_df_timestamp = poses_2d_df_timestamp.loc[~poses_2d_df_timestamp['camera_id'].isin(missing_cameras)]
-    poses_3d_df_timestamp = process_pose_data.reconstruct.reconstruct_poses_3d_timestamp(
+    poses_3d_df_timestamp = process_pose_data.reconstruct.reconstruct_poses_3d_timestamp_legacy(
         poses_2d_df_timestamp=poses_2d_df_timestamp,
         camera_calibrations=camera_calibrations,
         min_keypoint_quality=min_keypoint_quality,

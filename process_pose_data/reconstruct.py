@@ -320,7 +320,7 @@ def reconstruct_poses_3d_timestamp(
     if return_diagnostics:
         diagnostics['pose_pair_ids_2d_after_best_match_filter'] = pose_pairs_2d_df_timestamp.index
     if return_diagnostics:
-        poses_3d_df_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp_new(
+        poses_3d_df_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp(
             pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
             pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
@@ -331,7 +331,7 @@ def reconstruct_poses_3d_timestamp(
         )
         diagnostics.update(pose_graph_diagnostics)
     else:
-        poses_3d_df_timestamp = generate_3d_poses_timestamp_new(
+        poses_3d_df_timestamp = generate_3d_poses_timestamp(
             pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
             pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
@@ -458,7 +458,7 @@ def reconstruct_poses_3d_timestamp_legacy(
     if return_diagnostics:
         diagnostics['pose_pair_ids_2d_after_best_match_filter'] = pose_pairs_2d_df_timestamp.index
     if return_diagnostics:
-        poses_3d_df_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp(
+        poses_3d_df_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp_legacy(
             pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
             pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
@@ -469,7 +469,7 @@ def reconstruct_poses_3d_timestamp_legacy(
         )
         diagnostics.update(pose_graph_diagnostics)
     else:
-        poses_3d_df_timestamp = generate_3d_poses_timestamp(
+        poses_3d_df_timestamp = generate_3d_poses_timestamp_legacy(
             pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
             pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
@@ -791,7 +791,7 @@ def generate_3d_poses_timestamp(
         if len(timestamps) > 1:
             raise ValueError('More than one timestamp found in data frame')
     timestamp = timestamps[0]
-    pose_graph = generate_pose_graph_new(
+    pose_graph = generate_pose_graph(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
         include_track_labels=include_track_labels
     )
@@ -876,7 +876,7 @@ def generate_3d_poses_timestamp_legacy(
         if len(timestamps) > 1:
             raise ValueError('More than one timestamp found in data frame')
     timestamp = timestamps[0]
-    pose_graph = generate_pose_graph(
+    pose_graph = generate_pose_graph_legacy(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
         include_track_labels=include_track_labels
     )
