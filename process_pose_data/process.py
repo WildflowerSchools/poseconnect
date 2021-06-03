@@ -521,7 +521,6 @@ def reconstruct_poses_3d_local_timestamp(
     pose_3d_limits=None,
     pose_3d_graph_initial_edge_threshold=2,
     pose_3d_graph_max_dispersion=0.20,
-    iterate_subgraph_analysis=False,
     include_track_labels=False,
     return_diagnostics=False
 ):
@@ -660,7 +659,6 @@ def reconstruct_poses_3d_local_timestamp(
         pose_3d_limits=pose_3d_limits,
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
-        iterate_subgraph_analysis=iterate_subgraph_analysis,
         include_track_labels=include_track_labels,
         return_diagnostics=return_diagnostics
     )
