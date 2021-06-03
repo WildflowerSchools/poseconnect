@@ -1213,7 +1213,7 @@ def analyze_pose_subgraph(
             subgraph_analysis_diagnostics_item['action'] = 'Could not find single node that sufficiently reduced dispersion or splits subgraph. Increasing k to {} splits subgraph into {} components with sizes {}'.format(
                 k,
                 len(components),
-                list(map(len, componens))
+                list(map(len, components))
             )
         subgraph_list = list()
         if return_diagnostics:
