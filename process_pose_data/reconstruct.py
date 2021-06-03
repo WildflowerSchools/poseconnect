@@ -1109,18 +1109,19 @@ def analyze_pose_subgraph(
             best_splitting_num_components = num_components_node_removed
             best_splitting_pose_quality = pose_quality_removed_node
     if best_dispersion_reducing_subgraph is not None:
-        print('{}Removing node {} ({}) ({}) resulted in dispersion {}. Done'.format(
+        print('{}Removing node {} resulted in dispersion {}. Done'.format(
             ' '*(depth*2),
             best_dispersion_reducing_node,
-            pose_2d_label_lookup[best_dispersion_reducing_node],
-            pose_2d_ground_truth[best_dispersion_reducing_node],
+            # pose_2d_label_lookup[best_dispersion_reducing_node],
+            # pose_2d_ground_truth[best_dispersion_reducing_node],
             best_dispersion
         ))
         return [best_dispersion_reducing_subgraph]
     if best_splitting_subgraph is not None:
         print('{}Removing node {} of pose_quality {} results in {} components with k={}. Analyzing each component'.format(
             ' '*(depth*2),
-            pose_2d_label_lookup[best_splitting_node],
+            best_splitting_node,
+            # pose_2d_label_lookup[best_splitting_node],
             best_splitting_pose_quality,
             best_splitting_num_components,
             initial_edge_threshold
