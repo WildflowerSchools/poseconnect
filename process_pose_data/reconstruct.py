@@ -1025,6 +1025,8 @@ def analyze_pose_graph(
             'action': 'Decomposing into {}-edge-connected components'.format(initial_edge_threshold),
             'component_sizes': list(map(len, components))
         }]
+    print(len(components))
+    print(list(map(len,components)))
     for component_index, component in enumerate(components):
         print(component_index)
         print(len(component))
