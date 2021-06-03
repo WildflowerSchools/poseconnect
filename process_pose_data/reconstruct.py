@@ -1170,7 +1170,10 @@ def analyze_pose_subgraph(
         ))
         components = list(nx.k_edge_components(pose_subgraph, k))
         if len(components) == 1:
-            print('{}k={} insufficient'.format(k))
+            print('{}k={} insufficient'.format(
+                ' '*(depth*2),
+                k
+            ))
             k=k+1
             continue
         subgraph_list = list()
