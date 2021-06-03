@@ -225,7 +225,6 @@ def reconstruct_poses_3d_timestamp(
     pose_3d_limits=None,
     pose_3d_graph_initial_edge_threshold=2,
     pose_3d_graph_max_dispersion=0.20,
-    iterate_subgraph_analysis=False,
     include_track_labels=False,
     validate_df=True,
     return_diagnostics=False
@@ -326,7 +325,6 @@ def reconstruct_poses_3d_timestamp(
             pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             max_dispersion=pose_3d_graph_max_dispersion,
-            iterate_subgraph_analysis=iterate_subgraph_analysis,
             include_track_labels=include_track_labels,
             validate_df=validate_df,
             return_diagnostics=return_diagnostics
@@ -338,7 +336,6 @@ def reconstruct_poses_3d_timestamp(
             pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             max_dispersion=pose_3d_graph_max_dispersion,
-            iterate_subgraph_analysis=iterate_subgraph_analysis,
             include_track_labels=include_track_labels,
             validate_df=validate_df
         )
@@ -645,7 +642,6 @@ def generate_3d_poses_timestamp(
     pose_2d_ids_column_name='pose_2d_ids',
     initial_edge_threshold=2,
     max_dispersion=0.20,
-    iterate_subgraph_analysis=False,
     include_track_labels=False,
     validate_df=True,
     return_diagnostics=False
@@ -667,7 +663,6 @@ def generate_3d_poses_timestamp(
             pose_graph=pose_graph,
             initial_edge_threshold=initial_edge_threshold,
             max_dispersion=max_dispersion,
-            iterate_subgraph_analysis=iterate_subgraph_analysis,
             return_diagnostics=return_diagnostics
         )
         diagnostics.update(k_edge_subgraph_diagnostics)
@@ -675,8 +670,7 @@ def generate_3d_poses_timestamp(
         subgraph_list = generate_k_edge_subgraph_list_iteratively(
             pose_graph=pose_graph,
             initial_edge_threshold=initial_edge_threshold,
-            max_dispersion=max_dispersion,
-            iterate_subgraph_analysis=iterate_subgraph_analysis
+            max_dispersion=max_dispersion
         )
     print('Finished subgraph analysis. Returned subgraphs of sizes: {}'.format([subgraph.number_of_nodes() for subgraph in subgraph_list]))
     pose_3d_ids = list()
@@ -755,7 +749,6 @@ def generate_k_edge_subgraph_list_iteratively(
     pose_graph,
     initial_edge_threshold=2,
     max_dispersion=0.20,
-    iterate_subgraph_analysis=False,
     max_iterations=5,
     return_diagnostics=False
 ):
@@ -767,96 +760,78 @@ def generate_k_edge_subgraph_list_iteratively(
     if return_diagnostics:
         diagnostics = {'subgraph_list': list()}
     iteration_index = 0
-    while True:
-        print('Starting iteration. k: {}. Pose graph of size {}. Iteration {}'.format(
-            initial_edge_threshold,
-            pose_graph.number_of_nodes(),
-            iteration_index
-        ))
-        iteration_subgraph_list = list()
-        for nodes in nx.k_edge_components(pose_graph, initial_edge_threshold):
-            subgraph = pose_graph.subgraph(nodes)
-            print('Analyzing subgraph of size {}'.format(subgraph.number_of_nodes()))
-            if len(nodes) < 2:
-                if return_diagnostics:
-                    diagnostics['subgraph_list'].append({
-                        'overall_iteration': iteration_index,
-                        'edge_threshold': initial_edge_threshold,
-                        'subgraph': subgraph,
-                        'dispersion': None,
-                        'status': 'less_than_two_nodes'
-                    })
-                print('Fewer than 2 nodes. Continuing.')
-                continue
-            if subgraph.number_of_edges() == 0:
-                if return_diagnostics:
-                    diagnostics['subgraph_list'].append({
-                        'overall_iteration': iteration_index,
-                        'edge_threshold': initial_edge_threshold,
-                        'subgraph': subgraph,
-                        'dispersion': None,
-                        'status': 'zero_edges'
-                    })
-                print('Zero edges. Continuing')
-                continue
-            dispersion = pose_3d_dispersion(subgraph)
-            if max_dispersion is None or dispersion <= max_dispersion:
-                if return_diagnostics:
-                    diagnostics['subgraph_list'].append({
-                        'overall_iteration': iteration_index,
-                        'edge_threshold': initial_edge_threshold,
-                        'subgraph': subgraph,
-                        'dispersion': dispersion,
-                        'status': 'saved'
-                    })
-                print('Success. Adding subgraph of size {} to iteration list'.format(subgraph.number_of_nodes()))
-                iteration_subgraph_list.append(subgraph)
-                continue
-            print('Dispersion too great. Increasing k')
+    print('Starting. k: {}. Pose graph of size {}. Iteration {}'.format(
+        initial_edge_threshold,
+        pose_graph.number_of_nodes(),
+        iteration_index
+    ))
+    iteration_subgraph_list = list()
+    for nodes in nx.k_edge_components(pose_graph, initial_edge_threshold):
+        subgraph = pose_graph.subgraph(nodes)
+        print('Analyzing subgraph of size {}'.format(subgraph.number_of_nodes()))
+        if len(nodes) < 2:
+            if return_diagnostics:
+                diagnostics['subgraph_list'].append({
+                    'overall_iteration': iteration_index,
+                    'edge_threshold': initial_edge_threshold,
+                    'subgraph': subgraph,
+                    'dispersion': None,
+                    'status': 'less_than_two_nodes'
+                })
+            print('Fewer than 2 nodes. Continuing.')
+            continue
+        if subgraph.number_of_edges() == 0:
+            if return_diagnostics:
+                diagnostics['subgraph_list'].append({
+                    'overall_iteration': iteration_index,
+                    'edge_threshold': initial_edge_threshold,
+                    'subgraph': subgraph,
+                    'dispersion': None,
+                    'status': 'zero_edges'
+                })
+            print('Zero edges. Continuing')
+            continue
+        dispersion = pose_3d_dispersion(subgraph)
+        if max_dispersion is None or dispersion <= max_dispersion:
             if return_diagnostics:
                 diagnostics['subgraph_list'].append({
                     'overall_iteration': iteration_index,
                     'edge_threshold': initial_edge_threshold,
                     'subgraph': subgraph,
                     'dispersion': dispersion,
-                    'status': 'too much dispersion; iterating'
+                    'status': 'saved'
                 })
-                subgraph_list_next_level, subgraph_diagnostics_next_level = generate_k_edge_subgraph_list_iteratively(
-                    pose_graph=subgraph,
-                    initial_edge_threshold=initial_edge_threshold + 1,
-                    max_dispersion=max_dispersion,
-                    iterate_subgraph_analysis=False,
-                    return_diagnostics=return_diagnostics
-                )
-                diagnostics['subgraph_list'].extend(subgraph_diagnostics_next_level['subgraph_list'])
-                iteration_subgraph_list.extend(subgraph_list_next_level)
-            else:
-                subgraph_list_next_level = generate_k_edge_subgraph_list_iteratively(
-                    pose_graph=subgraph,
-                    initial_edge_threshold=initial_edge_threshold + 1,
-                    max_dispersion=max_dispersion,
-                    iterate_subgraph_analysis=False
-                )
-                iteration_subgraph_list.extend(subgraph_list_next_level)
-        print('Done with this iteration. Adding {} subgraphs to overall list'.format(
-            len(iteration_subgraph_list)
-        ))
-        subgraph_list.extend(iteration_subgraph_list)
-        if not iterate_subgraph_analysis:
-            print('Subgraph iteration turned off. Ending iteration.')
-            break
-        if len(iteration_subgraph_list) == 0:
-            print('Iteration subgraph list is empty. Ending iteration.')
-            break
-        if iteration_index == max_iterations - 1:
-            print('Max iterations reached. Ending iteration.')
-            break
-        print('Preparing for next iteration. Creating new pose graph by removing nodes.')
-        pose_graph = copy.deepcopy(pose_graph)
-        for iteration_subgraph in iteration_subgraph_list:
-            print('Removing {} nodes'.format(iteration_subgraph.number_of_nodes()))
-            pose_graph.remove_nodes_from(iteration_subgraph.nodes())
-        iteration_index += 1
+            print('Success. Adding subgraph of size {} to iteration list'.format(subgraph.number_of_nodes()))
+            iteration_subgraph_list.append(subgraph)
+            continue
+        print('Dispersion too great. Increasing k')
+        if return_diagnostics:
+            diagnostics['subgraph_list'].append({
+                'overall_iteration': iteration_index,
+                'edge_threshold': initial_edge_threshold,
+                'subgraph': subgraph,
+                'dispersion': dispersion,
+                'status': 'too much dispersion; iterating'
+            })
+            subgraph_list_next_level, subgraph_diagnostics_next_level = generate_k_edge_subgraph_list_iteratively(
+                pose_graph=subgraph,
+                initial_edge_threshold=initial_edge_threshold + 1,
+                max_dispersion=max_dispersion,
+                return_diagnostics=return_diagnostics
+            )
+            diagnostics['subgraph_list'].extend(subgraph_diagnostics_next_level['subgraph_list'])
+            iteration_subgraph_list.extend(subgraph_list_next_level)
+        else:
+            subgraph_list_next_level = generate_k_edge_subgraph_list_iteratively(
+                pose_graph=subgraph,
+                initial_edge_threshold=initial_edge_threshold + 1,
+                max_dispersion=max_dispersion,
+            )
+            iteration_subgraph_list.extend(subgraph_list_next_level)
+    print('Done. Adding {} subgraphs to overall list'.format(
+        len(iteration_subgraph_list)
+    ))
+    subgraph_list.extend(iteration_subgraph_list)
     if return_diagnostics:
         return subgraph_list, diagnostics
     else:
