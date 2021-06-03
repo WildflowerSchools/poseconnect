@@ -1009,6 +1009,7 @@ def analyze_pose_graph(
     return_diagnostics=False
 ):
     print('Starting with initial graph')
+    graph_analysis_diagnostics = {}
     num_graph_nodes = pose_graph.number_of_nodes()
     # node_labels = [pose_2d_label_lookup[pose_2d_id] for pose_2d_id in pose_graph.nodes]
     # ground_truth = [pose_2d_ground_truth[pose_2d_id] for pose_2d_id in pose_graph.nodes]
@@ -1029,7 +1030,10 @@ def analyze_pose_graph(
             return_diagnostics=False
         )
         subgraph_list.extend(subgraph_list_component)
-    return subgraph_list
+    if return_diagnostics:
+        return subgraph_list, graph_analysis_diagnostics
+    else:
+        return subgraph_list
 
 def analyze_pose_subgraph(
     pose_subgraph,
@@ -1038,6 +1042,7 @@ def analyze_pose_subgraph(
     depth=1,
     return_diagnostics=False
 ):
+    subgraph_analysis_diagnostics = {}
     print('\n{}Depth: {}'.format(' '*depth*2, depth))
     print('{}k: {}'.format(' '*depth*2, initial_edge_threshold))
     num_subgraph_nodes = pose_subgraph.number_of_nodes()
@@ -1050,18 +1055,30 @@ def analyze_pose_subgraph(
     # print('{}Ground truth: {}'.format(' '*depth*2, ground_truth))
     if num_subgraph_nodes == 1:
         print('{}Only one node'.format(' '*(depth*2)))
-        return list()
+        if return_diagnostics:
+            return list(), subgraph_analysis_diagnostics
+        else:
+            return list()
     if num_subgraph_edges == 0:
         print('{}No edges'.format(' '*(depth*2)))
-        return list()
+        if return_diagnostics:
+            return list(), subgraph_analysis_diagnostics
+        else:
+            return list()
     if num_subgraph_edges == 1:
         print(['Only one edge. Done'])
-        return [pose_subgraph]
+        if return_diagnostics:
+            return [pose_subgraph], subgraph_analysis_diagnostics
+        else:
+            return [pose_subgraph]
     dispersion = process_pose_data.pose_3d_dispersion(pose_subgraph)
     print('{}Dispersion: {}'.format(' '*(depth*2), dispersion))
     if dispersion < max_dispersion:
         print('{}Dispersion meets threshold. Done.'.format(' '*(depth*2)))
-        return [pose_subgraph]
+        if return_diagnostics:
+            return [pose_subgraph], subgraph_analysis_diagnostics
+        else:
+            return [pose_subgraph]
     print('{}Dispersion is above threshold'.format(' '*(depth*2)))
     print('{}Checking to see if removal of a single node can bring dispersion below threshold or split the graph'.format(
         ' '*(depth*2)
@@ -1116,7 +1133,10 @@ def analyze_pose_subgraph(
             # pose_2d_ground_truth[best_dispersion_reducing_node],
             best_dispersion
         ))
-        return [best_dispersion_reducing_subgraph]
+        if return_diagnostics:
+            return [best_dispersion_reducing_subgraph], subgraph_analysis_diagnostics
+        else:
+            return [best_dispersion_reducing_subgraph]
     if best_splitting_subgraph is not None:
         print('{}Removing node {} of pose_quality {} results in {} components with k={}. Analyzing each component'.format(
             ' '*(depth*2),
@@ -1135,7 +1155,10 @@ def analyze_pose_subgraph(
                     depth=depth+1
                 )
             )
-        return subgraph_list
+        if return_diagnostics:
+            return subgraph_list, subgraph_analysis_diagnostics
+        else:
+            return subgraph_list
     print('{}Could not find single node that sufficiently reduced dispersion or splits subgraph. Increasing k'.format(
         ' '*(depth*2)
     ))
@@ -1156,7 +1179,10 @@ def analyze_pose_subgraph(
                     depth=depth+1
                 )
             )
-        return subgraph_list
+        if return_diagnostics:
+            return subgraph_list, subgraph_analysis_diagnostics
+        else:
+            return subgraph_list
 
 def generate_k_edge_subgraph_list_iteratively(
     pose_graph,
