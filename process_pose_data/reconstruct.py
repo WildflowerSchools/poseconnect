@@ -1164,7 +1164,10 @@ def analyze_pose_subgraph(
     ))
     k = initial_edge_threshold + 1
     while True:
-        print('{}Trying k={}'.format(k))
+        print('{}Trying k={}'.format(
+            ' '*(depth*2),
+            k
+        ))
         components = list(nx.k_edge_components(pose_subgraph, k))
         if len(components) == 1:
             print('{}k={} insufficient'.format(k))
