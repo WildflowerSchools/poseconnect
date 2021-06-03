@@ -808,7 +808,8 @@ def generate_3d_poses_timestamp_new(
         subgraph_list = analyze_pose_graph(
             pose_graph=pose_graph,
             initial_edge_threshold=initial_edge_threshold,
-            max_dispersion=max_dispersion
+            max_dispersion=max_dispersion,
+            return_diagnostics=return_diagnostics
         )
     logger.debug('Finished graph analysis. Returned subgraphs of sizes: {}'.format([subgraph.number_of_nodes() for subgraph in subgraph_list]))
     pose_3d_ids = list()
@@ -1043,9 +1044,10 @@ def analyze_pose_graph(
                 depth=1,
                 return_diagnostics=return_diagnostics
             )
+        print(len(subgraph_list_component))
         subgraph_list.extend(subgraph_list_component)
     if return_diagnostics:
-        graph_analysis = {'graph_analysis': graph_analysis_diagnostics_list}
+        graph_analysis_diagnostics = {'graph_analysis': graph_analysis_diagnostics_list}
         return subgraph_list, graph_analysis_diagnostics
     else:
         return subgraph_list
