@@ -834,7 +834,7 @@ def generate_3d_poses_timestamp_new(
                 ))
             keypoint_coordinates_3d_list.append(keypoint_coordinates_3d_edge)
         keypoint_coordinates_3d.append(np.nanmedian(np.stack(keypoint_coordinates_3d_list), axis=0))
-        pose_2d_ids.append(pose_2d_ids_list)
+        pose_2d_ids.append(list(set(pose_2d_ids_list)))
         if include_track_labels:
             track_labels.append(track_label_list)
     if len(pose_3d_ids) == 0:
@@ -918,7 +918,7 @@ def generate_3d_poses_timestamp(
                 ))
             keypoint_coordinates_3d_list.append(keypoint_coordinates_3d_edge)
         keypoint_coordinates_3d.append(np.nanmedian(np.stack(keypoint_coordinates_3d_list), axis=0))
-        pose_2d_ids.append(pose_2d_ids_list)
+        pose_2d_ids.append(list(set(pose_2d_ids_list)))
         if include_track_labels:
             track_labels.append(track_label_list)
     if len(pose_3d_ids) == 0:
