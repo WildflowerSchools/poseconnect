@@ -1016,7 +1016,7 @@ def analyze_pose_graph(
     logger.debug('k: {}'.format(initial_edge_threshold))
     logger.debug('Dividing into {}-edge-connected components'.format(initial_edge_threshold))
     subgraph_list = list()
-    components = nx.k_edge_components(pose_graph, initial_edge_threshold)
+    components = list(nx.k_edge_components(pose_graph, initial_edge_threshold))
     if return_diagnostics:
         graph_analysis_diagnostics_list=[{
             'depth': 0,
@@ -1026,7 +1026,7 @@ def analyze_pose_graph(
             'component_sizes': list(map(len, components))
         }]
     print(len(components))
-    print(list(map(len,components)))
+    print(list(map(len,components))
     for component_index, component in enumerate(components):
         print(component_index)
         print(len(component))
