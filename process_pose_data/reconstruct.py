@@ -1016,17 +1016,36 @@ def analyze_pose_graph(
     logger.debug('Dividing into {}-edge-connected components'.format(initial_edge_threshold))
     subgraph_list = list()
     components = nx.k_edge_components(pose_graph, initial_edge_threshold)
+    if return_diagnostics:
+        graph_analysis_diagnostics_list=[{
+            'depth': 0,
+            'num_nodes': pose_graph.number_of_nodes(),
+            'num_edges': pose_graph.number_of_edges(),
+            'action': 'Decomposing into {}-edge-connected components'.format(initial_edge_threshold),
+            'component_sizes': list(map(len, components))
+        }]
     for component_index, component in enumerate(components):
         pose_subgraph = pose_graph.subgraph(component)
-        subgraph_list_component = analyze_pose_subgraph(
-            pose_subgraph=pose_subgraph,
-            initial_edge_threshold=initial_edge_threshold,
-            max_dispersion=max_dispersion,
-            depth=1,
-            return_diagnostics=False
-        )
+        if return_diagnostics:
+            subgraph_list_component, subgraph_analysis_diagnostics_list = analyze_pose_subgraph(
+                pose_subgraph=pose_subgraph,
+                initial_edge_threshold=initial_edge_threshold,
+                max_dispersion=max_dispersion,
+                depth=1,
+                return_diagnostics=return_diagnostics
+            )
+            graph_analysis_diagnostics_list.extend(subgraph_analysis_diagnostics_list)
+        else:
+            subgraph_list_component = analyze_pose_subgraph(
+                pose_subgraph=pose_subgraph,
+                initial_edge_threshold=initial_edge_threshold,
+                max_dispersion=max_dispersion,
+                depth=1,
+                return_diagnostics=return_diagnostics
+            )
         subgraph_list.extend(subgraph_list_component)
     if return_diagnostics:
+        graph_analysis = {'graph_analysis': graph_analysis_diagnostics_list}
         return subgraph_list, graph_analysis_diagnostics
     else:
         return subgraph_list
@@ -1038,7 +1057,12 @@ def analyze_pose_subgraph(
     depth=1,
     return_diagnostics=False
 ):
-    subgraph_analysis_diagnostics = {}
+    subgraph_analysis_diagnostics_item = {
+        'depth': depth,
+        'num_nodes': pose_graph.number_of_nodes(),
+        'num_edges': pose_graph.number_of_edges(),
+
+    }
     logger.debug('Depth: {}'.format(depth))
     logger.debug('k: {}'.format(initial_edge_threshold))
     num_subgraph_nodes = pose_subgraph.number_of_nodes()
@@ -1048,19 +1072,22 @@ def analyze_pose_subgraph(
     if num_subgraph_nodes == 1:
         logger.debug('Only one node')
         if return_diagnostics:
-            return list(), subgraph_analysis_diagnostics
+            subgraph_analysis_diagnostics_item['action'] = 'Only one node. Returning nothing'
+            return list(), [subgraph_analysis_diagnostics_item]
         else:
             return list()
     if num_subgraph_edges == 0:
         logger.debug('No edges')
         if return_diagnostics:
-            return list(), subgraph_analysis_diagnostics
+            subgraph_analysis_diagnostics_item['action'] = 'No edges. Returning nothing'
+            return list(), [subgraph_analysis_diagnostics_item]
         else:
             return list()
     if num_subgraph_edges == 1:
         logger.debug('Only one edge. Done')
         if return_diagnostics:
-            return [pose_subgraph], subgraph_analysis_diagnostics
+            subgraph_analysis_diagnostics_item['action'] = 'Only one edge. Done.'
+            return [pose_subgraph], [subgraph_analysis_diagnostics_item]
         else:
             return [pose_subgraph]
     dispersion = process_pose_data.pose_3d_dispersion(pose_subgraph)
@@ -1068,7 +1095,8 @@ def analyze_pose_subgraph(
     if dispersion < max_dispersion:
         logger.debug('Dispersion meets threshold. Done.')
         if return_diagnostics:
-            return [pose_subgraph], subgraph_analysis_diagnostics
+            subgraph_analysis_diagnostics_item['action'] = 'Dispersion meets threshold. Done.'
+            return [pose_subgraph], [subgraph_analysis_diagnostics_item]
         else:
             return [pose_subgraph]
     logger.debug('Dispersion is above threshold')
@@ -1121,7 +1149,12 @@ def analyze_pose_subgraph(
             best_dispersion
         ))
         if return_diagnostics:
-            return [best_dispersion_reducing_subgraph], subgraph_analysis_diagnostics
+            subgraph_analysis_diagnostics_item['action'] = 'Dispersion is {}, but removing node {} results in dispersion {}. Done'.format(
+                dispersion,
+                best_dispersion_reducing_node,
+                best_dispersion
+            )
+            return [best_dispersion_reducing_subgraph], [subgraph_analysis_diagnostics_item]
         else:
             return [best_dispersion_reducing_subgraph]
     if best_splitting_subgraph is not None:
@@ -1131,17 +1164,37 @@ def analyze_pose_subgraph(
             best_splitting_num_components,
             initial_edge_threshold
         ))
+        if return_diagnostics:
+            subgraph_analysis_diagnostics_item['action'] = 'Dispersion is {}, but removing node {} of pose quality {} results in {} {}-edge-connected components of sizes {}. Analyzing each component'.format(
+                dispersion,
+                best_splitting_node,
+                best_splitting_pose_quality,
+                best_splitting_num_components,
+                initial_edge_threshold,
+                list(map(len, best_splitting_components))
+            )
         subgraph_list = list()
+        if return_diagnostics:
+            subgraph_analysis_list = [subgraph_analysis_diagnostics_item]
         for component in best_splitting_components:
-            subgraph_list.extend(
-                analyze_pose_subgraph(
+            if return_diagnostics:
+                subsubgraph_list, subsubgraph_analysis_list = analyze_pose_subgraph(
                     pose_subgraph=pose_subgraph.subgraph(component),
                     initial_edge_threshold=initial_edge_threshold,
                     depth=depth+1
                 )
-            )
+                subgraph_list.extend(subsubgraph_list)
+                subgraph_analysis_list.extend(subsubgraph_analysis_list)
+            else:
+                subgraph_list.extend(
+                    analyze_pose_subgraph(
+                        pose_subgraph=pose_subgraph.subgraph(component),
+                        initial_edge_threshold=initial_edge_threshold,
+                        depth=depth+1
+                    )
+                )
         if return_diagnostics:
-            return subgraph_list, subgraph_analysis_diagnostics
+            return subgraph_list, subgraph_analysis_list
         else:
             return subgraph_list
     logger.debug('Could not find single node that sufficiently reduced dispersion or splits subgraph. Increasing k')
@@ -1153,17 +1206,30 @@ def analyze_pose_subgraph(
             logger.debug('k={} insufficient'.format(k))
             k=k+1
             continue
+        if return_diagnostics:
+            subgraph_analysis_diagnostics_item['action'] = 'Could not find single node that sufficiently reduced dispersion or splits subgraph. Increasing k to {}'.format(k)
         subgraph_list = list()
+        if return_diagnostics:
+            subgraph_analysis_list = [subgraph_analysis_diagnostics_item]
         for component in components:
-            subgraph_list.extend(
-                analyze_pose_subgraph(
+            if return_diagnostics:
+                subsubgraph_list, subsubgraph_analysis_list = analyze_pose_subgraph(
                     pose_subgraph=pose_subgraph.subgraph(component),
                     initial_edge_threshold=initial_edge_threshold,
                     depth=depth+1
                 )
-            )
+                subgraph_list.extend(subsubgraph_list)
+                subgraph_analysis_list.extend(subsubgraph_analysis_list)
+            else:
+                subgraph_list.extend(
+                    analyze_pose_subgraph(
+                        pose_subgraph=pose_subgraph.subgraph(component),
+                        initial_edge_threshold=initial_edge_threshold,
+                        depth=depth+1
+                    )
+                )
         if return_diagnostics:
-            return subgraph_list, subgraph_analysis_diagnostics
+            return subgraph_list, subgraph_analysis_list
         else:
             return subgraph_list
 
