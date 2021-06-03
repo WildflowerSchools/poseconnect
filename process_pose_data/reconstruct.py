@@ -1187,7 +1187,8 @@ def analyze_pose_subgraph(
                 subsubgraph_list, subsubgraph_analysis_list = analyze_pose_subgraph(
                     pose_subgraph=pose_subgraph.subgraph(component),
                     initial_edge_threshold=initial_edge_threshold,
-                    depth=depth+1
+                    depth=depth+1,
+                    return_diagnostics=return_diagnostics
                 )
                 subgraph_list.extend(subsubgraph_list)
                 subgraph_analysis_list.extend(subsubgraph_analysis_list)
@@ -1196,7 +1197,8 @@ def analyze_pose_subgraph(
                     analyze_pose_subgraph(
                         pose_subgraph=pose_subgraph.subgraph(component),
                         initial_edge_threshold=initial_edge_threshold,
-                        depth=depth+1
+                        depth=depth+1,
+                        return_diagnostics=return_diagnostics
                     )
                 )
         if return_diagnostics:
