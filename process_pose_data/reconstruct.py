@@ -209,7 +209,7 @@ def pose_3d_limits(
         ])
     return np.array([pose_3d_limits_min, pose_3d_limits_max]) + + np.array([[[-tolerance]], [[tolerance]]])
 
-def reconstruct_poses_3d_timestamp_new(
+def reconstruct_poses_3d_timestamp(
     poses_2d_df_timestamp,
     camera_calibrations,
     pose_2d_id_column_name='pose_2d_id',
@@ -347,7 +347,7 @@ def reconstruct_poses_3d_timestamp_new(
     else:
         return poses_3d_df_timestamp
 
-def reconstruct_poses_3d_timestamp(
+def reconstruct_poses_3d_timestamp_legacy(
     poses_2d_df_timestamp,
     camera_calibrations,
     pose_2d_id_column_name='pose_2d_id',
@@ -775,7 +775,7 @@ def extract_best_score_indices_timestamp_camera_pair(
     best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
     return best_score_indices
 
-def generate_3d_poses_timestamp_new(
+def generate_3d_poses_timestamp(
     pose_pairs_2d_df_timestamp,
     pose_2d_ids_column_name='pose_2d_ids',
     initial_edge_threshold=2,
@@ -860,7 +860,7 @@ def generate_3d_poses_timestamp_new(
     else:
         return poses_3d_df_timestamp
 
-def generate_3d_poses_timestamp(
+def generate_3d_poses_timestamp_legacy(
     pose_pairs_2d_df_timestamp,
     pose_2d_ids_column_name='pose_2d_ids',
     initial_edge_threshold=2,
@@ -944,7 +944,7 @@ def generate_3d_poses_timestamp(
     else:
         return poses_3d_df_timestamp
 
-def generate_pose_graph_new(
+def generate_pose_graph(
     pose_pairs_2d_df_timestamp,
     include_track_labels=False
 ):
@@ -979,7 +979,7 @@ def generate_pose_graph_new(
         )
     return pose_graph
 
-def generate_pose_graph(
+def generate_pose_graph_legacy(
     pose_pairs_2d_df_timestamp,
     include_track_labels=False
 ):
