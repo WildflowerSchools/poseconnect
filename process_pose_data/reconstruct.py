@@ -1112,8 +1112,11 @@ def analyze_pose_subgraph(
     best_splitting_pose_quality = None
     for node_to_remove in pose_subgraph.nodes:
         subgraph_node_removed = pose_subgraph.subgraph(set(pose_subgraph.nodes) - {node_to_remove})
-        dispersion_node_removed = process_pose_data.pose_3d_dispersion(subgraph_node_removed)
         num_edges_node_removed = subgraph_node_removed.number_of_edges()
+        if num_edges_node_removed > 1:
+            dispersion_node_removed = process_pose_data.pose_3d_dispersion(subgraph_node_removed)
+        else:
+            dispersion_node_removed = None
         if (
             num_edges_node_removed > 1 and
             dispersion_node_removed < max_dispersion and
