@@ -272,6 +272,172 @@ def overlay_poses(
                 delete_input_videos=delete_individual_clips
             )
 
+def overlay_poses_timestamp(
+    poses_df,
+    timestamp=None,
+    camera_assignment_ids=None,
+    environment_id=None,
+    environment_name=None,
+    camera_device_types=None,
+    camera_device_ids=None,
+    camera_part_numbers=None,
+    camera_names=None,
+    camera_serial_numbers=None,
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None,
+    local_video_directory='./videos',
+    local_image_directory='./images',
+    video_filename_extension='mp4',
+    image_filename_extension='png',
+    pose_model_id=None,
+    camera_calibrations=None,
+    pose_label_column=None,
+    keypoint_connectors=None,
+    pose_color='green',
+    keypoint_radius=3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.6,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1,
+    output_directory='./image_overlays',
+    output_filename_prefix='poses',
+    output_filename_datetime_format='%Y%m%d_%H%M%S_%f',
+    output_filename_extension='png',
+):
+    poses_df_columns = poses_df.columns.tolist()
+    if 'keypoint_coordinates_3d' in poses_df_columns and 'camera_id' not in poses_df_columns:
+        logger.info('Poses appear to be 3D poses. Projecting into each camera view')
+        poses_3d = True
+        poses_2d = False
+    elif 'keypoint_coordinates_3d' not in poses_df_columns and 'camera_id' in poses_df_columns:
+        logger.info('Poses appear to be 2D poses. Subsetting poses foreach camera view')
+        poses_3d = False
+        poses_2d = True
+    elif len(poses_df) == 0:
+        logger.warn('Pose dataframe is empty')
+        return
+    else:
+        raise ValueError('Cannot parse pose dataframe')
+    if timestamp is None:
+        timestamps = list(poses_df['timestamp'].unique())
+        if len(timestamps) > 1:
+            raise ValueError('Timestamp not specified and supplied poses contain {} timestamps'.format(
+                len(timestamps)
+            ))
+        timestamp = timestamps[0].to_pydatetime()
+    poses_df_timestamp = poses_df.loc[poses_df['timestamp'] == timestamp].copy()
+    if len(poses_df_timestamp) == 0:
+        raise ValueError('Supplied poses contain no data for timestamp {}'.format(
+            timestamp.isoformat()
+        ))
+    image_metadata_with_local_paths = video_io.fetch_images(
+        image_timestamps=[timestamp],
+        camera_assignment_ids=camera_assignment_ids,
+        environment_id=environment_id,
+        environment_name=environment_name,
+        camera_device_types=camera_device_types,
+        camera_device_ids=camera_device_ids,
+        camera_part_numbers=camera_part_numbers,
+        camera_names=camera_names,
+        camera_serial_numbers=camera_serial_numbers,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret,
+        local_image_directory=local_image_directory,
+        image_filename_extension=image_filename_extension,
+        local_video_directory=local_video_directory,
+        video_filename_extension=video_filename_extension
+    )
+    image_metadata_dict = dict()
+    for datum in image_metadata_with_local_paths:
+        image_metadata_dict[datum.get('device_id')] = datum
+    camera_ids = list(image_metadata_dict.keys())
+    camera_name_dict = honeycomb_io.fetch_camera_names(
+        camera_ids
+    )
+    if poses_3d:
+        if camera_calibrations is None:
+            camera_calibrations = honeycomb_io.fetch_camera_calibrations(
+                camera_ids,
+                start=timestamp,
+                end=timestamp
+            )
+    if pose_model_id is not None:
+        pose_model = honeycomb_io.fetch_pose_model_by_pose_model_id(
+            pose_model_id
+        )
+        if keypoint_connectors is None:
+            keypoint_connectors = pose_model.get('keypoint_connectors')
+    if keypoint_connectors is not None:
+        draw_keypoint_connectors = True
+    else:
+        draw_keypoint_connectors = False
+    os.makedirs(output_directory, exist_ok=True)
+    for camera_id in camera_ids:
+        camera_name = camera_name_dict[camera_id]
+        logger.info('Overlaying poses for {}'.format(camera_name))
+        if poses_2d:
+            poses_camera_df = poses_df_timestamp.loc[poses_df_timestamp['camera_id'] == camera_id].copy()
+        if poses_3d:
+            poses_camera_df = poses_df_timestamp.copy()
+            camera_calibration = camera_calibrations[camera_id]
+            project_points_partial = functools.partial(
+                cv_utils.project_points,
+                rotation_vector=camera_calibration['rotation_vector'],
+                translation_vector=camera_calibration['translation_vector'],
+                camera_matrix=camera_calibration['camera_matrix'],
+                distortion_coefficients=camera_calibration['distortion_coefficients'],
+                remove_behind_camera=True,
+                remove_outside_frame=True,
+                image_corners=[
+                    [0,0],
+                    [camera_calibration['image_width'], camera_calibration['image_height']]
+                ]
+            )
+            poses_camera_df['keypoint_coordinates_2d'] = poses_camera_df['keypoint_coordinates_3d'].apply(project_points_partial)
+        image_local_path = image_metadata_dict[camera_id]['image_local_path']
+        image = cv.imread(image_local_path)
+        for pose_id, row in poses_camera_df.iterrows():
+            keypoint_coordinates_2d = row['keypoint_coordinates_2d']
+            if pose_label_column is not None:
+                pose_label = row[pose_label_column]
+            else:
+                pose_label = None
+            image=draw_pose_2d_opencv(
+                image=image,
+                keypoint_coordinates=keypoint_coordinates_2d,
+                pose_label=pose_label,
+                draw_keypoint_connectors=draw_keypoint_connectors,
+                keypoint_connectors=keypoint_connectors,
+                keypoint_alpha=keypoint_alpha,
+                keypoint_connector_alpha=keypoint_connector_alpha,
+                keypoint_connector_linewidth=keypoint_connector_linewidth,
+                pose_label_font_scale=pose_label_font_scale,
+                pose_label_line_width=pose_label_line_width
+            )
+        output_path = os.path.join(
+            output_directory,
+            '{}_{}_{}.{}'.format(
+                output_filename_prefix,
+                timestamp.strftime(output_filename_datetime_format),
+                slugify.slugify(camera_name),
+                output_filename_extension
+            )
+        )
+        cv.imwrite(output_path, image)
+
 def overlay_poses_camera_time_segment(
     input_parameters,
     video_metadata_dict,

@@ -882,6 +882,9 @@ def generate_time_segment_start_list(
         second=10*(start_utc.second // 10),
         tzinfo=start_utc.tzinfo
     )
-    num_time_segments = math.ceil((end_utc - start_utc_floor).total_seconds()  / 10.0)
+    if end_utc == start_utc_floor:
+        num_time_segments = 1
+    else:
+        num_time_segments = math.ceil((end_utc - start_utc_floor).total_seconds()  / 10.0)
     time_segment_start_list = [start_utc_floor + i*datetime.timedelta(seconds=10) for i in range(num_time_segments)]
     return time_segment_start_list

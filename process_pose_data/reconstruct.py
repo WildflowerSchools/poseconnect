@@ -11,6 +11,7 @@ from uuid import uuid4
 import logging
 import time
 import itertools
+import copy
 from functools import partial
 
 logger = logging.getLogger(__name__)
@@ -225,9 +226,15 @@ def reconstruct_poses_3d_timestamp(
     pose_3d_graph_initial_edge_threshold=2,
     pose_3d_graph_max_dispersion=0.20,
     include_track_labels=False,
-    validate_df=True
+    validate_df=True,
+    return_diagnostics=False
 ):
     poses_2d_df_timestamp_copy = poses_2d_df_timestamp.copy()
+    if return_diagnostics:
+        diagnostics = {
+        'poses_2d_df': poses_2d_df_timestamp_copy.copy(),
+        'pose_2d_ids_original': poses_2d_df_timestamp_copy.index
+        }
     if validate_df:
         if len(poses_2d_df_timestamp_copy['timestamp'].unique()) > 1:
             raise ValueError('More than one timestamp found in data frame')
@@ -237,19 +244,27 @@ def reconstruct_poses_3d_timestamp(
             poses_2d_df=poses_2d_df_timestamp_copy,
             min_keypoint_quality=min_keypoint_quality
         )
+    if return_diagnostics:
+        diagnostics['pose_2d_ids_after_min_keypoint_quality_filter'] = poses_2d_df_timestamp_copy.index
     poses_2d_df_timestamp_copy = process_pose_data.filter.remove_empty_2d_poses(
         poses_2d_df=poses_2d_df_timestamp_copy
     )
+    if return_diagnostics:
+        diagnostics['pose_2d_ids_after_empty_2d_poses_filter'] = poses_2d_df_timestamp_copy.index
     if min_num_keypoints is not None:
         poses_2d_df_timestamp_copy = process_pose_data.filter.filter_poses_by_num_valid_keypoints(
             poses_2d_df=poses_2d_df_timestamp_copy,
             min_num_keypoints=min_num_keypoints
         )
+    if return_diagnostics:
+        diagnostics['pose_2d_ids_after_min_num_keypoints_filter'] = poses_2d_df_timestamp_copy.index
     if min_pose_quality is not None:
         poses_2d_df_timestamp_copy = process_pose_data.filter.filter_poses_by_quality(
             poses_2d_df=poses_2d_df_timestamp_copy,
             min_pose_quality=min_pose_quality
         )
+    if return_diagnostics:
+        diagnostics['pose_2d_ids_after_min_pose_quality_filter'] = poses_2d_df_timestamp_copy.index
     pose_pairs_2d_df_timestamp = generate_pose_pairs_timestamp(
         poses_2d_df_timestamp=poses_2d_df_timestamp_copy,
         pose_2d_id_column_name=pose_2d_id_column_name
@@ -258,48 +273,217 @@ def reconstruct_poses_3d_timestamp(
         pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
         camera_calibrations=camera_calibrations
     )
+    if return_diagnostics:
+        diagnostics['pose_pairs_2d_df'] = pose_pairs_2d_df_timestamp.copy()
     pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_empty_3d_poses(
         pose_pairs_2d_df=pose_pairs_2d_df_timestamp
     )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_empty_3d_pose_filter'] = pose_pairs_2d_df_timestamp.index
     pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_empty_reprojected_2d_poses(
         pose_pairs_2d_df=pose_pairs_2d_df_timestamp
     )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_empty_reprojected_2d_pose_filter'] = pose_pairs_2d_df_timestamp.index
     pose_pairs_2d_df_timestamp = score_pose_pairs(
         pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
         distance_method=pose_pair_score_distance_method,
         summary_method=pose_pair_score_summary_method,
         pixel_distance_scale=pose_pair_score_pixel_distance_scale
     )
+    if return_diagnostics:
+        diagnostics['pose_pair_2d_scores'] = pose_pairs_2d_df_timestamp['score']
     pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_invalid_pose_pair_scores(
         pose_pairs_2d_df=pose_pairs_2d_df_timestamp
     )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_invalid_pose_pair_score_filter'] = pose_pairs_2d_df_timestamp.index
     if min_pose_pair_score is not None or max_pose_pair_score is not None:
         pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_score(
             pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
             min_score=min_pose_pair_score,
             max_score=max_pose_pair_score
         )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_min_max_pose_pair_score_filter'] = pose_pairs_2d_df_timestamp.index
     if pose_3d_limits is not None:
         pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
             pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
             pose_3d_limits=pose_3d_limits
         )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_3d_pose_spatial_limit_filter'] = pose_pairs_2d_df_timestamp.index
     pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_best_match(
         pose_pairs_2d_df_timestamp,
         pose_2d_id_column_name=pose_2d_id_column_name
     )
-    poses_3d_df_timestamp = generate_3d_poses_timestamp(
-        pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
-        pose_2d_ids_column_name=pose_2d_ids_column_name,
-        initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
-        max_dispersion=pose_3d_graph_max_dispersion,
-        include_track_labels=include_track_labels,
-        validate_df=validate_df
-    )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_best_match_filter'] = pose_pairs_2d_df_timestamp.index
+    if return_diagnostics:
+        poses_3d_df_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp(
+            pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+            pose_2d_ids_column_name=pose_2d_ids_column_name,
+            initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+            max_dispersion=pose_3d_graph_max_dispersion,
+            include_track_labels=include_track_labels,
+            validate_df=validate_df,
+            return_diagnostics=return_diagnostics
+        )
+        diagnostics.update(pose_graph_diagnostics)
+    else:
+        poses_3d_df_timestamp = generate_3d_poses_timestamp(
+            pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+            pose_2d_ids_column_name=pose_2d_ids_column_name,
+            initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+            max_dispersion=pose_3d_graph_max_dispersion,
+            include_track_labels=include_track_labels,
+            validate_df=validate_df
+        )
     if len(poses_3d_df_timestamp) == 0:
         return poses_3d_df_timestamp
     poses_3d_df_timestamp.set_index('pose_3d_id', inplace=True)
-    return poses_3d_df_timestamp
+    if return_diagnostics:
+        return poses_3d_df_timestamp, diagnostics
+    else:
+        return poses_3d_df_timestamp
+
+def reconstruct_poses_3d_timestamp_legacy(
+    poses_2d_df_timestamp,
+    camera_calibrations,
+    pose_2d_id_column_name='pose_2d_id',
+    pose_2d_ids_column_name='pose_2d_ids',
+    min_keypoint_quality=None,
+    min_num_keypoints=None,
+    min_pose_quality=None,
+    min_pose_pair_score=None,
+    max_pose_pair_score=25.0,
+    pose_pair_score_distance_method='pixels',
+    pose_pair_score_pixel_distance_scale=5.0,
+    pose_pair_score_summary_method='rms',
+    pose_3d_limits=None,
+    pose_3d_graph_initial_edge_threshold=2,
+    pose_3d_graph_max_dispersion=0.20,
+    include_track_labels=False,
+    validate_df=True,
+    return_diagnostics=False
+):
+    poses_2d_df_timestamp_copy = poses_2d_df_timestamp.copy()
+    if return_diagnostics:
+        diagnostics = {
+        'poses_2d_df': poses_2d_df_timestamp_copy.copy(),
+        'pose_2d_ids_original': poses_2d_df_timestamp_copy.index
+        }
+    if validate_df:
+        if len(poses_2d_df_timestamp_copy['timestamp'].unique()) > 1:
+            raise ValueError('More than one timestamp found in data frame')
+    timestamp = poses_2d_df_timestamp_copy['timestamp'][0]
+    if min_keypoint_quality is not None:
+        poses_2d_df_timestamp_copy = process_pose_data.filter.filter_keypoints_by_quality(
+            poses_2d_df=poses_2d_df_timestamp_copy,
+            min_keypoint_quality=min_keypoint_quality
+        )
+    if return_diagnostics:
+        diagnostics['pose_2d_ids_after_min_keypoint_quality_filter'] = poses_2d_df_timestamp_copy.index
+    poses_2d_df_timestamp_copy = process_pose_data.filter.remove_empty_2d_poses(
+        poses_2d_df=poses_2d_df_timestamp_copy
+    )
+    if return_diagnostics:
+        diagnostics['pose_2d_ids_after_empty_2d_poses_filter'] = poses_2d_df_timestamp_copy.index
+    if min_num_keypoints is not None:
+        poses_2d_df_timestamp_copy = process_pose_data.filter.filter_poses_by_num_valid_keypoints(
+            poses_2d_df=poses_2d_df_timestamp_copy,
+            min_num_keypoints=min_num_keypoints
+        )
+    if return_diagnostics:
+        diagnostics['pose_2d_ids_after_min_num_keypoints_filter'] = poses_2d_df_timestamp_copy.index
+    if min_pose_quality is not None:
+        poses_2d_df_timestamp_copy = process_pose_data.filter.filter_poses_by_quality(
+            poses_2d_df=poses_2d_df_timestamp_copy,
+            min_pose_quality=min_pose_quality
+        )
+    if return_diagnostics:
+        diagnostics['pose_2d_ids_after_min_pose_quality_filter'] = poses_2d_df_timestamp_copy.index
+    pose_pairs_2d_df_timestamp = generate_pose_pairs_timestamp(
+        poses_2d_df_timestamp=poses_2d_df_timestamp_copy,
+        pose_2d_id_column_name=pose_2d_id_column_name
+    )
+    pose_pairs_2d_df_timestamp = calculate_3d_poses(
+        pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+        camera_calibrations=camera_calibrations
+    )
+    if return_diagnostics:
+        diagnostics['pose_pairs_2d_df'] = pose_pairs_2d_df_timestamp.copy()
+    pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_empty_3d_poses(
+        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+    )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_empty_3d_pose_filter'] = pose_pairs_2d_df_timestamp.index
+    pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_empty_reprojected_2d_poses(
+        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+    )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_empty_reprojected_2d_pose_filter'] = pose_pairs_2d_df_timestamp.index
+    pose_pairs_2d_df_timestamp = score_pose_pairs(
+        pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+        distance_method=pose_pair_score_distance_method,
+        summary_method=pose_pair_score_summary_method,
+        pixel_distance_scale=pose_pair_score_pixel_distance_scale
+    )
+    if return_diagnostics:
+        diagnostics['pose_pair_2d_scores'] = pose_pairs_2d_df_timestamp['score']
+    pose_pairs_2d_df_timestamp =  process_pose_data.filter.remove_invalid_pose_pair_scores(
+        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+    )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_invalid_pose_pair_score_filter'] = pose_pairs_2d_df_timestamp.index
+    if min_pose_pair_score is not None or max_pose_pair_score is not None:
+        pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_score(
+            pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+            min_score=min_pose_pair_score,
+            max_score=max_pose_pair_score
+        )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_min_max_pose_pair_score_filter'] = pose_pairs_2d_df_timestamp.index
+    if pose_3d_limits is not None:
+        pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
+            pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+            pose_3d_limits=pose_3d_limits
+        )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_3d_pose_spatial_limit_filter'] = pose_pairs_2d_df_timestamp.index
+    pose_pairs_2d_df_timestamp = process_pose_data.filter.filter_pose_pairs_by_best_match(
+        pose_pairs_2d_df_timestamp,
+        pose_2d_id_column_name=pose_2d_id_column_name
+    )
+    if return_diagnostics:
+        diagnostics['pose_pair_ids_2d_after_best_match_filter'] = pose_pairs_2d_df_timestamp.index
+    if return_diagnostics:
+        poses_3d_df_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp_legacy(
+            pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+            pose_2d_ids_column_name=pose_2d_ids_column_name,
+            initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+            max_dispersion=pose_3d_graph_max_dispersion,
+            include_track_labels=include_track_labels,
+            validate_df=validate_df,
+            return_diagnostics=return_diagnostics
+        )
+        diagnostics.update(pose_graph_diagnostics)
+    else:
+        poses_3d_df_timestamp = generate_3d_poses_timestamp_legacy(
+            pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+            pose_2d_ids_column_name=pose_2d_ids_column_name,
+            initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+            max_dispersion=pose_3d_graph_max_dispersion,
+            include_track_labels=include_track_labels,
+            validate_df=validate_df
+        )
+    if len(poses_3d_df_timestamp) == 0:
+        return poses_3d_df_timestamp
+    poses_3d_df_timestamp.set_index('pose_3d_id', inplace=True)
+    if return_diagnostics:
+        return poses_3d_df_timestamp, diagnostics
+    else:
+        return poses_3d_df_timestamp
 
 def generate_pose_pairs_timestamp(
     poses_2d_df_timestamp,
@@ -597,7 +781,8 @@ def generate_3d_poses_timestamp(
     initial_edge_threshold=2,
     max_dispersion=0.20,
     include_track_labels=False,
-    validate_df=True
+    validate_df=True,
+    return_diagnostics=False
 ):
     if len(pose_pairs_2d_df_timestamp) == 0:
         return pd.DataFrame()
@@ -610,11 +795,23 @@ def generate_3d_poses_timestamp(
         pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
         include_track_labels=include_track_labels
     )
-    subgraph_list = generate_k_edge_subgraph_list_iteratively(
-        pose_graph=pose_graph,
-        initial_edge_threshold=initial_edge_threshold,
-        max_dispersion=max_dispersion
-    )
+    if return_diagnostics:
+        diagnostics = {'initial_pose_graph': pose_graph}
+        subgraph_list, graph_analysis_diagnostics = analyze_pose_graph(
+            pose_graph=pose_graph,
+            initial_edge_threshold=initial_edge_threshold,
+            max_dispersion=max_dispersion,
+            return_diagnostics=return_diagnostics
+        )
+        diagnostics.update(graph_analysis_diagnostics)
+    else:
+        subgraph_list = analyze_pose_graph(
+            pose_graph=pose_graph,
+            initial_edge_threshold=initial_edge_threshold,
+            max_dispersion=max_dispersion,
+            return_diagnostics=return_diagnostics
+        )
+    logger.debug('Finished graph analysis. Returned subgraphs of sizes: {}'.format([subgraph.number_of_nodes() for subgraph in subgraph_list]))
     pose_3d_ids = list()
     keypoint_coordinates_3d = list()
     pose_2d_ids = list()
@@ -638,7 +835,7 @@ def generate_3d_poses_timestamp(
                 ))
             keypoint_coordinates_3d_list.append(keypoint_coordinates_3d_edge)
         keypoint_coordinates_3d.append(np.nanmedian(np.stack(keypoint_coordinates_3d_list), axis=0))
-        pose_2d_ids.append(pose_2d_ids_list)
+        pose_2d_ids.append(list(set(pose_2d_ids_list)))
         if include_track_labels:
             track_labels.append(track_label_list)
     if len(pose_3d_ids) == 0:
@@ -658,9 +855,131 @@ def generate_3d_poses_timestamp(
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
             pose_2d_ids_column_name: pose_2d_ids
         })
-    return poses_3d_df_timestamp
+    if return_diagnostics:
+        return poses_3d_df_timestamp, diagnostics
+    else:
+        return poses_3d_df_timestamp
+
+def generate_3d_poses_timestamp_legacy(
+    pose_pairs_2d_df_timestamp,
+    pose_2d_ids_column_name='pose_2d_ids',
+    initial_edge_threshold=2,
+    max_dispersion=0.20,
+    include_track_labels=False,
+    validate_df=True,
+    return_diagnostics=False
+):
+    if len(pose_pairs_2d_df_timestamp) == 0:
+        return pd.DataFrame()
+    timestamps = pose_pairs_2d_df_timestamp['timestamp'].unique()
+    if validate_df:
+        if len(timestamps) > 1:
+            raise ValueError('More than one timestamp found in data frame')
+    timestamp = timestamps[0]
+    pose_graph = generate_pose_graph_legacy(
+        pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        include_track_labels=include_track_labels
+    )
+    if return_diagnostics:
+        diagnostics = {'initial_pose_graph': pose_graph}
+        subgraph_list, k_edge_subgraph_diagnostics = generate_k_edge_subgraph_list_iteratively(
+            pose_graph=pose_graph,
+            initial_edge_threshold=initial_edge_threshold,
+            max_dispersion=max_dispersion,
+            return_diagnostics=return_diagnostics
+        )
+        diagnostics.update(k_edge_subgraph_diagnostics)
+    else:
+        subgraph_list = generate_k_edge_subgraph_list_iteratively(
+            pose_graph=pose_graph,
+            initial_edge_threshold=initial_edge_threshold,
+            max_dispersion=max_dispersion
+        )
+    logger.debug('Finished subgraph analysis. Returned subgraphs of sizes: {}'.format([subgraph.number_of_nodes() for subgraph in subgraph_list]))
+    pose_3d_ids = list()
+    keypoint_coordinates_3d = list()
+    pose_2d_ids = list()
+    if include_track_labels:
+        track_labels = list()
+    for subgraph in subgraph_list:
+        pose_3d_ids.append(uuid4().hex)
+        keypoint_coordinates_3d_list = list()
+        track_label_list = list()
+        pose_2d_ids_list = list()
+        for pose_2d_id_1, pose_2d_id_2, keypoint_coordinates_3d_edge in subgraph.edges(data='keypoint_coordinates_3d'):
+            pose_2d_ids_list.extend([pose_2d_id_1, pose_2d_id_2])
+            if include_track_labels:
+                track_label_list.append((
+                    subgraph.nodes[pose_2d_id_1]['camera_id'],
+                    subgraph.nodes[pose_2d_id_1]['track_label_2d']
+                ))
+                track_label_list.append((
+                    subgraph.nodes[pose_2d_id_2]['camera_id'],
+                    subgraph.nodes[pose_2d_id_2]['track_label_2d']
+                ))
+            keypoint_coordinates_3d_list.append(keypoint_coordinates_3d_edge)
+        keypoint_coordinates_3d.append(np.nanmedian(np.stack(keypoint_coordinates_3d_list), axis=0))
+        pose_2d_ids.append(list(set(pose_2d_ids_list)))
+        if include_track_labels:
+            track_labels.append(track_label_list)
+    if len(pose_3d_ids) == 0:
+        return pd.DataFrame()
+    if include_track_labels:
+        poses_3d_df_timestamp = pd.DataFrame({
+            'pose_3d_id': pose_3d_ids,
+            'timestamp': timestamp,
+            'keypoint_coordinates_3d': keypoint_coordinates_3d,
+            pose_2d_ids_column_name: pose_2d_ids,
+            'track_labels_2d': track_labels
+        })
+    else:
+        poses_3d_df_timestamp = pd.DataFrame({
+            'pose_3d_id': pose_3d_ids,
+            'timestamp': timestamp,
+            'keypoint_coordinates_3d': keypoint_coordinates_3d,
+            pose_2d_ids_column_name: pose_2d_ids
+        })
+    if return_diagnostics:
+        return poses_3d_df_timestamp, diagnostics
+    else:
+        return poses_3d_df_timestamp
 
 def generate_pose_graph(
+    pose_pairs_2d_df_timestamp,
+    include_track_labels=False
+):
+    pose_graph = nx.Graph()
+    for pose_2d_ids, row in pose_pairs_2d_df_timestamp.iterrows():
+        if include_track_labels:
+            pose_graph.add_node(
+                pose_2d_ids[0],
+                pose_quality_2d=row['pose_quality_2d_a'],
+                track_label=row['track_label_2d_a'],
+                camera_id = row['camera_id_a']
+            )
+            pose_graph.add_node(
+                pose_2d_ids[1],
+                pose_quality_2d=row['pose_quality_2d_b'],
+                track_label=row['track_label_2d_b'],
+                camera_id = row['camera_id_b']
+            )
+        else:
+            pose_graph.add_node(
+                pose_2d_ids[0],
+                pose_quality_2d=row['pose_quality_2d_a']
+            )
+            pose_graph.add_node(
+                pose_2d_ids[1],
+                pose_quality_2d=row['pose_quality_2d_b']
+            )
+        pose_graph.add_edge(
+            *pose_2d_ids,
+            keypoint_coordinates_3d=row['keypoint_coordinates_3d'],
+            centroid_3d=np.nanmean(row['keypoint_coordinates_3d'], axis=0)
+        )
+    return pose_graph
+
+def generate_pose_graph_legacy(
     pose_pairs_2d_df_timestamp,
     include_track_labels=False
 ):
@@ -684,28 +1003,339 @@ def generate_pose_graph(
         )
     return pose_graph
 
+def analyze_pose_graph(
+    pose_graph,
+    initial_edge_threshold=2,
+    max_dispersion=0.20,
+    return_diagnostics=False
+):
+    logger.debug('Starting with initial graph')
+    graph_analysis_diagnostics = {}
+    num_graph_nodes = pose_graph.number_of_nodes()
+    logger.debug('Number of nodes: {}'.format(num_graph_nodes))
+    logger.debug('k: {}'.format(initial_edge_threshold))
+    logger.debug('Dividing into {}-edge-connected components'.format(initial_edge_threshold))
+    subgraph_list = list()
+    components = list(nx.k_edge_components(pose_graph, initial_edge_threshold))
+    if return_diagnostics:
+        graph_analysis_diagnostics_list=[{
+            'depth': 0,
+            'num_nodes': pose_graph.number_of_nodes(),
+            'num_edges': pose_graph.number_of_edges(),
+            'action': 'Decomposing into {}-edge-connected components'.format(initial_edge_threshold),
+            'component_sizes': list(map(len, components))
+        }]
+    for component_index, component in enumerate(components):
+        pose_subgraph = pose_graph.subgraph(component)
+        if return_diagnostics:
+            subgraph_list_component, subgraph_analysis_diagnostics_list = analyze_pose_subgraph(
+                pose_subgraph=pose_subgraph,
+                initial_edge_threshold=initial_edge_threshold,
+                max_dispersion=max_dispersion,
+                depth=1,
+                return_diagnostics=return_diagnostics
+            )
+            graph_analysis_diagnostics_list.extend(subgraph_analysis_diagnostics_list)
+        else:
+            subgraph_list_component = analyze_pose_subgraph(
+                pose_subgraph=pose_subgraph,
+                initial_edge_threshold=initial_edge_threshold,
+                max_dispersion=max_dispersion,
+                depth=1,
+                return_diagnostics=return_diagnostics
+            )
+        subgraph_list.extend(subgraph_list_component)
+    if return_diagnostics:
+        graph_analysis_diagnostics = {'graph_analysis': graph_analysis_diagnostics_list}
+        return subgraph_list, graph_analysis_diagnostics
+    else:
+        return subgraph_list
+
+def analyze_pose_subgraph(
+    pose_subgraph,
+    initial_edge_threshold=2,
+    max_dispersion=0.20,
+    depth=1,
+    return_diagnostics=False
+):
+    subgraph_analysis_diagnostics_item = {
+        'depth': depth,
+        'num_nodes': pose_subgraph.number_of_nodes(),
+        'num_edges': pose_subgraph.number_of_edges(),
+
+    }
+    logger.debug('Depth: {}'.format(depth))
+    logger.debug('k: {}'.format(initial_edge_threshold))
+    num_subgraph_nodes = pose_subgraph.number_of_nodes()
+    num_subgraph_edges = pose_subgraph.number_of_edges()
+    logger.debug('Number of nodes: {}'.format(num_subgraph_nodes))
+    logger.debug('Number of edges: {}'.format(num_subgraph_edges))
+    if num_subgraph_nodes == 1:
+        logger.debug('Only one node')
+        if return_diagnostics:
+            subgraph_analysis_diagnostics_item['action'] = 'Only one node. Returning nothing'
+            return list(), [subgraph_analysis_diagnostics_item]
+        else:
+            return list()
+    if num_subgraph_edges == 0:
+        logger.debug('No edges')
+        if return_diagnostics:
+            subgraph_analysis_diagnostics_item['action'] = 'No edges. Returning nothing'
+            return list(), [subgraph_analysis_diagnostics_item]
+        else:
+            return list()
+    if num_subgraph_edges == 1:
+        logger.debug('Only one edge. Done')
+        if return_diagnostics:
+            subgraph_analysis_diagnostics_item['action'] = 'Only one edge. Done.'
+            return [pose_subgraph], [subgraph_analysis_diagnostics_item]
+        else:
+            return [pose_subgraph]
+    dispersion = process_pose_data.pose_3d_dispersion(pose_subgraph)
+    logger.debug('Dispersion: {}'.format(dispersion))
+    if dispersion < max_dispersion:
+        logger.debug('Dispersion meets threshold. Done.')
+        if return_diagnostics:
+            subgraph_analysis_diagnostics_item['action'] = 'Dispersion meets threshold. Done.'
+            return [pose_subgraph], [subgraph_analysis_diagnostics_item]
+        else:
+            return [pose_subgraph]
+    logger.debug('Dispersion is above threshold')
+    logger.debug('Checking to see if removal of a single node can bring dispersion below threshold or split the graph')
+    best_dispersion_reducing_node = None
+    best_dispersion_reducing_subgraph = None
+    best_dispersion = None
+    best_splitting_node = None
+    best_splitting_subgraph = None
+    best_splitting_components = None
+    best_splitting_num_components = None
+    best_splitting_pose_quality = None
+    for node_to_remove in pose_subgraph.nodes:
+        subgraph_node_removed = pose_subgraph.subgraph(set(pose_subgraph.nodes) - {node_to_remove})
+        num_edges_node_removed = subgraph_node_removed.number_of_edges()
+        if num_edges_node_removed > 1:
+            dispersion_node_removed = process_pose_data.pose_3d_dispersion(subgraph_node_removed)
+        else:
+            dispersion_node_removed = None
+        if (
+            num_edges_node_removed > 1 and
+            dispersion_node_removed < max_dispersion and
+            (
+                best_dispersion is None or
+                dispersion_node_removed < best_dispersion
+            )
+        ):
+            best_dispersion_reducing_node = node_to_remove
+            best_dispersion_reducing_subgraph = subgraph_node_removed
+            best_dispersion = dispersion_node_removed
+        pose_quality_removed_node = pose_subgraph.nodes.data()[node_to_remove]['pose_quality_2d']
+        components_node_removed = list(nx.k_edge_components(subgraph_node_removed, initial_edge_threshold))
+        num_components_node_removed = len(components_node_removed)
+        if (
+            num_components_node_removed > 1 and
+            (
+                best_splitting_num_components is None or
+                num_components_node_removed < best_splitting_num_components or
+                (
+                    num_components_node_removed == best_splitting_num_components and
+                    pose_quality_removed_node < best_splitting_pose_quality
+                )
+            )
+        ):
+            best_splitting_node = node_to_remove
+            best_splitting_subgraph = subgraph_node_removed
+            best_splitting_components = components_node_removed
+            best_splitting_num_components = num_components_node_removed
+            best_splitting_pose_quality = pose_quality_removed_node
+    if best_dispersion_reducing_subgraph is not None:
+        logger.debug('Removing node {} resulted in dispersion {}. Done'.format(
+            best_dispersion_reducing_node,
+            best_dispersion
+        ))
+        if return_diagnostics:
+            subgraph_analysis_diagnostics_item['action'] = 'Dispersion is {}, but removing node {} results in dispersion {}. Done'.format(
+                dispersion,
+                best_dispersion_reducing_node,
+                best_dispersion
+            )
+            return [best_dispersion_reducing_subgraph], [subgraph_analysis_diagnostics_item]
+        else:
+            return [best_dispersion_reducing_subgraph]
+    if best_splitting_subgraph is not None:
+        logger.debug('Removing node {} of pose_quality {} results in {} components with k={}. Analyzing each component'.format(
+            best_splitting_node,
+            best_splitting_pose_quality,
+            best_splitting_num_components,
+            initial_edge_threshold
+        ))
+        if return_diagnostics:
+            subgraph_analysis_diagnostics_item['action'] = 'Dispersion is {}, but removing node {} of pose quality {} results in {} {}-edge-connected components of sizes {}. Analyzing each component'.format(
+                dispersion,
+                best_splitting_node,
+                best_splitting_pose_quality,
+                best_splitting_num_components,
+                initial_edge_threshold,
+                list(map(len, best_splitting_components))
+            )
+        subgraph_list = list()
+        if return_diagnostics:
+            subgraph_analysis_list = [subgraph_analysis_diagnostics_item]
+        for component in best_splitting_components:
+            if return_diagnostics:
+                subsubgraph_list, subsubgraph_analysis_list = analyze_pose_subgraph(
+                    pose_subgraph=pose_subgraph.subgraph(component),
+                    initial_edge_threshold=initial_edge_threshold,
+                    depth=depth+1,
+                    return_diagnostics=return_diagnostics
+                )
+                subgraph_list.extend(subsubgraph_list)
+                subgraph_analysis_list.extend(subsubgraph_analysis_list)
+            else:
+                subgraph_list.extend(
+                    analyze_pose_subgraph(
+                        pose_subgraph=pose_subgraph.subgraph(component),
+                        initial_edge_threshold=initial_edge_threshold,
+                        depth=depth+1,
+                        return_diagnostics=return_diagnostics
+                    )
+                )
+        if return_diagnostics:
+            return subgraph_list, subgraph_analysis_list
+        else:
+            return subgraph_list
+    logger.debug('Could not find single node that sufficiently reduced dispersion or splits subgraph. Increasing k')
+    k = initial_edge_threshold + 1
+    while True:
+        logger.debug('Trying k={}'.format(k))
+        components = list(nx.k_edge_components(pose_subgraph, k))
+        if len(components) == 1:
+            logger.debug('k={} insufficient'.format(k))
+            k=k+1
+            continue
+        if return_diagnostics:
+            subgraph_analysis_diagnostics_item['action'] = 'Could not find single node that sufficiently reduced dispersion or splits subgraph. Increasing k to {} splits subgraph into {} components with sizes {}'.format(
+                k,
+                len(components),
+                list(map(len, components))
+            )
+        subgraph_list = list()
+        if return_diagnostics:
+            subgraph_analysis_list = [subgraph_analysis_diagnostics_item]
+        for component in components:
+            if return_diagnostics:
+                subsubgraph_list, subsubgraph_analysis_list = analyze_pose_subgraph(
+                    pose_subgraph=pose_subgraph.subgraph(component),
+                    initial_edge_threshold=initial_edge_threshold,
+                    depth=depth+1,
+                    return_diagnostics=return_diagnostics
+                )
+                subgraph_list.extend(subsubgraph_list)
+                subgraph_analysis_list.extend(subsubgraph_analysis_list)
+            else:
+                subgraph_list.extend(
+                    analyze_pose_subgraph(
+                        pose_subgraph=pose_subgraph.subgraph(component),
+                        initial_edge_threshold=initial_edge_threshold,
+                        depth=depth+1,
+                        return_diagnostics=return_diagnostics
+                    )
+                )
+        if return_diagnostics:
+            return subgraph_list, subgraph_analysis_list
+        else:
+            return subgraph_list
+
 def generate_k_edge_subgraph_list_iteratively(
     pose_graph,
     initial_edge_threshold=2,
-    max_dispersion=0.20
+    max_dispersion=0.20,
+    max_iterations=5,
+    return_diagnostics=False
 ):
+    logger.debug('Starting function. k: {}. Pose graph of size {}'.format(
+        initial_edge_threshold,
+        pose_graph.number_of_nodes()
+    ))
     subgraph_list = list()
+    if return_diagnostics:
+        diagnostics = {'subgraph_list': list()}
+    iteration_index = 0
+    logger.debug('Starting. k: {}. Pose graph of size {}. Iteration {}'.format(
+        initial_edge_threshold,
+        pose_graph.number_of_nodes(),
+        iteration_index
+    ))
+    iteration_subgraph_list = list()
     for nodes in nx.k_edge_components(pose_graph, initial_edge_threshold):
-        if len(nodes) < 2:
-            continue
         subgraph = pose_graph.subgraph(nodes)
-        if subgraph.number_of_edges() ==0:
+        logger.debug('Analyzing subgraph of size {}'.format(subgraph.number_of_nodes()))
+        if len(nodes) < 2:
+            if return_diagnostics:
+                diagnostics['subgraph_list'].append({
+                    'overall_iteration': iteration_index,
+                    'edge_threshold': initial_edge_threshold,
+                    'subgraph': subgraph,
+                    'dispersion': None,
+                    'status': 'less_than_two_nodes'
+                })
+            logger.debug('Fewer than 2 nodes. Continuing.')
+            continue
+        if subgraph.number_of_edges() == 0:
+            if return_diagnostics:
+                diagnostics['subgraph_list'].append({
+                    'overall_iteration': iteration_index,
+                    'edge_threshold': initial_edge_threshold,
+                    'subgraph': subgraph,
+                    'dispersion': None,
+                    'status': 'zero_edges'
+                })
+            logger.debug('Zero edges. Continuing')
             continue
         dispersion = pose_3d_dispersion(subgraph)
         if max_dispersion is None or dispersion <= max_dispersion:
-            subgraph_list.append(subgraph)
+            if return_diagnostics:
+                diagnostics['subgraph_list'].append({
+                    'overall_iteration': iteration_index,
+                    'edge_threshold': initial_edge_threshold,
+                    'subgraph': subgraph,
+                    'dispersion': dispersion,
+                    'status': 'saved'
+                })
+            logger.debug('Success. Adding subgraph of size {} to iteration list'.format(subgraph.number_of_nodes()))
+            iteration_subgraph_list.append(subgraph)
             continue
-        subgraph_list.extend(generate_k_edge_subgraph_list_iteratively(
-            pose_graph=subgraph,
-            initial_edge_threshold=initial_edge_threshold + 1,
-            max_dispersion=max_dispersion
-        ))
-    return subgraph_list
+        logger.debug('Dispersion too great. Increasing k')
+        if return_diagnostics:
+            diagnostics['subgraph_list'].append({
+                'overall_iteration': iteration_index,
+                'edge_threshold': initial_edge_threshold,
+                'subgraph': subgraph,
+                'dispersion': dispersion,
+                'status': 'too much dispersion; iterating'
+            })
+            subgraph_list_next_level, subgraph_diagnostics_next_level = generate_k_edge_subgraph_list_iteratively(
+                pose_graph=subgraph,
+                initial_edge_threshold=initial_edge_threshold + 1,
+                max_dispersion=max_dispersion,
+                return_diagnostics=return_diagnostics
+            )
+            diagnostics['subgraph_list'].extend(subgraph_diagnostics_next_level['subgraph_list'])
+            iteration_subgraph_list.extend(subgraph_list_next_level)
+        else:
+            subgraph_list_next_level = generate_k_edge_subgraph_list_iteratively(
+                pose_graph=subgraph,
+                initial_edge_threshold=initial_edge_threshold + 1,
+                max_dispersion=max_dispersion,
+            )
+            iteration_subgraph_list.extend(subgraph_list_next_level)
+    logger.debug('Done. Adding {} subgraphs to overall list'.format(
+        len(iteration_subgraph_list)
+    ))
+    subgraph_list.extend(iteration_subgraph_list)
+    if return_diagnostics:
+        return subgraph_list, diagnostics
+    else:
+        return subgraph_list
 
 def pose_3d_dispersion(pose_graph):
     return np.linalg.norm(
