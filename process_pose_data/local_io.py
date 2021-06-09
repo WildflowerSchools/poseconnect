@@ -138,10 +138,10 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
                     path
                 ))
             try:
-                timestamp_json = dateutil.parser.isoparse(timestamp_json_string)
+                timestamp_json = dateutil.parser.isoparse(pose_data_object.get('timstamp'))
             except:
                 raise ValueError('Timestamp string in JSON \'{}\' cannot be parsed by dateutil.parser.isoparse()'.format(
-                    timestamp_json_string
+                    pose_data_object.get('timstamp')
                 ))
             if timestamp_json != time_segment_start_utc + datetime.timedelta(milliseconds=100*new_frame_number):
                 raise ValueError('Time segment start is {} and frame number is {} but timestamp in JSON is {}'.format(
