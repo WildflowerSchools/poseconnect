@@ -1077,7 +1077,7 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
             time_segment_start.isoformat(),
             poses_2d_df_time_segment['timestamp'].min().isoformat()
         ))
-    if poses_2d_df_time_segment['timestamp'].max() >= time_segment_start + datetime.timedelta(milliseconds=100):
+    if poses_2d_df_time_segment['timestamp'].max() >= time_segment_start + datetime.timedelta(seconds=10):
         raise ValueError('Last timestamp in 2D pose data for time segment starting at {} is {}, which is after end of time segment'.format(
             time_segment_start.isoformat(),
             poses_2d_df_time_segment['timestamp'].max().isoformat()
