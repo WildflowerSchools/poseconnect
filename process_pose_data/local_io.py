@@ -67,16 +67,23 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
     current_pose_list = list()
     carryover_pose_list = list()
     for camera_assignment_id in camera_assignment_ids:
+        print(camera_assignment_id)
         num_carryover_frames = 0
         base_timestamp = time_segment_start_utc
+        print(base_timestamp)
+        print(type(carryover_poses))
+        if carryover_poses is not None:
+            print(carryover_poses.columns)
         if (
             carryover_poses is not None and
             'assignment_id' in carryover_poses.columns
         ):
             carryover_poses_camera = carryover_poses.loc[carryover_poses['assignment_id'] == camera_assignment_id]
             num_carryover_frames = len(carryover_poses_camera)
+            print(num_carryover_frames)
             if num_carryover_frames > 0:
                 base_timestamp = carryover_poses_camera['timestamp'].max() + datetime.timedelta(milliseconds=100)
+                print(base_timestamp)
         glob_pattern = alphapose_data_file_glob_pattern(
             base_dir=base_dir,
             environment_id=environment_id,
