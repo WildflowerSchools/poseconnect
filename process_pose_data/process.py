@@ -1072,6 +1072,16 @@ def reconstruct_poses_3d_alphapose_local_time_segment(
         logger.info('No 2D poses found for time segment starting at %s', time_segment_start.isoformat())
         return
     logger.info('Fetched 2D pose data for time segment starting at {}'.format(time_segment_start.isoformat()))
+    if poses_2d_df_time_segment['timestamp'].min() < time_segment_start:
+        raise ValueError('First timestamp in 2D pose data for time segment starting at {} is {}, which is before start of time segment'.format(
+            time_segment_start.isoformat(),
+            poses_2d_df_time_segment['timestamp'].min().isoformat()
+        ))
+    if poses_2d_df_time_segment['timestamp'].max() >= time_segment_start + datetime.timedelta(milliseconds=100):
+        raise ValueError('Last timestamp in 2D pose data for time segment starting at {} is {}, which is after end of time segment'.format(
+            time_segment_start.isoformat(),
+            poses_2d_df_time_segment['timestamp'].max().isoformat()
+        ))
     logger.info('Converting camera assignment IDs to camera device IDs for time segment starting at {}'.format(time_segment_start.isoformat()))
     poses_2d_df_time_segment = process_pose_data.local_io.convert_assignment_ids_to_camera_device_ids(
         poses_2d_df=poses_2d_df_time_segment,
