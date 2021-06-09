@@ -217,12 +217,12 @@ def identify_poses_timestamp(
         pose_track_3d_indices=np.asarray(new_pose_track_3d_indices)
         person_indices=np.asarray(new_person_indices)
         num_matches = len(pose_track_3d_indices)
-    if num _matches == 0:
+    if num_matches == 0:
         if return_match_statistics:
             match_statistics = [num_poses, num_persons, num_matches]
             return pd.DataFrame(), match_statistics
         else:
-            return pd.DataFrame()    
+            return pd.DataFrame()
     pose_identification_timestamp_df = pd.DataFrame({
         'timestamp': timestamp,
         'pose_track_3d_id': pose_track_3d_ids[pose_track_3d_indices],
