@@ -31,7 +31,7 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
     alphapose_subdirectory='prepared',
     tree_structure='file-per-frame',
     filename='alphapose-results.json',
-    json_format='cmu'
+    json_format='cmu',
     client=None,
     uri=None,
     token_uri=None,

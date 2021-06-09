@@ -32,7 +32,7 @@ def extract_poses_2d_alphapose_local_by_time_segment(
     token_uri=None,
     audience=None,
     client_id=None,
-    client_secret=None
+    client_secret=None,
     task_progress_bar=False,
     notebook=False
 ):
