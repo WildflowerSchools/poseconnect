@@ -100,6 +100,7 @@ def identify_poses(
     uwb_data_resampled_df,
     active_person_ids=None,
     ignore_z=False,
+    max_distance=None,
     return_match_statistics=False
 ):
     pose_identification_timestamp_df_list = list()
@@ -122,6 +123,7 @@ def identify_poses(
                 uwb_data_resampled_timestamp_df=uwb_data_resampled_timestamp_df,
                 active_person_ids=active_person_ids,
                 ignore_z=ignore_z,
+                max_distance=max_distance,
                 return_match_statistics=return_match_statistics
             )
         pose_identification_timestamp_df_list.append(pose_identification_timestamp_df)
@@ -144,6 +146,7 @@ def identify_poses_timestamp(
     uwb_data_resampled_timestamp_df,
     active_person_ids=None,
     ignore_z=False,
+    max_distance=None,
     return_match_statistics=False
 ):
     num_poses = len(poses_3d_with_tracks_and_sensor_positions_timestamp_df)
@@ -204,6 +207,15 @@ def identify_poses_timestamp(
             num_matches,
             distance_matrix
         ))
+    if max_distance is not None:
+        new_pose_track_3d_indices=list()
+        new_person_indices=list()
+        for pose_track_3d_index, person_index in zip(pose_track_3d_indices, person_indices):
+            if distance_matrix[pose_track_3d_index, person_index] <= max_distance:
+                new_pose_track_3d_indices.append(track_index)
+                new_person_indices.append(person_index)
+        pose_track_3d_indices=np.asarray(new_pose_track_3d_indices)
+        person_indices=np.asarray(new_person_indices)
     pose_identification_timestamp_df = pd.DataFrame({
         'timestamp': timestamp,
         'pose_track_3d_id': pose_track_3d_ids[pose_track_3d_indices],
