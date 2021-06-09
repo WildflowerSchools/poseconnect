@@ -212,7 +212,7 @@ def identify_poses_timestamp(
         new_person_indices=list()
         for pose_track_3d_index, person_index in zip(pose_track_3d_indices, person_indices):
             if distance_matrix[pose_track_3d_index, person_index] <= max_distance:
-                new_pose_track_3d_indices.append(track_index)
+                new_pose_track_3d_indices.append(pose_track_3d_index)
                 new_person_indices.append(person_index)
         pose_track_3d_indices=np.asarray(new_pose_track_3d_indices)
         person_indices=np.asarray(new_person_indices)
