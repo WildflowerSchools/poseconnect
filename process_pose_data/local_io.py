@@ -5,6 +5,7 @@ import logging
 from uuid import uuid4
 import datetime
 import dateutil
+from collections import OrderedDict
 import os
 import glob
 import pickle
@@ -26,91 +27,136 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
     base_dir,
     environment_id,
     time_segment_start,
+    camera_assignment_ids=None,
+    carryover_poses=None,
     alphapose_subdirectory='prepared',
     tree_structure='file-per-frame',
     filename='alphapose-results.json',
-    json_format='cmu'
+    json_format='cmu',
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
 ):
+    if tree_structure != 'file-per-frame':
+        raise NotImplementedError('Only \'file-per-frame\' tree structure currently supported')
     time_segment_start_utc = time_segment_start.astimezone(datetime.timezone.utc)
-    glob_pattern = alphapose_data_file_glob_pattern(
-        base_dir=base_dir,
-        environment_id=environment_id,
-        camera_assignment_id=None,
-        year=time_segment_start_utc.year,
-        month=time_segment_start_utc.month,
-        day=time_segment_start_utc.day,
-        hour=time_segment_start_utc.hour,
-        minute=time_segment_start_utc.minute,
-        second=time_segment_start_utc.second,
-        alphapose_subdirectory=alphapose_subdirectory,
-        tree_structure=tree_structure,
-        filename=filename
-    )
-    re_pattern = alphapose_data_file_re_pattern(
-        base_dir=base_dir,
-        alphapose_subdirectory=alphapose_subdirectory,
-        tree_structure=tree_structure,
-        filename=filename
-    )
-    data_list = list()
-    if tree_structure == 'file-per-frame':
-        for path in glob.iglob(glob_pattern):
+    time_segment_end_utc = time_segment_start_utc + datetime.timedelta(seconds=10)
+    if camera_assignment_ids is None:
+        logger.info('Querying Honycomb for cameras assigned to environment \'{}\' in the period {} to {}'.format(
+            environment_id,
+            time_segment_start_utc.isoformat(),
+            time_segment_end_utc.isoformat()
+        ))
+        camera_info = honeycomb_io.fetch_camera_info(
+            environment_id=environment_id,
+            environment_name=None,
+            start=time_segment_start_utc,
+            end=time_segment_end_utc,
+            chunk_size=100,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+        camera_assignment_ids = camera_info['assignment_id'].unique().tolist()
+    current_pose_list = list()
+    carryover_pose_list = list()
+    for camera_assignment_id in camera_assignment_ids:
+        num_carryover_frames = 0
+        base_timestamp = time_segment_start_utc
+        if (
+            carryover_poses is not None and
+            'assignment_id' in carryover_poses.columns
+        ):
+            carryover_poses_camera = carryover_poses.loc[carryover_poses['assignment_id'] == camera_assignment_id]
+            num_carryover_frames = len(carryover_poses_camera)
+            if num_carryover_frames > 0:
+                base_timestamp = carryover_poses_camera['timestamp'].max() + datetime.timedelta(milliseconds=100)
+        glob_pattern = alphapose_data_file_glob_pattern(
+            base_dir=base_dir,
+            environment_id=environment_id,
+            camera_assignment_id=camera_assignment_id,
+            year=time_segment_start_utc.year,
+            month=time_segment_start_utc.month,
+            day=time_segment_start_utc.day,
+            hour=time_segment_start_utc.hour,
+            minute=time_segment_start_utc.minute,
+            second=time_segment_start_utc.second,
+            alphapose_subdirectory=alphapose_subdirectory,
+            tree_structure=tree_structure,
+            filename=filename
+        )
+        re_pattern = alphapose_data_file_re_pattern(
+            base_dir=base_dir,
+            alphapose_subdirectory=alphapose_subdirectory,
+            tree_structure=tree_structure,
+            filename=filename
+        )
+        paths = glob.glob(glob_pattern)
+        num_new_frames = len(paths)
+        new_frames = list()
+        for path in paths:
             m = re.match(re_pattern, path)
             if not m:
                 raise ValueError('Regular expression does not match path: {}'.format(path))
-            assignment_id = m.group('assignment_id')
-            timestamp_video_file = datetime.datetime(
-                int(m.group('year_string')),
-                int(m.group('month_string')),
-                int(m.group('day_string')),
-                int(m.group('hour_string')),
-                int(m.group('minute_string')),
-                int(m.group('second_string')),
-                tzinfo=datetime.timezone.utc
-            )
             frame_number = int(m.group('frame_number_string'))
+            new_frames.append((frame_number, path))
+        new_frames = OrderedDict(sorted(new_frames, key=lambda x: x[0]))
+        if list(new_frames.keys()) != list(range(num_new_frames)):
+            raise ValueError('Found {} files for time segment {} and camera \'{}\' so expected frame numbers 0 through {} but found frame numbers {}'.format(
+                num_new_frames,
+                time_segment_start_utc.isoformat(),
+                camera_assignment_id,
+                num_new_frames - 1,
+                list(new_frames.keys())
+            ))
+        # If we only have one extra frame, it's due to clock drift and we want to just drop the last frame
+        if num_carryover_frames + num_new_frames == 101:
+            logger.warning('2D pose data for camera \'{}\' at time segment {} has exactly one extra frame. Deleting.'.format(
+                camera_assignment_id,
+                time_segment_start.isoformat()
+            ))
+            del new_frames[num_new_frames - 1]
+            num_new_frames = num_new_frames - 1
+        for new_frame_number, path in new_frames.items():
             with open(path, 'r') as fp:
                 try:
                     pose_data_object = json.load(fp)
                 except:
                     raise ValueError('Error reading JSON from file {}'.format(path))
-            if len(pose_data_object) == 0:
-                continue
-            timestamp_json_string = pose_data_object.get('timestamp')
-            assignment_id_json = pose_data_object.get('assignment_id')
-            environment_id_json = pose_data_object.get('environment_id')
-            try:
-                timestamp_json = dateutil.parser.isoparse(timestamp_json_string)
-            except:
-                raise ValueError('Timestamp string in JSON \'{}\' cannot be parsed by dateutil.parser.isoparse()'.format(
-                    timestamp_json_string
-                ))
-            timestamp_path = timestamp_video_file + datetime.timedelta(microseconds = 10**5*frame_number)
-            if timestamp_json != timestamp_path:
-                raise ValueError('Timestamp in JSON \'{}\' does not match timestamp inferred from path \'{}\' for file \'{}\' (extracted frame number string \'{}\' resulting in frame number {})'.format(
-                    timestamp_json.isoformat(),
-                    timestamp_path.isoformat(),
-                    path,
-                    m.group('frame_number_string'),
-                    frame_number
-                ))
-            if assignment_id_json != assignment_id:
-                raise ValueError('Assignment ID in JSON \'{}\' does not match assignment ID inferred from path \'{}\' for file \'{}\''.format(
-                    assignment_id_json,
-                    assignment_id,
+            if pose_data_object.get('assignment_id') != camera_assignment_id:
+                raise ValueError('Camera assignment ID in JSON \'{}\' does not match assignment ID inferred from path \'{}\' for file \'{}\''.format(
+                    pose_data_object.get('assignment_id'),
+                    camera_assignment_id,
                     path
                 ))
-            if environment_id_json != environment_id:
+            if pose_data_object.get('environment_id') != environment_id:
                 raise ValueError('Assignment ID in JSON \'{}\' does not match assignment ID inferred from path \'{}\' for file \'{}\''.format(
-                    environment_id_json,
+                    pose_data_object.get('environment_id'),
                     environment_id,
                     path
                 ))
+            try:
+                timestamp_json = dateutil.parser.isoparse(pose_data_object.get('timestamp'))
+            except:
+                raise ValueError('Timestamp string in JSON \'{}\' cannot be parsed by dateutil.parser.isoparse()'.format(
+                    pose_data_object.get('timestamp')
+                ))
+            if timestamp_json != time_segment_start_utc + datetime.timedelta(milliseconds=100*new_frame_number):
+                raise ValueError('Time segment start is {} and frame number is {} but timestamp in JSON is {}'.format(
+                    time_segment_start_utc.isoformat(),
+                    new_frame_number,
+                    timestamp_json
+                ))
+            timestamp = base_timestamp + datetime.timedelta(milliseconds=100*new_frame_number)
             poses = pose_data_object.get('poses')
             if poses is None:
                 raise ValueError('JSON in file \'{}\' does not contain \'poses\' field')
-            if len(poses) == 0:
-                continue
             for pose in poses:
                 keypoints = np.asarray([[keypoint.get('x'), keypoint.get('y')] for keypoint in pose.get('keypoints')])
                 keypoint_quality = np.asarray([keypoint.get('quality')for keypoint in pose.get('keypoints')])
@@ -118,95 +164,27 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
                 keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
                 pose_quality = pose.get('quality')
                 pose_2d_id = pose.get('pose_id')
-                data_list.append({
+                datum = {
                     'pose_2d_id': pose_2d_id,
-                    'timestamp': pd.to_datetime(timestamp_json),
-                    'assignment_id': assignment_id_json,
+                    'timestamp': timestamp,
+                    'assignment_id': camera_assignment_id,
                     'keypoint_coordinates_2d': keypoints,
                     'keypoint_quality_2d': keypoint_quality,
                     'pose_quality_2d': pose_quality
-                })
-    elif tree_structure == 'file-per-segment':
-        for path in glob.iglob(glob_pattern):
-            m = re.match(re_pattern, path)
-            if not m:
-                raise ValueError('Regular expression does not match path: {}'.format(path))
-            assignment_id = m.group('assignment_id')
-            timestamp_video_file = datetime.datetime(
-                int(m.group('year_string')),
-                int(m.group('month_string')),
-                int(m.group('day_string')),
-                int(m.group('hour_string')),
-                int(m.group('minute_string')),
-                int(m.group('second_string')),
-                tzinfo=datetime.timezone.utc
-            )
-            with open(path, 'r') as fp:
-                try:
-                    pose_data_object = json.load(fp)
-                except:
-                    raise ValueError('Error reading JSON from file {}'.format(path))
-            if len(pose_data_object) == 0:
-                continue
-            if json_format == 'cmu':
-                # JSON is a dict structure with an entry for each image
-                for image_filename, pose_data in pose_data_object.items():
-                    frame_number = int(image_filename.split('.')[0])
-                    timestamp = timestamp_video_file + datetime.timedelta(microseconds = 10**5*frame_number)
-                    for pose in pose_data['bodies']:
-                        keypoint_data_array = np.asarray(pose['joints']).reshape((-1 , 3))
-                        keypoints = keypoint_data_array[:, :2]
-                        keypoint_quality = keypoint_data_array[:, 2]
-                        keypoints = np.where(keypoints == 0.0, np.nan, keypoints)
-                        keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
-                        pose_quality = pose.get('score')
-                        data_list.append({
-                            'pose_2d_id': uuid4().hex,
-                            'timestamp': pd.to_datetime(timestamp),
-                            'assignment_id': assignment_id,
-                            'keypoint_coordinates_2d': keypoints,
-                            'keypoint_quality_2d': keypoint_quality,
-                            'pose_quality_2d': pose_quality
-                        })
-            elif json_format == 'list':
-                # JSON is a list structure with an item for each pose
-                for pose_data in pose_data_object:
-                    frame_number = int(pose_data.get('image_id').split('.')[0])
-                    timestamp = timestamp_video_file + datetime.timedelta(microseconds = 10**5*frame_number)
-                    keypoint_data_array = np.asarray(pose_data['keypoints']).reshape((-1 , 3))
-                    keypoints = keypoint_data_array[:, :2]
-                    keypoint_quality = keypoint_data_array[:, 2]
-                    keypoints = np.where(keypoints == 0.0, np.nan, keypoints)
-                    keypoint_quality = np.where(keypoint_quality == 0.0, np.nan, keypoint_quality)
-                    pose_quality = pose_data.get('score')
-                    data_list.append({
-                        'pose_2d_id': uuid4().hex,
-                        'timestamp': pd.to_datetime(timestamp),
-                        'assignment_id': assignment_id,
-                        'keypoint_coordinates_2d': keypoints,
-                        'keypoint_quality_2d': keypoint_quality,
-                        'pose_quality_2d': pose_quality
-                    })
-            else:
-                raise ValueError('JSON format specifier \'{}\' not recognized'.format(json_format))
-    else:
-        raise ValueError('Tree structure specification \'{}\' not recognized'.format(
-            tree_structure
-        ))
-    df = pd.DataFrame(data_list)
-    if len(df) == 0:
-        logger.warning('No poses found for time segment starting at %04d/%02d/%02dT%02d:%02d:%02d. Returning empty data frame',
-            time_segment_start_utc.year,
-            time_segment_start_utc.month,
-            time_segment_start_utc.day,
-            time_segment_start_utc.hour,
-            time_segment_start_utc.minute,
-            time_segment_start_utc.second
-        )
-        return df
-    df.set_index('pose_2d_id', inplace=True)
-    df.sort_values(['timestamp', 'assignment_id'], inplace=True)
-    return df
+                }
+                if timestamp < time_segment_start_utc + datetime.timedelta(seconds=10):
+                    current_pose_list.append(datum)
+                else:
+                    carryover_pose_list.append(datum)
+    current_poses = pd.DataFrame(current_pose_list)
+    carryover_poses = pd.DataFrame(carryover_pose_list)
+    if len(current_poses) > 0:
+        current_poses.set_index('pose_2d_id', inplace=True)
+        current_poses.sort_values(['timestamp', 'assignment_id'], inplace=True)
+    if len(carryover_poses) > 0:
+        carryover_poses.set_index('pose_2d_id', inplace=True)
+        carryover_poses.sort_values(['timestamp', 'assignment_id'], inplace=True)
+    return current_poses, carryover_poses
 
 def fetch_3d_poses_with_person_info(
     base_dir,
