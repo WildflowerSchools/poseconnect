@@ -168,7 +168,7 @@ def extract_poses_2d_alphapose_local_by_time_segment(
             filename=poses_2d_file_name,
             json_format=poses_2d_json_format
         )
-        if previous_carryover_poses is not None:
+        if previous_carryover_poses is not None and len(previous_carryover_poses) > 0:
             poses_2d_df_time_segment = (
                 pd.concat((
                     previous_carryover_poses,
