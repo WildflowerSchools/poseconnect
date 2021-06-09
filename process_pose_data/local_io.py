@@ -69,7 +69,6 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
     for camera_assignment_id in camera_assignment_ids:
         num_carryover_frames = 0
         base_timestamp = time_segment_start_utc
-        if carryover_poses is not None:
         if (
             carryover_poses is not None and
             'assignment_id' in carryover_poses.columns
