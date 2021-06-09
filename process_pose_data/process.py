@@ -21,6 +21,179 @@ def extract_poses_2d_alphapose_local_by_time_segment(
     end,
     base_dir,
     environment_id,
+    camera_assignment_ids=None,
+    alphapose_subdirectory='prepared',
+    tree_structure='file-per-frame',
+    poses_2d_file_name='alphapose-results.json',
+    poses_2d_json_format='cmu',
+    pose_processing_subdirectory='pose_processing',
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+    task_progress_bar=False,
+    notebook=False
+):
+    """
+    Fetches 2D pose data from local Alphapose output and writes back to local files.
+
+    Input data is assumed to be organized according to standard Alphapose
+    pipeline output (see documentation for that pipeline).
+
+    If camera assignment IDs are not specified, function will query Honeycomb
+    for cameras assigned to the specified environment over the specified period
+
+    Output data is organized into 10 second segments (mirroring source videos),
+    saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_extraction_2d/ENVIRONMENT_ID/YYYY/MM/DD/HH-MM-SS/poses_2d_INFERENCE_ID.pkl\'
+
+    Output metadata is saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/pose_extraction_2d/ENVIRONMENT_ID/pose_extraction_2d_metadata_INFERENCE_ID.pkl\'
+
+    Args:
+        start (datetime): Start of period to be analyzed
+        end (datetime): End of period to be analyzed
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        camera_assignment_ids (list of str): Cameras to include (default is None)
+        alphapose_subdirectory (str): subdirectory (under base directory) for Alphapose output (default is \'prepared\')
+        poses_2d_file_name: Filename for Alphapose data in each directory (default is \'alphapose-results.json\')
+        poses_2d_json_format: Format of Alphapose results files (default is\'cmu\')
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        client (MinimalHoneycombClient): Honeycomb client (otherwise generates one) (default is None)
+        uri (str): Honeycomb URI (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        token_uri (str): Honeycomb token URI (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        audience (str): Honeycomb audience (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        client_id (str): Honeycomb client ID (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        client_secret (str): Honeycomb client secret (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        task_progress_bar (bool): Boolean indicating whether script should display a progress bar (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+
+    Returns:
+        (str) Locally-generated inference ID for this run (identifies output data)
+    """
+    if start.tzinfo is None:
+        logger.info('Specified start is timezone-naive. Assuming UTC')
+        start=start.replace(tzinfo=datetime.timezone.utc)
+    if end.tzinfo is None:
+        logger.info('Specified end is timezone-naive. Assuming UTC')
+        end=end.replace(tzinfo=datetime.timezone.utc)
+    logger.info('Extracting 2D poses from local Alphapose output. Base directory: {}. Alphapose data subdirectory: {}. Pose processing data subdirectory: {}. Environment ID: {}. Start: {}. End: {}'.format(
+        base_dir,
+        alphapose_subdirectory,
+        pose_processing_subdirectory,
+        environment_id,
+        start,
+        end
+    ))
+    logger.info('Generating metadata')
+    pose_extraction_2d_metadata = generate_metadata(
+        environment_id=environment_id,
+        pipeline_stage='pose_extraction_2d',
+        parameters={
+            'start': start,
+            'end': end
+        }
+    )
+    inference_id = pose_extraction_2d_metadata.get('inference_id')
+    logger.info('Writing inference metadata to local file')
+    process_pose_data.local_io.write_data_local(
+        data_object=pose_extraction_2d_metadata,
+        base_dir=base_dir,
+        pipeline_stage='pose_extraction_2d',
+        environment_id=environment_id,
+        filename_stem='pose_extraction_2d_metadata',
+        inference_id=pose_extraction_2d_metadata['inference_id'],
+        time_segment_start=None,
+        object_type='dict',
+        append=False,
+        sort_field=None,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    logger.info('Generating list of time segments')
+    time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
+        start=start,
+        end=end
+    )
+    num_time_segments = len(time_segment_start_list)
+    num_minutes = (end - start).total_seconds()/60
+    if camera_assignment_ids is None:
+        logger.info('Querying Honycomb for cameras assigned to environment \'{}\' in the period {} to {}'.format(
+            environment_id,
+            start.isoformat(),
+            end.isoformat()
+        ))
+        camera_info = honeycomb_io.fetch_camera_info(
+            environment_id=environment_id,
+            environment_name=None,
+            start=start,
+            end=end,
+            chunk_size=100,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+        camera_assignment_ids = camera_info['assignment_id'].unique().tolist()
+    num_cameras = len(camera_assignment_ids)
+    logger.info('Extracting 2D poses for {} cameras and {} time segments spanning {:.3f} minutes: {} to {}'.format(
+        num_cameras,
+        num_time_segments,
+        num_minutes,
+        time_segment_start_list[0].isoformat(),
+        time_segment_start_list[-1].isoformat()
+    ))
+    processing_start = time.time()
+    if task_progress_bar:
+        if notebook:
+            time_segment_start_iterator = tqdm.notebook.tqdm(time_segment_start_list)
+        else:
+            time_segment_start_iterator = tqdm.tqdm(time_segment_start_list)
+    else:
+        time_segment_start_iterator = time_segment_start_list
+    carryover_poses = None
+    for time_segment_start in time_segment_start_iterator:
+        poses_2d_df_time_segment, carryover_poses = process_pose_data.local_io.fetch_2d_pose_data_alphapose_local_time_segment(
+            base_dir=base_dir,
+            environment_id=environment_id,
+            time_segment_start=time_segment_start,
+            camera_assignment_ids=camera_assignment_ids,
+            carryover_poses = carryover_poses,
+            alphapose_subdirectory=alphapose_subdirectory,
+            tree_structure=tree_structure,
+            filename=poses_2d_file_name,
+            json_format=poses_2d_json_format
+        )
+        process_pose_data.local_io.write_data_local(
+            data_object=poses_2d_df_time_segment,
+            base_dir=base_dir,
+            pipeline_stage='pose_extraction_2d',
+            environment_id=environment_id,
+            filename_stem='poses_2d',
+            inference_id=inference_id,
+            time_segment_start=time_segment_start,
+            object_type='dataframe',
+            append=False,
+            sort_field=None,
+            pose_processing_subdirectory=pose_processing_subdirectory
+        )
+    processing_time = time.time() - processing_start
+    logger.info('Extracted {:.3f} minutes of 2D poses in {:.3f} minutes (ratio of {:.3f})'.format(
+        num_minutes,
+        processing_time/60,
+        (processing_time/60)/num_minutes
+    ))
+    return inference_id
+
+def extract_poses_2d_alphapose_local_by_time_segment_legacy(
+    start,
+    end,
+    base_dir,
+    environment_id,
     alphapose_subdirectory='prepared',
     tree_structure='file-per-frame',
     poses_2d_file_name='alphapose-results.json',
