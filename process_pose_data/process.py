@@ -1996,6 +1996,8 @@ def identify_pose_tracks_3d_local_by_segment(
             object_type='dataframe',
             pose_processing_subdirectory='pose_processing'
         )
+        if len(poses_3d_time_segment_df) == 0:
+            continue
         poses_3d_with_tracks_time_segment_df = poses_3d_time_segment_df.join(pose_3d_ids_with_tracks_df, how='inner')
         # Add sensor positions
         poses_3d_with_tracks_and_sensor_positions_time_segment_df = process_pose_data.identify.extract_sensor_position_data(
