@@ -174,10 +174,12 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
                     carryover_pose_list.append(datum)
     current_poses = pd.DataFrame(current_pose_list)
     carryover_poses = pd.DataFrame(carryover_pose_list)
-    current_poses.set_index('pose_2d_id', inplace=True)
-    current_poses.sort_values(['timestamp', 'assignment_id'], inplace=True)
-    carryover_poses.set_index('pose_2d_id', inplace=True)
-    carryover_poses.sort_values(['timestamp', 'assignment_id'], inplace=True)
+    if len(current_poses) > 0:
+        current_poses.set_index('pose_2d_id', inplace=True)
+        current_poses.sort_values(['timestamp', 'assignment_id'], inplace=True)
+    if len(carryover_poses) > 0:
+        carryover_poses.set_index('pose_2d_id', inplace=True)
+        carryover_poses.sort_values(['timestamp', 'assignment_id'], inplace=True)
     return current_poses, carryover_poses
 
 def fetch_3d_poses_with_person_info(
