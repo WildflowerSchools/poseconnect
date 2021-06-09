@@ -155,19 +155,29 @@ def extract_poses_2d_alphapose_local_by_time_segment(
             time_segment_start_iterator = tqdm.tqdm(time_segment_start_list)
     else:
         time_segment_start_iterator = time_segment_start_list
-    carryover_poses = None
+    previous_carryover_poses = None
     for time_segment_start in time_segment_start_iterator:
-        poses_2d_df_time_segment, carryover_poses = process_pose_data.local_io.fetch_2d_pose_data_alphapose_local_time_segment(
+        current_poses, carryover_poses = process_pose_data.local_io.fetch_2d_pose_data_alphapose_local_time_segment(
             base_dir=base_dir,
             environment_id=environment_id,
             time_segment_start=time_segment_start,
             camera_assignment_ids=camera_assignment_ids,
-            carryover_poses = carryover_poses,
+            carryover_poses = previous_carryover_poses,
             alphapose_subdirectory=alphapose_subdirectory,
             tree_structure=tree_structure,
             filename=poses_2d_file_name,
             json_format=poses_2d_json_format
         )
+        if previous_carryover_poses is not None:
+            poses_2d_df_time_segment = (
+                pd.concat((
+                    previous_carryover_poses,
+                    current_poses
+                ))
+                .sort_values(['timestamp', 'assignment_id'])
+            )
+        else:
+            poses_2d_df_time_segment=current_poses
         process_pose_data.local_io.write_data_local(
             data_object=poses_2d_df_time_segment,
             base_dir=base_dir,
@@ -181,6 +191,7 @@ def extract_poses_2d_alphapose_local_by_time_segment(
             sort_field=None,
             pose_processing_subdirectory=pose_processing_subdirectory
         )
+        previous_carryover_poses = carryover_poses
     processing_time = time.time() - processing_start
     logger.info('Extracted {:.3f} minutes of 2D poses in {:.3f} minutes (ratio of {:.3f})'.format(
         num_minutes,
