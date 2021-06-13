@@ -101,7 +101,7 @@ def calculate_track_identification(
 def identify_poses(
     poses_3d_with_tracks_df,
     uwb_data_resampled_df,
-    sensor_position_keypoint_index=None¸
+    sensor_position_keypoint_index=None,
     active_person_ids=None,
     ignore_z=False,
     max_distance=None,
