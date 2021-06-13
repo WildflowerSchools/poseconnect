@@ -214,7 +214,7 @@ def identify_poses_timestamp(
                     ))
             else:
                 raise ValueError('Sensor position keypoint index specification must be int or dict or None')
-            keypoints = poses_3d_with_tracks_timestamp_df.loc[pose_ids[i]]['keypoint_coordinates_3d']
+            keypoints = poses_3d_with_tracks_timestamp_df.loc[pose_track_3d_ids[i]]['keypoint_coordinates_3d']
             if keypoint_index is not None and np.all(np.isfinite(keypoints[keypoint_index])):
                 pose_track_position = keypoints[keypoint_index]
             else:
