@@ -116,7 +116,7 @@ def identify_poses(
             pose_identification_timestamp_df, match_statistics = identify_poses_timestamp(
                 poses_3d_with_tracks_timestamp_df=poses_3d_with_tracks_timestamp_df,
                 uwb_data_resampled_timestamp_df=uwb_data_resampled_timestamp_df,
-                sensor_position_keypoint_index=sensor_position_keypoint_index¸
+                sensor_position_keypoint_index=sensor_position_keypoint_index,
                 active_person_ids=active_person_ids,
                 ignore_z=ignore_z,
                 return_match_statistics=return_match_statistics
@@ -126,7 +126,7 @@ def identify_poses(
             pose_identification_timestamp_df = identify_poses_timestamp(
                 poses_3d_with_tracks_timestamp_df=poses_3d_with_tracks_timestamp_df,
                 uwb_data_resampled_timestamp_df=uwb_data_resampled_timestamp_df,
-                sensor_position_keypoint_index=sensor_position_keypoint_index¸
+                sensor_position_keypoint_index=sensor_position_keypoint_index,
                 active_person_ids=active_person_ids,
                 ignore_z=ignore_z,
                 max_distance=max_distance,
@@ -150,7 +150,7 @@ def identify_poses(
 def identify_poses_timestamp(
     poses_3d_with_tracks_timestamp_df,
     uwb_data_resampled_timestamp_df,
-    sensor_position_keypoint_index=None¸
+    sensor_position_keypoint_index=None,
     active_person_ids=None,
     ignore_z=False,
     max_distance=None,

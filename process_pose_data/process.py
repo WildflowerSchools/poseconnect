@@ -2028,7 +2028,7 @@ def identify_pose_tracks_3d_local_by_segment(
             pose_identification_time_segment_df, match_statistics_time_segment_df = process_pose_data.identify.identify_poses(
                 poses_3d_with_tracks_df=poses_3d_with_tracks_time_segment_df,
                 uwb_data_resampled_df=uwb_data_resampled_time_segment_df,
-                sensor_position_keypoint_index=sensor_position_keypoint_index¸
+                sensor_position_keypoint_index=sensor_position_keypoint_index,
                 active_person_ids=active_person_ids,
                 ignore_z=ignore_z,
                 return_match_statistics=return_match_statistics
@@ -2038,7 +2038,7 @@ def identify_pose_tracks_3d_local_by_segment(
             pose_identification_time_segment_df = process_pose_data.identify.identify_poses(
                 poses_3d_with_tracks_df=poses_3d_with_tracks_time_segment_df,
                 uwb_data_resampled_df=uwb_data_resampled_time_segment_df,
-                sensor_position_keypoint_index=sensor_position_keypoint_index¸
+                sensor_position_keypoint_index=sensor_position_keypoint_index,
                 active_person_ids=active_person_ids,
                 ignore_z=ignore_z,
                 max_distance=max_distance,
