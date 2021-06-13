@@ -219,7 +219,7 @@ def identify_poses_timestamp(
                 pose_track_position = keypoints[keypoint_index]
             else:
                 pose_track_position = np.nanmedian(keypoints, axis=0)
-            person_position = person_positions.iloc[j][['x_position', 'y_position', 'z_position']].values
+            person_position = uwb_data_resampled_timestamp_df.iloc[j][['x_position', 'y_position', 'z_position']].values
             displacement_vector = pose_track_position - person_position
             if ignore_z:
                 displacement_vector = displacement_vector[:2]
