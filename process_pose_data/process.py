@@ -1820,7 +1820,7 @@ def identify_pose_tracks_3d_local_by_segment(
     environment_id,
     download_position_data_inference_id,
     pose_track_3d_interpolation_inference_id,
-    sensor_position_keypoint_index=10,
+    sensor_position_keypoint_index=None,
     active_person_ids=None,
     ignore_z=False,
     min_fraction_matched=0.5,
@@ -1842,6 +1842,11 @@ def identify_pose_tracks_3d_local_by_segment(
     The script looks up the inference IDs for the 3D pose tracks and 3D poses by
     inspecting the metadata from the pose track interpolation run.
 
+    The sensor_position_keypoint_index can be an integer (same sensor position
+    for all people) a dictionary with person IDs as keys and sensor positions as
+    values (different sensor positions for different people) or None (uses
+    median keypoint for each person).
+
     If active person IDs are not specified, script assumes all sensors are
     assigned to people are available to match.
 
@@ -1856,7 +1861,7 @@ def identify_pose_tracks_3d_local_by_segment(
         environment_id (str): Honeycomb environment ID for source environment
         download_position_data_inference_id (str): Inference ID for source position data
         pose_track_3d_interpolation_inference_id_id (str): Inference ID for source pose track data
-        sensor_position_keypoint_index (int): Index of keypoint corresponding to UWB sensor on each person (default: 10)
+        sensor_position_keypoint_index (int or dict): Index of keypoint(s) corresponding to UWB sensor on each person (default: None)
         active_person_ids (sequence of str): List of Honeycomb person IDs for people known to be wearing active tags (default is None)
         ignore_z (bool): Boolean indicating whether to ignore z dimension when comparing pose and sensor positions (default is False)
         min_fraction_matched (float): Minimum fraction of poses in track which must match person for track to be identified as person (default is 0.5)
@@ -2000,11 +2005,11 @@ def identify_pose_tracks_3d_local_by_segment(
         if len(poses_3d_time_segment_df) == 0:
             continue
         poses_3d_with_tracks_time_segment_df = poses_3d_time_segment_df.join(pose_3d_ids_with_tracks_df, how='inner')
-        # Add sensor positions
-        poses_3d_with_tracks_and_sensor_positions_time_segment_df = process_pose_data.identify.extract_sensor_position_data(
-            poses_3d_with_tracks_df=poses_3d_with_tracks_time_segment_df,
-            sensor_position_keypoint_index=sensor_position_keypoint_index
-        )
+        # # Add sensor positions
+        # poses_3d_with_tracks_and_sensor_positions_time_segment_df = process_pose_data.identify.extract_sensor_position_data(
+        #     poses_3d_with_tracks_df=poses_3d_with_tracks_time_segment_df,
+        #     sensor_position_keypoint_index=sensor_position_keypoint_index
+        # )
         # Fetch resampled UWB data
         uwb_data_resampled_time_segment_df = process_pose_data.local_io.fetch_data_local(
             base_dir=base_dir,
@@ -2021,8 +2026,9 @@ def identify_pose_tracks_3d_local_by_segment(
         # Identify poses
         if return_match_statistics:
             pose_identification_time_segment_df, match_statistics_time_segment_df = process_pose_data.identify.identify_poses(
-                poses_3d_with_tracks_and_sensor_positions_df=poses_3d_with_tracks_and_sensor_positions_time_segment_df,
+                poses_3d_with_tracks_df=poses_3d_with_tracks_time_segment_df,
                 uwb_data_resampled_df=uwb_data_resampled_time_segment_df,
+                sensor_position_keypoint_index=sensor_position_keypoint_index¸
                 active_person_ids=active_person_ids,
                 ignore_z=ignore_z,
                 return_match_statistics=return_match_statistics
@@ -2030,8 +2036,9 @@ def identify_pose_tracks_3d_local_by_segment(
             match_statistics_time_segment_df_list.append(match_statistics_time_segment_df)
         else:
             pose_identification_time_segment_df = process_pose_data.identify.identify_poses(
-                poses_3d_with_tracks_and_sensor_positions_df=poses_3d_with_tracks_and_sensor_positions_time_segment_df,
+                poses_3d_with_tracks_df=poses_3d_with_tracks_time_segment_df,
                 uwb_data_resampled_df=uwb_data_resampled_time_segment_df,
+                sensor_position_keypoint_index=sensor_position_keypoint_index¸
                 active_person_ids=active_person_ids,
                 ignore_z=ignore_z,
                 max_distance=max_distance,
