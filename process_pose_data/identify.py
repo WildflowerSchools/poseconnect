@@ -214,12 +214,12 @@ def identify_poses_timestamp(
                     ))
             else:
                 raise ValueError('Sensor position keypoint index specification must be int or dict or None')
-            keypoints = poses_3d_with_tracks_timestamp_df.loc[pose_track_3d_ids[i]]['keypoint_coordinates_3d']
+            keypoints = poses_3d_with_tracks_timestamp_df.iloc[i]['keypoint_coordinates_3d']
             if keypoint_index is not None and np.all(np.isfinite(keypoints[keypoint_index])):
                 pose_track_position = keypoints[keypoint_index]
             else:
                 pose_track_position = np.nanmedian(keypoints, axis=0)
-            person_position = person_positions.loc[person_ids[j], ['x_position', 'y_position', 'z_position']].values
+            person_position = person_positions.iloc[j][['x_position', 'y_position', 'z_position']].values
             displacement_vector = pose_track_position - person_position
             if ignore_z:
                 displacement_vector = displacement_vector[:2]
