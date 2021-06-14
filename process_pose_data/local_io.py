@@ -1,3 +1,4 @@
+import process_pose_data.viz_3d
 import honeycomb_io
 import pandas as pd
 import numpy as np
