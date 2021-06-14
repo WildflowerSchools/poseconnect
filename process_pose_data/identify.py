@@ -208,10 +208,6 @@ def identify_poses_timestamp(
                 keypoint_index = sensor_position_keypoint_index
             elif isinstance(sensor_position_keypoint_index, dict):
                 keypoint_index = sensor_position_keypoint_index.get(person_ids[j])
-                if keypoint_index is None:
-                    logger.warning('Person ID \'{}\' not found in dictionary of sensor position keypoint indices. Reverting to median keypoint position'.format(
-                        person_ids[j]
-                    ))
             else:
                 raise ValueError('Sensor position keypoint index specification must be int or dict or None')
             keypoints = poses_3d_with_tracks_timestamp_df.iloc[i]['keypoint_coordinates_3d']
