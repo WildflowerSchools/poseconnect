@@ -186,6 +186,41 @@ def fetch_2d_pose_data_alphapose_local_time_segment(
         carryover_poses.sort_values(['timestamp', 'assignment_id'], inplace=True)
     return current_poses, carryover_poses
 
+def fetch_3d_poses_with_person_info_json(
+    base_dir,
+    environment_id,
+    pose_track_3d_identification_inference_id,
+    start=None,
+    end=None,
+    pose_processing_subdirectory='pose_processing',
+    output_path=None,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None
+):
+    poses_3d_with_person_info_df = fetch_3d_poses_with_person_info(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        pose_track_3d_identification_inference_id=pose_track_3d_identification_inference_id,
+        start=start,
+        end=end,
+        pose_processing_subdirectory=pose_processing_subdirectory,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    poses_3d_with_person_info_json = process_pose_data.viz_3d.convert_3d_poses_with_person_info_to_json(
+        poses_3d_with_person_info_df=poses_3d_with_person_info_df,
+        output_path=output_path
+    )
+    return poses_3d_with_person_info_json
+
 def fetch_3d_poses_with_person_info(
     base_dir,
     environment_id,
