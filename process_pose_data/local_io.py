@@ -458,7 +458,7 @@ def fetch_person_positions_local_json(
         download_position_data_inference_id=download_position_data_inference_id,
         pose_processing_subdirectory=pose_processing_subdirectory
     )
-    person_positions_json = convert_person_positions_to_json(
+    person_positions_json = process_pose_data.viz_3d.convert_person_positions_to_json(
         person_positions=person_positions,
         output_path=output_path
     )
