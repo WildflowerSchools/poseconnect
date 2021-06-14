@@ -441,6 +441,29 @@ def fetch_3d_poses_with_tracks_local(
     )
     return poses_3d_with_tracks_df
 
+def fetch_person_positions_local_json(
+    base_dir,
+    environment_id,
+    start,
+    end,
+    download_position_data_inference_id,
+    output_path=None,
+    pose_processing_subdirectory='pose_processing'
+):
+    person_positions = fetch_person_positions_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        start=start,
+        end=end,
+        download_position_data_inference_id=download_position_data_inference_id,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    person_positions_json = convert_person_positions_to_json(
+        person_positions=person_positions,
+        output_path=output_path
+    )
+    return person_positions_json
+
 def fetch_person_positions_local(
     base_dir,
     environment_id,
