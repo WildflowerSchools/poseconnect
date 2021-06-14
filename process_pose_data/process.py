@@ -2005,12 +2005,6 @@ def identify_pose_tracks_3d_local_by_segment(
         if len(poses_3d_time_segment_df) == 0:
             continue
         poses_3d_with_tracks_time_segment_df = poses_3d_time_segment_df.join(pose_3d_ids_with_tracks_df, how='inner')
-        # # Add sensor positions
-        # poses_3d_with_tracks_and_sensor_positions_time_segment_df = process_pose_data.identify.extract_sensor_position_data(
-        #     poses_3d_with_tracks_df=poses_3d_with_tracks_time_segment_df,
-        #     sensor_position_keypoint_index=sensor_position_keypoint_index
-        # )
-        # Fetch resampled UWB data
         uwb_data_resampled_time_segment_df = process_pose_data.local_io.fetch_data_local(
             base_dir=base_dir,
             pipeline_stage='download_position_data',
