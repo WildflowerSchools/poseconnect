@@ -31,3 +31,24 @@ def convert_3d_poses_with_person_info_to_json(
         with open(output_path, 'w') as fp:
             fp.write(poses_3d_with_person_info_json)
     return poses_3d_with_person_info_json
+
+def convert_person_positions_to_json(
+    person_positions,
+    output_path=None
+):
+    person_positions = person_positions.copy()
+    person_positions.sort_values('timestamp', inplace=True)
+    person_positions['timestamp'] = person_positions['timestamp'].apply(lambda x: x.isoformat())
+    person_positions['sensor_coordinates'] = person_positions['sensor_coordinates'].apply(lambda x: x.tolist())
+    person_positions = person_positions.astype('object')
+    person_positions = person_positions.where(pd.notnull(person_positions), None)
+    data_dict = OrderedDict()
+    for timestamp, timestamp_df in person_positions.groupby('timestamp'):
+        data_dict[timestamp] = timestamp_df.to_dict(orient='records')
+    person_positions_json = json.dumps(data_dict, indent=2)
+    if output_path is not None:
+        output_directory = os.path.dirname(output_path)
+        os.makedirs(output_directory, exist_ok=True)
+        with open(output_path, 'w') as fp:
+            fp.write(person_positions_json)
+    return person_positions_json
