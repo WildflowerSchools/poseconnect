@@ -441,6 +441,78 @@ def fetch_3d_poses_with_tracks_local(
     )
     return poses_3d_with_tracks_df
 
+def fetch_person_positions_local(
+    base_dir,
+    environment_id,
+    start,
+    end,
+    download_position_data_inference_id,
+    pose_processing_subdirectory='pose_processing'
+):
+    person_positions = process_pose_data.fetch_data_local_by_time_segment(
+        start=start,
+        end=end,
+        base_dir=base_dir,
+        pipeline_stage='download_position_data',
+        environment_id=environment_id,
+        filename_stem='position_data',
+        inference_ids=download_position_data_inference_id,
+        data_ids=None,
+        sort_field=None,
+        object_type='dataframe',
+        pose_processing_subdirectory='pose_processing'
+    )
+    if len(person_positions) == 0:
+        return person_positions
+    person_ids = person_positions['person_id'].unique().tolist()
+    person_info = honeycomb_io.fetch_persons(
+        person_ids=person_ids,
+        person_types=None,
+        names=None,
+        first_names=None,
+        last_names=None,
+        nicknames=None,
+        short_names=None,
+        environment_id=None,
+        environment_name=None,
+        start=None,
+        end=None,
+        output_format='dataframe'
+    )
+    person_positions = person_positions.join(
+        person_info,
+        how='left',
+        on='person_id'
+    )
+    person_positions.sort_values(
+        'timestamp',
+        inplace=True,
+        ignore_index=True
+    )
+    person_positions['transparent_classroom_id'] = pd.to_numeric(person_positions['transparent_classroom_id']).astype('Int64')
+    person_positions['sensor_coordinates'] = person_positions.apply(
+        lambda row: np.asarray([row['x_position'], row['y_position'], row['z_position']]),
+        axis=1
+    )
+    person_positions = person_positions.reindex(columns=[
+        'timestamp',
+        'person_id',
+        'sensor_coordinates',
+        'person_type',
+        'name',
+        'first_name',
+        'last_name',
+        'nickname',
+        'short_name',
+        'transparent_classroom_id'
+    ])
+    person_positions.sort_values(
+        'timestamp',
+        inplace=True,
+        ignore_index=True
+    )
+    return person_positions
+
 def write_data_local_by_time_segment(
     data_object,
     base_dir,
