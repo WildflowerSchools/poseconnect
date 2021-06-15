@@ -557,7 +557,7 @@ def fetch_tray_positions_local_json(
         tray_positions=tray_positions,
         output_path=output_path
     )
-    return person_positions_json
+    return tray_positions_json
 
 def fetch_tray_positions_local(
     base_dir,
