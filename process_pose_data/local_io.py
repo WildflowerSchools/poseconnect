@@ -569,46 +569,35 @@ def fetch_tray_positions_local(
         environment_name=None,
         start=None,
         end=None,
-        output_format='dataframe',
-        chunk_size=chunk_size,
-        client=client,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        output_format='dataframe'
     )
     tray_positions = tray_positions.join(
         tray_info,
         how='left',
         on='tray_id'
     )
-    person_ids = tray_positions['person_id'].unique().tolist()
-    person_info = honeycomb_io.fetch_persons(
-        person_ids=person_ids,
-        person_types=None,
+    material_ids = tray_positions['material_id'].unique().tolist()
+    material_info = honeycomb_io.fetch_materials(
+        material_ids=material_ids,
         names=None,
-        first_names=None,
-        last_names=None,
-        nicknames=None,
-        short_names=None,
+        transparent_classroom_ids=None,
         environment_id=None,
         environment_name=None,
         start=None,
         end=None,
         output_format='dataframe',
-        chunk_size=chunk_size,
-        client=client,
-        uri=uri,
-        token_uri=token_uri,
-        audience=audience,
-        client_id=client_id,
-        client_secret=client_secret
+        chunk_size=100,
+        client=None,
+        uri=None,
+        token_uri=None,
+        audience=None,
+        client_id=None,
+        client_secret=None
     )
     tray_positions = tray_positions.join(
-        person_info,
+        material_info,
         how='left',
-        on='person_id'
+        on='material_id'
     )
     # tray_positions['transparent_classroom_id'] = pd.to_numeric(tray_positions['transparent_classroom_id']).astype('Int64')
     tray_positions['sensor_coordinates'] = tray_positions.apply(
