@@ -550,7 +550,7 @@ def fetch_tray_positions_local_json(
         environment_id=environment_id,
         start=start,
         end=end,
-        download_position_data_trays_inference_id=download_position_dat_trays_inference_id,
+        download_position_data_trays_inference_id=download_position_data_trays_inference_id,
         pose_processing_subdirectory=pose_processing_subdirectory
     )
     tray_positions_json = process_pose_data.viz_3d.convert_tray_positions_to_json(
