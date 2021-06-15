@@ -545,7 +545,7 @@ def fetch_tray_positions_local_json(
     output_path=None,
     pose_processing_subdirectory='pose_processing'
 ):
-    person_positions = fetch_person_positions_local(
+    tray_positions = fetch_tray_positions_local(
         base_dir=base_dir,
         environment_id=environment_id,
         start=start,
