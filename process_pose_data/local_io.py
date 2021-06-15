@@ -536,6 +536,29 @@ def fetch_person_positions_local(
     )
     return person_positions
 
+def fetch_tray_positions_local_json(
+    base_dir,
+    environment_id,
+    start,
+    end,
+    download_position_data_trays_inference_id,
+    output_path=None,
+    pose_processing_subdirectory='pose_processing'
+):
+    person_positions = fetch_person_positions_local(
+        base_dir=base_dir,
+        environment_id=environment_id,
+        start=start,
+        end=end,
+        download_position_data_trays_inference_id=download_position_dat_trays_inference_id,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    tray_positions_json = process_pose_data.viz_3d.convert_tray_positions_to_json(
+        tray_positions=tray_positions,
+        output_path=output_path
+    )
+    return person_positions_json
+
 def fetch_tray_positions_local(
     base_dir,
     environment_id,
