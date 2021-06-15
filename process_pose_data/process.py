@@ -1519,15 +1519,19 @@ def download_position_data_by_datapoint(
     """
     Fetches UWB position data from Honeycomb and writes it back to local files.
 
-    Determination of minimum and maximum datapoint timestamps for a given start
-    and end time is tricky, because the timestamp on a UWB datapoint typically
-    captures when the data in that datapoint begins but the duration of the data
-    in that datapoint is less predictable (typically about 30 minutes). For this
-    reason, the script asks the user to explicitly specify minimum and maximum
-    datapoint timestamps rather than calculating them from the specified start and
-    end times. A reasonable practice is to set the minimum datapoint timestamp
-    to be about 40 minutes less than the start time and to set the maximum
-    datapoint timestamp to be equal to the end time.
+    If source data is set to \'datapoints\', function will pull the data from
+    legacy datapoint objects. In this case, user must specify
+    \'datapoint_timestamp_min\' and \'datapoint_timestamp_max\' in addition to
+    \'start\' and \'end\'. Determination of minimum and maximum datapoint
+    timestamps for a given start and end time is tricky, because the timestamp
+    on a UWB datapoint typically captures when the data in that datapoint begins
+    but the duration of the data in that datapoint is less predictable
+    (typically about 30 minutes). For this reason, the script asks the user to
+    explicitly specify minimum and maximum datapoint timestamps rather than
+    calculating them from the specified start and end times. A reasonable
+    practice is to set the minimum datapoint timestamp to be about 40 minutes
+    less than the start time and to set the maximum datapoint timestamp to be
+    equal to the end time.
 
     Output data is organized into 10 second segments (mirroring videos) and
     saved as
@@ -1543,6 +1547,7 @@ def download_position_data_by_datapoint(
         end (datetime): End of position data to fetch
         base_dir: Base directory for local data (e.g., \'/data\')
         environment_id (str): Honeycomb environment ID for source environment
+        source_objects (str): Source data in Honeycomb (either \'position_objects\' or \'datapoints\') (default is \'position_objects\')
         pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
         chunk_size (int): Maximum number of records to pull with Honeycomb request (default is 100)
         client (MinimalHoneycombClient): Honeycomb client (otherwise generates one) (default is None)
