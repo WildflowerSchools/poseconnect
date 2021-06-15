@@ -607,7 +607,7 @@ def fetch_tray_positions_local(
     tray_positions = tray_positions.reindex(columns=[
         'timestamp',
         'tray_id',
-        'material_id'
+        'material_id',
         'sensor_coordinates',
         'tray_name',
         'tray_part_number',
