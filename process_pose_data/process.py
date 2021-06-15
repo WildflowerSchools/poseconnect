@@ -1615,7 +1615,7 @@ def download_position_data_by_datapoint(
     )
     num_time_segments = len(time_segment_start_list)
     num_minutes = (end - start).total_seconds()/60
-    logger.info('Downloading position data for {} time segments spanning {:.3f} minutes: {} to {}'.format(
+    logger.info('Downloading people position data for {} time segments spanning {:.3f} minutes: {} to {}'.format(
         num_time_segments,
         num_minutes,
         time_segment_start_list[0].isoformat(),
@@ -1636,11 +1636,11 @@ def download_position_data_by_datapoint(
     )
     device_ids = person_tag_info_df['device_id'].unique().tolist()
     assignment_ids = person_tag_info_df.index.tolist()
-    logger.info('Found {} tags for specified environment and time span'.format(
+    logger.info('Found {} person tags for specified environment and time span'.format(
         len(device_ids)
     ))
     if source_objects == 'position_objects':
-        logger.info('Fetching position objects for these tags and specified start_end and writing to local files')
+        logger.info('Fetching position objects for these tags and specified start/end and writing to local files')
         if task_progress_bar:
             if notebook:
                 time_segment_start_iterator = tqdm.notebook.tqdm(time_segment_start_list)
@@ -1735,12 +1735,12 @@ def download_position_data_by_datapoint(
             datapoint_timestamp_max=datapoint_timestamp_max,
             assignment_ids=assignment_ids,
             chunk_size=chunk_size,
-            client=None,
-            uri=None,
-            token_uri=None,
-            audience=None,
-            client_id=None,
-            client_secret=None
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
         )
         logger.info('Found {} UWB datapoint IDs for these tags and specified datapoint timestamp min/max'.format(
             len(data_ids)
@@ -1756,12 +1756,12 @@ def download_position_data_by_datapoint(
         for data_id in data_id_iterator:
             position_data_df = honeycomb_io.fetch_uwb_data_data_id(
                 data_id=data_id,
-                client=None,
-                uri=None,
-                token_uri=None,
-                audience=None,
-                client_id=None,
-                client_secret=None
+                client=client,
+                uri=uri,
+                token_uri=token_uri,
+                audience=audience,
+                client_id=client_id,
+                client_secret=client_secret
             )
             if len(position_data_df) == 0:
                 continue
@@ -1819,6 +1819,344 @@ def download_position_data_by_datapoint(
         (processing_time/60)/num_minutes
     ))
     return download_position_data_inference_id
+
+def download_position_data_trays_by_datapoint(
+    start,
+    end,
+    base_dir,
+    environment_id,
+    source_objects='position_objects',
+    datapoint_timestamp_min=None,
+    datapoint_timestamp_max=None,
+    pose_processing_subdirectory='pose_processing',
+    chunk_size=100,
+    client=None,
+    uri=None,
+    token_uri=None,
+    audience=None,
+    client_id=None,
+    client_secret=None,
+    task_progress_bar=False,
+    notebook=False
+):
+    """
+
+    Fetches UWB position data for trays from Honeycomb and writes it back to local files.
+
+    The main function, download_position_data_by_datapoint(), focuses on
+    people positions because those are what is needed for pose track
+    identification. The equivalent function for trays is included here to kep
+    things parallel and because some downstream visualizations require both.
+
+    If source data is set to \'datapoints\', function will pull the data from
+    legacy datapoint objects. In this case, user must specify
+    \'datapoint_timestamp_min\' and \'datapoint_timestamp_max\' in addition to
+    \'start\' and \'end\'. Determination of minimum and maximum datapoint
+    timestamps for a given start and end time is tricky, because the timestamp
+    on a UWB datapoint typically captures when the data in that datapoint begins
+    but the duration of the data in that datapoint is less predictable
+    (typically about 30 minutes). For this reason, the script asks the user to
+    explicitly specify minimum and maximum datapoint timestamps rather than
+    calculating them from the specified start and end times. A reasonable
+    practice is to set the minimum datapoint timestamp to be about 40 minutes
+    less than the start time and to set the maximum datapoint timestamp to be
+    equal to the end time.
+
+    Output data is organized into 10 second segments (mirroring videos) and
+    saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/download_position_data_trays/ENVIRONMENT_ID/YYYY/MM/DD/HH-MM-SS/position_data_INFERENCE_ID.pkl\'.
+
+    Output metadata is saved as
+    \'BASE_DIR/POSE_PROCESSING_SUBDIRECTORY/download_position_data_trays/ENVIRONMENT_ID/download_position_data_metadata_INFERENCE_ID.pkl\'
+
+    Args:
+        datapoint_timestamp_min (datetime): Minimum UWB data datapoint timestamp to fetch
+        datapoint_timestamp_max (datetime): Maximum UWB data datapoint timestamp to fetch
+        start (datetime): Start of position data to fetch
+        end (datetime): End of position data to fetch
+        base_dir: Base directory for local data (e.g., \'/data\')
+        environment_id (str): Honeycomb environment ID for source environment
+        source_objects (str): Source data in Honeycomb (either \'position_objects\' or \'datapoints\') (default is \'position_objects\')
+        pose_processing_subdirectory (str): subdirectory (under base directory) for all pose processing data (default is \'pose_processing\')
+        chunk_size (int): Maximum number of records to pull with Honeycomb request (default is 100)
+        client (MinimalHoneycombClient): Honeycomb client (otherwise generates one) (default is None)
+        uri (str): Honeycomb URI (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        token_uri (str): Honeycomb token URI (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        audience (str): Honeycomb audience (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        client_id (str): Honeycomb client ID (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        client_secret (str): Honeycomb client secret (otherwise falls back on default strategy of MinimalHoneycombClient) (default is None)
+        task_progress_bar (bool): Boolean indicating whether script should display an overall progress bar (default is False)
+        notebook (bool): Boolean indicating whether script is being run in a Jupyter notebook (for progress bar display) (default is False)
+
+    Returns:
+        (str) Locally-generated inference ID for this run (identifies output data)
+    """
+    if start.tzinfo is None:
+        logger.info('Specified start is timezone-naive. Assuming UTC')
+        start=start.replace(tzinfo=datetime.timezone.utc)
+    if end.tzinfo is None:
+        logger.info('Specified end is timezone-naive. Assuming UTC')
+        end=end.replace(tzinfo=datetime.timezone.utc)
+    if datapoint_timestamp_min is not None and datapoint_timestamp_min.tzinfo is None:
+        logger.info('Specified minimum datapoint timestamp is timezone-naive. Assuming UTC')
+        datapoint_timestamp_min=datapoint_timestamp_min.replace(tzinfo=datetime.timezone.utc)
+    if datapoint_timestamp_max is not None and datapoint_timestamp_max.tzinfo is None:
+        logger.info('Specified maximum datapoint timestamp is timezone-naive. Assuming UTC')
+        datapoint_timestamp_max=datapoint_timestamp_max.replace(tzinfo=datetime.timezone.utc)
+    logger.info('Downloading tray position data from Honeycomb. Base directory: {}. Pose processing data subdirectory: {}. Environment ID: {}. Start: {}. End: {}'.format(
+        base_dir,
+        pose_processing_subdirectory,
+        environment_id,
+        start,
+        end
+    ))
+    processing_start = time.time()
+    logger.info('Generating metadata')
+    download_position_data_metadata = generate_metadata(
+        environment_id=environment_id,
+        pipeline_stage='download_position_data_trays',
+        parameters={
+            'datapoint_timestamp_min': datapoint_timestamp_min,
+            'datapoint_timestamp_max': datapoint_timestamp_max,
+            'start': start,
+            'end': end
+        }
+    )
+    download_position_data_trays_inference_id = download_position_data_metadata.get('inference_id')
+    logger.info('Writing inference metadata to local file')
+    process_pose_data.local_io.write_data_local(
+        data_object=download_position_data_metadata,
+        base_dir=base_dir,
+        pipeline_stage='download_position_data_trays',
+        environment_id=environment_id,
+        filename_stem='download_position_data_trays_metadata',
+        inference_id=download_position_data_metadata['inference_id'],
+        time_segment_start=None,
+        object_type='dict',
+        append=False,
+        sort_field=None,
+        pose_processing_subdirectory=pose_processing_subdirectory
+    )
+    logger.info('Generating list of time segments')
+    time_segment_start_list = process_pose_data.local_io.generate_time_segment_start_list(
+        start=start,
+        end=end
+    )
+    num_time_segments = len(time_segment_start_list)
+    num_minutes = (end - start).total_seconds()/60
+    logger.info('Downloading tray position data for {} time segments spanning {:.3f} minutes: {} to {}'.format(
+        num_time_segments,
+        num_minutes,
+        time_segment_start_list[0].isoformat(),
+        time_segment_start_list[-1].isoformat()
+    ))
+    logger.info('Fetching tray tag info from Honeycomb for specified environment and time span')
+    tag_info = honeycomb_io.fetch_tag_info(
+        environment_id=environment_id,
+        environment_name=None,
+        start=start,
+        end=end,
+        chunk_size=chunk_size,
+        client=client,
+        uri=uri,
+        token_uri=token_uri,
+        audience=audience,
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    tray_info = tag_info.loc[tag_info['entity_type'] == 'Tray'].copy()
+    device_ids = tray_info.index.unique().tolist()
+    assignment_ids = tray_info['assignment_id'].tolist()
+    logger.info('Found {} tray tags for specified environment and time span'.format(
+        len(device_ids)
+    ))
+    if source_objects == 'position_objects':
+        logger.info('Fetching position objects for these tags and specified start/end and writing to local files')
+        if task_progress_bar:
+            if notebook:
+                time_segment_start_iterator = tqdm.notebook.tqdm(time_segment_start_list)
+            else:
+                time_segment_start_iterator = tqdm.tqdm(time_segment_start_list)
+        else:
+            time_segment_start_iterator = time_segment_start_list
+        for time_segment_start in time_segment_start_iterator:
+            position_data_df = honeycomb_io.fetch_cuwb_position_data(
+                start=time_segment_start - datetime.timedelta(milliseconds=500),
+                end=time_segment_start + datetime.timedelta(milliseconds=10500),
+                device_ids=device_ids,
+                environment_id=None,
+                environment_name=None,
+                device_types=['UWBTAG'],
+                output_format='dataframe',
+                sort_arguments=None,
+                chunk_size=1000,
+                client=client,
+                uri=uri,
+                token_uri=token_uri,
+                audience=audience,
+                client_id=client_id,
+                client_secret=client_secret
+            )
+            # There seem to be some duplicates in honeycomb
+            if position_data_df.duplicated(subset=set(position_data_df.columns).difference(['socket_read_time'])).any():
+                logger.warning('Duplicate position records found in time segment {}. Deleting duplicates.'.format(
+                    time_segment_start.isoformat()
+                ))
+                position_data_df.drop_duplicates(
+                    subset=set(position_data_df.columns).difference(['socket_read_time']),
+                    inplace=True
+                )
+            if len(position_data_df) == 0:
+                continue
+            position_data_df = (
+                position_data_df
+                .join(
+                    (
+                        tray_info
+                        .reindex(columns=['tray_id', 'material_id'])
+                    ),
+                    on='device_id'
+                )
+                .rename(columns={
+                    'x': 'x_position',
+                    'y': 'y_position',
+                    'z': 'z_position'
+                })
+                .reindex(columns=[
+                    'timestamp',
+                    'tray_id',
+                    'material_id',
+                    'x_position',
+                    'y_position',
+                    'z_position'
+                ])
+            )
+            position_data_df = process_pose_data.identify.resample_uwb_data(
+                uwb_data_df=position_data_df,
+                id_field_names=[
+                    'tray_id',
+                    'material_id'
+                ],
+                interpolation_field_names=[
+                    'x_position',
+                    'y_position',
+                    'z_position'
+                ],
+                timestamp_field_name='timestamp'
+            )
+            position_data_df = position_data_df.loc[
+                (position_data_df['timestamp'] >= time_segment_start) &
+                (position_data_df['timestamp'] < time_segment_start + datetime.timedelta(seconds=10))
+            ]
+            process_pose_data.local_io.write_data_local(
+                data_object=position_data_df,
+                base_dir=base_dir,
+                pipeline_stage='download_position_data_trays',
+                environment_id=environment_id,
+                filename_stem='position_data_trays',
+                inference_id=download_position_data_trays_inference_id,
+                time_segment_start=time_segment_start,
+                object_type='dataframe',
+                append=False,
+                sort_field=None,
+                pose_processing_subdirectory=pose_processing_subdirectory
+            )
+    elif source_objects == 'datapoints':
+        logger.info('Fetching UWB datapoint IDs for these tags and specified datapoint timestamp min/max')
+        data_ids = honeycomb_io.fetch_uwb_data_ids(
+            datapoint_timestamp_min=datapoint_timestamp_min,
+            datapoint_timestamp_max=datapoint_timestamp_max,
+            assignment_ids=assignment_ids,
+            chunk_size=chunk_size,
+            client=client,
+            uri=uri,
+            token_uri=token_uri,
+            audience=audience,
+            client_id=client_id,
+            client_secret=client_secret
+        )
+        logger.info('Found {} UWB datapoint IDs for these tags and specified datapoint timestamp min/max'.format(
+            len(data_ids)
+        ))
+        logger.info('Fetching position data from each of these UWB datapoints and writing to local files')
+        if task_progress_bar:
+            if notebook:
+                data_id_iterator = tqdm.notebook.tqdm(data_ids)
+            else:
+                data_id_iterator = tqdm.tqdm(data_ids)
+        else:
+            data_id_iterator = data_ids
+        for data_id in data_id_iterator:
+            position_data_df = honeycomb_io.fetch_uwb_data_data_id(
+                data_id=data_id,
+                client=client,
+                uri=uri,
+                token_uri=token_uri,
+                audience=audience,
+                client_id=client_id,
+                client_secret=client_secret
+            )
+            if len(position_data_df) == 0:
+                continue
+            position_data_df = honeycomb_io.extract_position_data(
+                df=position_data_df
+            )
+            if len(position_data_df) == 0:
+                continue
+            position_data_df = process_pose_data.identify.resample_uwb_data(
+                uwb_data_df=position_data_df,
+                id_field_names=[
+                    'assignment_id',
+                    'object_id',
+                    'serial_number',
+                ],
+                interpolation_field_names=[
+                    'x_position',
+                    'y_position',
+                    'z_position'
+                ],
+                timestamp_field_name='timestamp'
+            )
+            position_data_df = position_data_df.join(
+                (
+                    tag_info
+                    .set_index('assignment_id')
+                    .reindex(columns=['tray_id', 'material_id'])
+                ),
+                how='inner',
+                on='assignment_id'
+            )
+            for time_segment_start in time_segment_start_list:
+                position_data_time_segment_df = position_data_df.loc[
+                    (position_data_df['timestamp'] >= time_segment_start) &
+                    (position_data_df['timestamp'] < time_segment_start + datetime.timedelta(seconds=10))
+                ].reset_index(drop=True)
+                if len(position_data_time_segment_df) == 0:
+                    continue
+                process_pose_data.local_io.write_data_local(
+                    data_object=position_data_time_segment_df,
+                    base_dir=base_dir,
+                    pipeline_stage='download_position_data_trays',
+                    environment_id=environment_id,
+                    filename_stem='position_data_trays',
+                    inference_id=download_position_data_inference_id,
+                    time_segment_start=time_segment_start,
+                    object_type='dataframe',
+                    append=True,
+                    sort_field=None,
+                    pose_processing_subdirectory=pose_processing_subdirectory
+                )
+    else:
+        raise ValueError('Source object specification \'{}\' not recognized'.format(
+            source_objects
+        ))
+    processing_time = time.time() - processing_start
+    logger.info('Downloaded {:.3f} minutes of position data in {:.3f} minutes (ratio of {:.3f})'.format(
+        num_minutes,
+        processing_time/60,
+        (processing_time/60)/num_minutes
+    ))
+    return download_position_data_trays_inference_id
 
 def identify_pose_tracks_3d_local_by_segment(
     base_dir,
