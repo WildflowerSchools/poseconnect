@@ -604,18 +604,20 @@ def fetch_tray_positions_local(
         lambda row: np.asarray([row['x_position'], row['y_position'], row['z_position']]),
         axis=1
     )
-    # tray_positions = tray_positions.reindex(columns=[
-    #     'timestamp',
-    #     'person_id',
-    #     'sensor_coordinates',
-    #     'person_type',
-    #     'name',
-    #     'first_name',
-    #     'last_name',
-    #     'nickname',
-    #     'short_name',
-    #     'transparent_classroom_id'
-    # ])
+    tray_positions = tray_positions.reindex(columns=[
+        'timestamp',
+        'tray_id',
+        'material_id'
+        'sensor_coordinates',
+        'tray_name',
+        'tray_part_number',
+        'tray_serial_number',
+        'tray_name',
+        'material_name',
+        'material_transparent_classroom_id',
+        'material_transparent_classroom_type',
+        'material_description'
+    ])
     tray_positions.sort_values(
         'timestamp',
         inplace=True,
