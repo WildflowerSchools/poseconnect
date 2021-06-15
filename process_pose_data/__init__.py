@@ -9,4 +9,4 @@ from process_pose_data.identify import *
 from process_pose_data.geom_render import *
 from process_pose_data.process import *
 
-__version__ = '3.5.0'
+__version__ = '3.6.0'
