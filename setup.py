@@ -7,7 +7,7 @@ BASEDIR = os.path.dirname(os.path.abspath(__file__))
 VERSION_RE = re.compile(r'''__version__ = ['"]([0-9.]+)['"]''')
 
 def get_version():
-    init = open(os.path.join(BASEDIR, 'process_pose_data', '__init__.py')).read()
+    init = open(os.path.join(BASEDIR, 'pose_connect', '__init__.py')).read()
     return VERSION_RE.search(init).group(1)
 
 # Dependencies (format is 'PYPI_PACKAGE_NAME[>]=VERSION_NUMBER')
@@ -35,13 +35,13 @@ BASE_DEPENDENCIES = [
 os.chdir(os.path.normpath(BASEDIR))
 
 setup(
-    name='wf-process-pose-data',
+    name='pose-connect',
     packages=find_packages(),
     version=get_version(),
     include_package_data=True,
-    description='Tools for fetching, processing, visualizing, and analyzing Wildflower human pose data',
+    description='Tools for constructing 3D pose tracks from multi-camera 2D poses',
     long_description=open('README.md').read(),
-    url='https://github.com/WildflowerSchools/wf-process-pose-data',
+    url='https://github.com/WildflowerSchools/pose-connect',
     author='Theodore Quinn',
     author_email='ted.quinn@wildflowerschools.org',
     install_requires=BASE_DEPENDENCIES,
@@ -55,7 +55,7 @@ setup(
     #          "COMMAND_NAME = MODULE_PATH:METHOD_NAME"
     #     ]
     # },
-    keywords=['pose estimation'],
+    keywords=['pose reconstruction', 'pose tracking'],
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
