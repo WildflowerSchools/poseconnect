@@ -1,5 +1,5 @@
 import process_pose_data.local_io
-import process_pose_data.visualize
+import pose_connect.visualize
 import honeycomb_io
 import video_io
 import pandas as pd
@@ -854,7 +854,7 @@ def draw_poses_2d_timestamp_camera_pair_opencv(
     fig_width_inches=10.5,
     fig_height_inches=8
 ):
-    dfs_single_camera = process_pose_data.visualize.extract_single_camera_data(df)
+    dfs_single_camera = pose_connect.visualize.extract_single_camera_data(df)
     pose_label_maps = {
         'a': None,
         'b': None
@@ -1184,7 +1184,7 @@ def draw_poses_3d_timestamp_camera_opencv(
             end=timestamp.to_pydatetime()
         )
     match_group_labels = df['match_group_label'].unique()
-    color_mapping = process_pose_data.visualize.generate_color_mapping(match_group_labels)
+    color_mapping = pose_connect.visualize.generate_color_mapping(match_group_labels)
     for camera_id in camera_ids:
         camera_name = camera_names[camera_id]
         camera_calibration = camera_calibrations[camera_id]
@@ -1498,7 +1498,7 @@ def draw_poses_3d_timestamp_camera(
             end=timestamp.to_pydatetime()
         )
     match_group_labels = df['match_group_label'].unique()
-    color_mapping = process_pose_data.visualize.generate_color_mapping(match_group_labels)
+    color_mapping = pose_connect.visualize.generate_color_mapping(match_group_labels)
     for camera_id in camera_ids:
         camera_name = camera_names[camera_id]
         camera_calibration = camera_calibrations[camera_id]
@@ -1632,7 +1632,7 @@ def draw_poses_3d_consecutive_timestamps(
             end=timestamp.to_pydatetime()
         )
     pose_labels = poses_3d_df.loc[poses_3d_df['timestamp'].isin([timestamp, timestamp_previous]), pose_label_column].fillna('NA').unique()
-    color_mapping = process_pose_data.visualize.generate_color_mapping_no_sort(pose_labels)
+    color_mapping = pose_connect.visualize.generate_color_mapping_no_sort(pose_labels)
     for camera_id in camera_ids:
         camera_name = camera_names[camera_id]
         camera_calibration = camera_calibrations[camera_id]
