@@ -1,5 +1,4 @@
 import pose_connect.reconstruct
-import honeycomb_io
 import pandas as pd
 import numpy as np
 import logging
@@ -256,9 +255,7 @@ def select_poses(
         filter_list.append(camera_id_filter)
     if camera_name is not None:
         if camera_names is None:
-            camera_names = honeycomb_io.fetch_camera_names(
-                camera_ids = poses_2d_df['camera_id'].unique().tolist()
-            )
+            raise ValueError('Must specify camera name dict to filter on camera names')
         camera_ids = list()
         for camera_id_in_dict, camera_name_in_dict in camera_names.items():
             if camera_name_in_dict == camera_name:
@@ -342,12 +339,7 @@ def select_pose_pairs(
         filter_list.append(camera_id_b_filter)
     if camera_name_a is not None or camera_name_b is not None:
         if camera_names is None:
-            camera_names = honeycomb_io.fetch_camera_names(
-                camera_ids = np.union1d(
-                    pose_pairs_2d_df['camera_id_a'].unique(),
-                    pose_pairs_2d_df['camera_id_b'].unique()
-                ).tolist()
-            )
+            raise ValueError('Must specify camera name dict to filter on camera names')
     if camera_name_a is not None:
         camera_ids = list()
         for camera_id_in_dict, camera_name_in_dict in camera_names.items():
