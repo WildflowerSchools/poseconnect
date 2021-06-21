@@ -1,5 +1,4 @@
 import pose_connect.filter
-import honeycomb_io
 import cv_utils
 import cv2 as cv
 import pandas as pd
@@ -49,13 +48,7 @@ def reconstruct_poses_3d(
 ):
     camera_ids = poses_2d_df['camera_id'].unique().tolist()
     if camera_calibrations is None:
-        start = poses_2d_df['timestamp'].min().to_pydatetime()
-        end = poses_2d_df['timestamp'].max().to_pydatetime()
-        camera_calibrations = honeycomb_io.fetch_camera_calibrations(
-            camera_ids=camera_ids,
-            start=start,
-            end=end
-        )
+        raise ValueError('Must specify camera calibration information')
     missing_cameras = list()
     for camera_id in camera_ids:
         for calibration_parameter in [
@@ -74,16 +67,9 @@ def reconstruct_poses_3d(
         poses_2d_df = poses_2d_df.loc[~poses_2d_df['camera_id'].isin(missing_cameras)]
     if pose_3d_limits is None:
         if room_x_limits is None or room_y_limits is None:
-            raise ValueError('3D pose spatial limits no specified and room boundaries not specified')
-        if pose_model_id is None:
-            if 'pose_model_id' not in poses_2d_df.columns:
-                raise ValueError('3D pose spatial limits not specified and pose model ID not inclued in 2D pose data')
-            pose_model_ids = poses_2d_df['pose_model_id'].unique()
-            if len(pose_model_ids) > 1:
-                raise ValueError('Multiple pose model IDs found in 2D pose data')
-            pose_model_id = pose_model_ids[0]
-        pose_model = honeycomb_io.fetch_pose_model_by_pose_model_id(pose_model_id)
-        pose_model_name = pose_model.get('model_name')
+            raise ValueError('3D pose spatial limits not specified and room boundaries not specified')
+        if pose_model_name is None:
+            raise ValueError('3D pose spatial limits not specified and pose model name not specified')
         pose_3d_limits = pose_3d_limits_by_pose_model(
             room_x_limits=room_x_limits,
             room_y_limits=room_y_limits,
@@ -536,17 +522,7 @@ def calculate_3d_poses(
     if len(pose_pairs_2d_df) == 0:
         return pose_pairs_2d_df
     if camera_calibrations is None:
-        camera_ids = np.union1d(
-            pose_pairs_2d_df['camera_id_a'].unique(),
-            pose_pairs_2d_df['camera_id_b'].unique()
-        ).tolist()
-        start = pose_pairs_2d_df['timestamp'].min().to_pydatetime()
-        end = pose_pairs_2d_df['timestamp'].max().to_pydatetime()
-        camera_calibrations = honeycomb_io.fetch_camera_calibrations(
-            camera_ids=camera_ids,
-            start=start,
-            end=end
-        )
+        raise ValueError('Must specify camera calibration information')
     pose_pairs_2d_df = pose_pairs_2d_df.groupby(['camera_id_a', 'camera_id_b']).apply(
         lambda x: calculate_3d_poses_camera_pair(
             pose_pairs_2d_df_camera_pair=x,
