@@ -1,6 +1,6 @@
-# process_pose_data
+# pose_connect
 
-Tools for fetching, processing, visualizing, and analyzing Wildflower human pose data
+Tools for constructing 3D pose tracks from multi-camera 2D poses
 
 ## Task list
 
@@ -10,22 +10,7 @@ Tools for fetching, processing, visualizing, and analyzing Wildflower human pose
 * Use new text-with-background drawing primitive for pose labels
 * Add timestamp to video overlays
 * Consider getting rid of `geom_render` module
-* Fix up progress bars so we can have task-level and segment-level progress bars without logging in notebook
-* Fix up progress bars so they work properly outside of notebook with multiprocessing
-* Add indentation/labeling on segment-level progress bars
-* Clean up argument ordering in `reconstruct_poses_3d_alphapose_local_time_segment`
-* Add `poses_2d_json_format` option to `reconstruct_poses_3d` entry point
-* Add endpoints for all processing functions
-* Add ability to write locally generated object IDs to Honeycomb
-* Create separate workers for uploading to Honeycomb 3D poses, 3D pose tracks, interpolated 3D pose tracks, 3D pose identification, 3D pose track identification
-* Dockerize pipeline
-* Set up pipeline for Airflow
 * Add additional machinery for checking UWB data integrity (e.g., duplicates)
-* Retool `generate_inference_metadata_reconstruct_3d_poses_alphapose_local` to exclude cameras without calibration data
-* Make function to delete Honeycomb inference executions
-* Make function to delete local inference metadata
-* Make function to delete local 3D pose files
-* Make function for deleting local 3D pose data
 * Rewrite all log messages so formatting isn't called if log isn't printed
 * Make functions handle empty poses (all keypoints `NaN`) more gracefully (e.g., `score_pose_pairs()`, `draw_pose_2d()`)
 * Make visualization functions handle missing fields (e.g., `pose_quality`) more gracefully
