@@ -1,5 +1,4 @@
-import process_pose_data.reconstruct
-import honeycomb_io
+import pose_connect.reconstruct
 import pandas as pd
 import numpy as np
 import logging
@@ -110,7 +109,7 @@ def filter_pose_pairs_by_3d_pose_spatial_limits(
     if len(pose_pairs_2d_df) == 0:
         return pose_pairs_2d_df
     valid_3d_poses = pose_pairs_2d_df['keypoint_coordinates_3d'].apply(
-        lambda x: process_pose_data.reconstruct.pose_3d_in_range(x, pose_3d_limits)
+        lambda x: pose_connect.reconstruct.pose_3d_in_range(x, pose_3d_limits)
     )
     pose_pairs_2d_df = pose_pairs_2d_df.loc[valid_3d_poses].copy()
     return pose_pairs_2d_df
@@ -124,7 +123,7 @@ def filter_pose_pairs_by_best_match(
     pose_pairs_2d_df_timestamp.sort_index(inplace=True)
     best_score_indices = list()
     for group_name, group_df in pose_pairs_2d_df_timestamp.groupby(['camera_id_a', 'camera_id_b']):
-        best_score_indices.extend(process_pose_data.reconstruct.extract_best_score_indices_timestamp_camera_pair(
+        best_score_indices.extend(pose_connect.reconstruct.extract_best_score_indices_timestamp_camera_pair(
             pose_pairs_2d_df=group_df,
             pose_2d_id_column_name=pose_2d_id_column_name
         ))
@@ -256,9 +255,7 @@ def select_poses(
         filter_list.append(camera_id_filter)
     if camera_name is not None:
         if camera_names is None:
-            camera_names = honeycomb_io.fetch_camera_names(
-                camera_ids = poses_2d_df['camera_id'].unique().tolist()
-            )
+            raise ValueError('Must specify camera name dict to filter on camera names')
         camera_ids = list()
         for camera_id_in_dict, camera_name_in_dict in camera_names.items():
             if camera_name_in_dict == camera_name:
@@ -342,12 +339,7 @@ def select_pose_pairs(
         filter_list.append(camera_id_b_filter)
     if camera_name_a is not None or camera_name_b is not None:
         if camera_names is None:
-            camera_names = honeycomb_io.fetch_camera_names(
-                camera_ids = np.union1d(
-                    pose_pairs_2d_df['camera_id_a'].unique(),
-                    pose_pairs_2d_df['camera_id_b'].unique()
-                ).tolist()
-            )
+            raise ValueError('Must specify camera name dict to filter on camera names')
     if camera_name_a is not None:
         camera_ids = list()
         for camera_id_in_dict, camera_name_in_dict in camera_names.items():

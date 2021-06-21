@@ -1,4 +1,3 @@
-import honeycomb_io
 import cv_utils
 import cv2 as cv
 import pandas as pd
@@ -34,8 +33,7 @@ def keypoint_quality_histogram_by_camera(
 ):
     if display_camera_name:
         if camera_names is None:
-            camera_ids = df['camera_id'].unique().tolist()
-            camera_names = honeycomb_io.fetch_camera_names(camera_ids)
+            raise ValueError('If display_camera_name is set to True, must specify camera names dict')
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
@@ -138,8 +136,7 @@ def num_valid_keypoints_histogram_by_camera(
 ):
     if display_camera_name:
         if camera_names is None:
-            camera_ids = df['camera_id'].unique().tolist()
-            camera_names = honeycomb_io.fetch_camera_names(camera_ids)
+            raise ValueError('If display_camera_name is set to True, must specify camera names dict')
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
@@ -244,8 +241,7 @@ def pose_quality_histogram_by_camera(
 ):
     if display_camera_name:
         if camera_names is None:
-            camera_ids = df['camera_id'].unique().tolist()
-            camera_names = honeycomb_io.fetch_camera_names(camera_ids)
+            raise ValueError('If display_camera_name is set to True, must specify camera names dict')
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
@@ -348,8 +344,7 @@ def mean_keypoint_quality_histogram_by_camera(
 ):
     if display_camera_name:
         if camera_names is None:
-            camera_ids = df['camera_id'].unique().tolist()
-            camera_names = honeycomb_io.fetch_camera_names(camera_ids)
+            raise ValueError('If display_camera_name is set to True, must specify camera names dict')
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
@@ -451,8 +446,7 @@ def mean_keypoint_quality_pose_quality_scatter_by_camera(
 ):
     if display_camera_name:
         if camera_names is None:
-            camera_ids = df['camera_id'].unique().tolist()
-            camera_names = honeycomb_io.fetch_camera_names(camera_ids)
+            raise ValueError('If display_camera_name is set to True, must specify camera names dict')
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
@@ -635,8 +629,7 @@ def pose_pair_score_heatmap_timestamp_camera_pair(
     camera_id_b = camera_ids_b[0]
     if display_camera_names:
         if camera_names is None:
-            camera_ids = [camera_id_a, camera_id_b]
-            camera_names = honeycomb_io.fetch_camera_names(camera_ids)
+            raise ValueError('If display_camera_names is set to True, must specify camera names dict')
     if plot_title is not None:
         ax_title = '{} ({})'.format(
             plot_title,
@@ -849,8 +842,7 @@ def pose_track_3d_timelines_by_camera(
 ):
     if display_camera_name:
         if camera_names is None:
-            camera_ids = df['camera_id'].unique().tolist()
-            camera_names = honeycomb_io.fetch_camera_names(camera_ids)
+            raise ValueError('If display_camera_name is set to True, must specify camera names dict')
     for camera_id, group_df in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
