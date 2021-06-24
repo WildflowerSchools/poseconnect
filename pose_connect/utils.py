@@ -49,3 +49,42 @@ def convert_to_df(data_object):
                 raise ValueError('Data object is a string but it doesn\'t appear to be a valid filename or valid JSON')
             return convert_to_df(data_deserialized)
     raise ValueError('Failed to parse data object')
+
+def set_index_columns(
+    df,
+    index_columns
+):
+    if df.index.name == index_columns or df.index.names == index_columns:
+        return df
+    df = df.copy()
+    if isinstance(index_columns, str):
+        if df.index.nlevels == 1 and df.index.name is None and index_columns not in df.columns:
+            df.index.name = index_columns
+            return df
+        if (df.index.nlevels == 1 and df.index.name is None) or (df.index.nlevels > 1 and df.index.names == [None]*df.index.nlevels):
+            df.reset_index(inplace=True, drop=True)
+        else:
+            df.reset_index(inplace=True)
+        if index_columns not in df.columns:
+            raise ValueError('Dataframe already had a named index and specified index name not in column names')
+        df.set_index(index_columns, inplace=True)
+        return df
+    else:
+        try:
+            num_target_levels = len(index_columns)
+        except:
+            raise ValueError('Specified index columns must either be string or sequence of strings')
+        if num_target_levels == 1 and df.index.nlevels == 1 and df.index.name is None and not set(index_columns).issubset(set(df.columns)):
+            df.index.name = index_columns[0]
+            return df
+        if num_target_levels > 1 and df.index.nlevels == num_target_levels and df.index.names == [None]*df.index.nlevels and not set(index_columns).issubset(df.columns):
+            df.index.names = index_columns
+            return df
+        if (df.index.nlevels == 1 and df.index.name is None) or (df.index.nlevels > 1 and df.index.names is [None]*df.index.nlevels):
+            df.reset_index(inplace=True, drop=True)
+        else:
+            df.reset_index(inplace=True)
+        if not set(index_columns).issubset(set(df.columns)):
+            raise ValueError('Dataframe already had a named index and specified index names not in column names')
+        df.set_index(index_columns, inplace=True)
+        return df
