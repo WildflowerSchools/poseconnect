@@ -4,6 +4,27 @@ import json
 import pickle
 import os
 
+def ingest_poses_2d(data_object):
+    df = convert_to_df(data_object)
+    df = set_index_columns(
+        df=df,
+        index_columns='pose_2d_id'
+    )
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['camera_id'] = df['camera_id'].astype('object')
+    df['keypoint_coordinates_2d'] = df['keypoint_coordinates_2d'].apply(convert_to_array)
+    df['keypoint_quality_2d'] = df['keypoint_quality_2d'].apply(convert_to_array)
+    df['pose_quality_2d'] = pd.to_numeric(df['pose_quality_2d']).astype('float')
+    return df
+
+def convert_to_array(data_object):
+    if isinstance(data_object, str):
+        try:
+            data_object = json.loads(data_object)
+        except:
+            raise ValueError('Array object appears to be string but JSON deserialization fails')
+    return np.asarray(data_object)
+
 def convert_to_df(data_object):
     if isinstance(data_object, pd.DataFrame):
         return data_object
