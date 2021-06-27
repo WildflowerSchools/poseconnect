@@ -29,6 +29,31 @@ def ingest_poses_2d(data_object):
     df['pose_quality_2d'] = pd.to_numeric(df['pose_quality_2d']).astype('float')
     return df
 
+def ingest_camera_calibration_info(data_object):
+    df = convert_to_df(data_object)
+    df = set_index_columns(
+        df=df,
+        index_columns='camera_id'
+    )
+    target_columns = [
+        'camera_matrix',
+        'distortion_coefficients',
+        'rotation_vector',
+        'translation_vector',
+        'image_width',
+        'image_height'
+    ]
+    if not set(target_columns).issubset(set(df.columns)):
+        raise ValueError('Data is missing fields: {}'.format(
+            set(target_columns) - set(df.columns)
+        ))
+    df = df.reindex(columns=target_columns)
+    df['camera_matrix'] = df['camera_matrix'].apply(convert_to_array)
+    df['distortion_coefficients'] = df['distortion_coefficients'].apply(convert_to_array)
+    df['rotation_vector'] = df['rotation_vector'].apply(convert_to_array)
+    df['translation_vector'] = df['translation_vector'].apply(convert_to_array)
+    return df
+
 def convert_to_array(data_object):
     if isinstance(data_object, str):
         try:
