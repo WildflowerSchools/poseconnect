@@ -54,6 +54,27 @@ def ingest_camera_calibrations(data_object):
     df['translation_vector'] = df['translation_vector'].apply(convert_to_array)
     return df
 
+def ingest_poses_3d(data_object):
+    df = convert_to_df(data_object)
+    df = set_index_columns(
+        df=df,
+        index_columns='pose_3d_id'
+    )
+    target_columns = [
+        'timestamp',
+        'keypoint_coordinates_3d',
+        'pose_2d_ids'
+    ]
+    if not set(target_columns).issubset(set(df.columns)):
+        raise ValueError('Data is missing fields: {}'.format(
+            set(target_columns) - set(df.columns)
+        ))
+    df = df.reindex(columns=target_columns)
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(convert_to_array)
+    df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
+    return df
+
 def convert_to_array(data_object):
     if isinstance(data_object, str):
         try:
@@ -61,6 +82,14 @@ def convert_to_array(data_object):
         except:
             raise ValueError('Array object appears to be string but JSON deserialization fails')
     return np.asarray(data_object)
+
+def convert_to_list(data_object):
+    if isinstance(data_object, str):
+        try:
+            data_object = json.loads(data_object)
+        except:
+            raise ValueError('List object appears to be string but JSON deserialization fails')
+    return list(data_object)
 
 def convert_to_df(data_object):
     if isinstance(data_object, pd.DataFrame):

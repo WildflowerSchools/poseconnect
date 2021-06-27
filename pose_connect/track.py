@@ -1,3 +1,4 @@
+import pose_connect.utils
 import smc_kalman
 import pandas as pd
 import numpy as np
@@ -10,6 +11,40 @@ import itertools
 import copy
 
 logger = logging.getLogger(__name__)
+
+def generate_pose_tracks_3d(
+    poses_3d,
+    max_match_distance=1.0,
+    max_iterations_since_last_match=20,
+    centroid_position_initial_sd=1.0,
+    centroid_velocity_initial_sd=1.0,
+    reference_delta_t_seconds=1.0,
+    reference_velocity_drift=0.30,
+    position_observation_sd=0.5,
+    num_poses_per_track_min=11,
+    progress_bar=False,
+    notebook=False
+):
+    poses_3d = pose_connect.utils.ingest_poses_3d(poses_3d)
+    pose_tracks_3d = update_pose_tracks_3d(
+        poses_3d_df=poses_3d,
+        pose_tracks_3d=None,
+        max_match_distance=max_match_distance,
+        max_iterations_since_last_match=max_iterations_since_last_match,
+        centroid_position_initial_sd=centroid_position_initial_sd,
+        centroid_velocity_initial_sd=centroid_velocity_initial_sd,
+        reference_delta_t_seconds=reference_delta_t_seconds,
+        reference_velocity_drift=reference_velocity_drift,
+        position_observation_sd=position_observation_sd,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
+    if num_poses_per_track_min is not None:
+        pose_tracks_3d.filter(
+            num_poses_min=num_poses_per_track_min,
+            inplace=True
+        )
+    return pose_tracks_3d.output_df()
 
 def update_pose_tracks_3d(
     poses_3d_df,
