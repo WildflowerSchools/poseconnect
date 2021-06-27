@@ -10,6 +10,18 @@ def ingest_poses_2d(data_object):
         df=df,
         index_columns='pose_2d_id'
     )
+    target_columns = [
+        'timestamp',
+        'camera_id',
+        'keypoint_coordinates_2d',
+        'keypoint_quality_2d',
+        'pose_quality_2d'
+    ]
+    if not set(target_columns).issubset(set(df.columns)):
+        raise ValueError('Data is missing fields: {}'.format(
+            set(target_columns) - set(df.columns)
+        ))
+    df = df.reindex(columns=target_columns)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df['camera_id'] = df['camera_id'].astype('object')
     df['keypoint_coordinates_2d'] = df['keypoint_coordinates_2d'].apply(convert_to_array)
