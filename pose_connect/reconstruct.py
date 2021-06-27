@@ -46,6 +46,9 @@ def reconstruct_poses_3d(
     progress_bar=False,
     notebook=False
 ):
+    poses_2d_df = pose_connect.utils.ingest_poses_2d(poses_2d_df)
+    camera_calibrations = pose_connect.utils.ingest_camera_calibration_info(camera_calibrations)
+    camera_calibrations = camera_calibrations.to_dict(orient='index')
     camera_ids = poses_2d_df['camera_id'].unique().tolist()
     if camera_calibrations is None:
         raise ValueError('Must specify camera calibration information')
