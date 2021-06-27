@@ -109,3 +109,40 @@ def set_index_columns(
             raise ValueError('Dataframe already had a named index and specified index names not in column names')
         df.set_index(index_columns, inplace=True)
         return df
+
+def nearly_equal(df_1, df_2):
+    if not df_1.index.equals(df_2.index):
+        logger.warning('Indexes of dataframes are not equal')
+        return False, pd.DataFrame()
+    if not df_1.columns.equals(df_2.columns):
+        logger.warning('Column names of dataframes are not equal')
+        return False, pd.DataFrame()
+    equality_dict = dict()
+    for idx in df_1.index:
+        equality_dict[idx] = dict()
+        for column in df_1.columns:
+            equality_dict[idx][column] = False
+            try:
+                # logger.info('Testing both NAN')
+                if pd.isnull(df_1.loc[idx, column]) and pd.isnull(df_2.loc[idx, column]):
+                    # logger.info('Both NAN')
+                    equality_dict[idx][column] = True
+            except:
+                pass
+            try:
+                # logger.info('Testing equality')
+                if df_1.loc[idx, column] == df_2.loc[idx, column]:
+                    # logger.info('Equal')
+                    equality_dict[idx][column] = True
+            except:
+                pass
+            try:
+                # logger.info('Testing all close')
+                if np.allclose(df_1.loc[idx, column], df_2.loc[idx, column]):
+                    # logger.info('All close')
+                    equality_dict[idx][column] = True
+            except:
+                pass
+    equality_df = pd.DataFrame.from_dict(equality_dict, orient='index')
+    is_equal = np.all(equality_df)
+    return is_equal, equality_df
