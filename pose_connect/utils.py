@@ -29,7 +29,7 @@ def ingest_poses_2d(data_object):
     df['pose_quality_2d'] = pd.to_numeric(df['pose_quality_2d']).astype('float')
     return df
 
-def ingest_camera_calibration_info(data_object):
+def ingest_camera_calibrations(data_object):
     df = convert_to_df(data_object)
     df = set_index_columns(
         df=df,
