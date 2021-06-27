@@ -135,23 +135,17 @@ def nearly_equal(df_1, df_2):
         for column in df_1.columns:
             equality_dict[idx][column] = False
             try:
-                # logger.info('Testing both NAN')
                 if pd.isnull(df_1.loc[idx, column]) and pd.isnull(df_2.loc[idx, column]):
-                    # logger.info('Both NAN')
                     equality_dict[idx][column] = True
             except:
                 pass
             try:
-                # logger.info('Testing equality')
                 if df_1.loc[idx, column] == df_2.loc[idx, column]:
-                    # logger.info('Equal')
                     equality_dict[idx][column] = True
             except:
                 pass
             try:
-                # logger.info('Testing all close')
                 if np.allclose(df_1.loc[idx, column], df_2.loc[idx, column]):
-                    # logger.info('All close')
                     equality_dict[idx][column] = True
             except:
                 pass
