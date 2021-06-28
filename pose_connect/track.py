@@ -8,6 +8,7 @@ from uuid import uuid4
 import logging
 import time
 import itertools
+import functools
 import copy
 
 logger = logging.getLogger(__name__)
@@ -100,11 +101,20 @@ def update_pose_tracks_3d(
         )
     return pose_tracks_3d
 
-def interpolate_pose_tracks(pose_tracks_3d):
-    poses_3d_new = (
-        pose_tracks_3d.groupby('pose_track_3d_id')
-        .apply(interpolate_pose_track)
-    )
+def interpolate_pose_tracks(
+    pose_tracks_3d,
+    frames_per_second=10
+):
+    pose_tracks_3d = pose_connect.utils.ingest_pose_tracks_3d(pose_tracks_3d)
+    poses_3d_new_list=list()
+    for pose_track_3d_id, pose_track in pose_tracks_3d.groupby('pose_track_3d_id'):
+        poses_3d_new_track = interpolate_pose_track(
+            pose_track,
+            frames_per_second=frames_per_second
+        )
+        poses_3d_new_track['pose_track_3d_id'] = pose_track_3d_id
+        poses_3d_new_list.append(poses_3d_new_track)
+    poses_3d_new = pd.concat(poses_3d_new_list)
     pose_tracks_3d_interpolated= pd.concat((
         pose_tracks_3d,
         poses_3d_new
@@ -112,7 +122,15 @@ def interpolate_pose_tracks(pose_tracks_3d):
     pose_tracks_3d_interpolated.sort_values('timestamp', inplace=True)
     return pose_tracks_3d_interpolated
 
-def interpolate_pose_track(pose_track_3d):
+def interpolate_pose_track(
+    pose_track_3d,
+    frames_per_second=10
+):
+    if not isinstance(frames_per_second, int):
+        raise ValueError('Only integer frame rates currently supported')
+    if not 1000 % frames_per_second == 0:
+        raise ValueError('Only frame periods with integer number of milliseconds currently supported')
+    frame_period_milliseconds = 1000//frames_per_second
     if pose_track_3d['timestamp'].duplicated().any():
         raise ValueError('Pose data for single pose track contains duplicate timestamps')
     pose_track_3d = pose_track_3d.copy()
@@ -121,7 +139,7 @@ def interpolate_pose_track(pose_track_3d):
     combined_time_index = pd.date_range(
         start=pose_track_3d['timestamp'].min(),
         end=pose_track_3d['timestamp'].max(),
-        freq='100ms',
+        freq='{}ms'.format(frame_period_milliseconds),
         name='timestamp'
     )
     new_time_index = combined_time_index.difference(old_time_index)

@@ -75,6 +75,28 @@ def ingest_poses_3d(data_object):
     df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
     return df
 
+def ingest_pose_tracks_3d(data_object):
+    df = convert_to_df(data_object)
+    df = set_index_columns(
+        df=df,
+        index_columns='pose_3d_id'
+    )
+    target_columns = [
+        'timestamp',
+        'keypoint_coordinates_3d',
+        'pose_2d_ids',
+        'pose_track_3d_id'
+    ]
+    if not set(target_columns).issubset(set(df.columns)):
+        raise ValueError('Data is missing fields: {}'.format(
+            set(target_columns) - set(df.columns)
+        ))
+    df = df.reindex(columns=target_columns)
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(convert_to_array)
+    df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
+    return df
+
 def convert_to_array(data_object):
     if isinstance(data_object, str):
         try:
