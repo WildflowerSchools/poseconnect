@@ -100,15 +100,27 @@ def update_pose_tracks_3d(
         )
     return pose_tracks_3d
 
-def interpolate_pose_track(pose_tracks_3d):
-    if pose_tracks_3d['timestamp'].duplicated().any():
+def interpolate_pose_tracks(pose_tracks_3d):
+    poses_3d_new = (
+        pose_tracks_3d.groupby('pose_track_3d_id')
+        .apply(interpolate_pose_track)
+    )
+    pose_tracks_3d_interpolated= pd.concat((
+        pose_tracks_3d,
+        poses_3d_new
+    ))
+    pose_tracks_3d_interpolated.sort_values('timestamp', inplace=True)
+    return pose_tracks_3d_interpolated
+
+def interpolate_pose_track(pose_track_3d):
+    if pose_track_3d['timestamp'].duplicated().any():
         raise ValueError('Pose data for single pose track contains duplicate timestamps')
-    pose_tracks_3d = pose_tracks_3d.copy()
-    pose_tracks_3d.sort_values('timestamp', inplace=True)
-    old_time_index = pd.DatetimeIndex(pose_tracks_3d['timestamp'])
+    pose_track_3d = pose_track_3d.copy()
+    pose_track_3d.sort_values('timestamp', inplace=True)
+    old_time_index = pd.DatetimeIndex(pose_track_3d['timestamp'])
     combined_time_index = pd.date_range(
-        start=pose_tracks_3d['timestamp'].min(),
-        end=pose_tracks_3d['timestamp'].max(),
+        start=pose_track_3d['timestamp'].min(),
+        end=pose_track_3d['timestamp'].max(),
         freq='100ms',
         name='timestamp'
     )
@@ -117,7 +129,7 @@ def interpolate_pose_track(pose_tracks_3d):
     combined_num_poses = len(combined_time_index)
     new_num_poses = len(new_time_index)
     keypoints_flattened_df = pd.DataFrame(
-        np.stack(pose_tracks_3d['keypoint_coordinates_3d']).reshape((old_num_poses, -1)),
+        np.stack(pose_track_3d['keypoint_coordinates_3d']).reshape((old_num_poses, -1)),
         index=old_time_index
     )
     keypoints_flattened_interpolated_df = keypoints_flattened_df.reindex(combined_time_index).interpolate(method='time')
