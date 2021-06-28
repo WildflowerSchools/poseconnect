@@ -44,7 +44,14 @@ def generate_pose_tracks_3d(
             num_poses_min=num_poses_per_track_min,
             inplace=True
         )
-    return pose_tracks_3d.output_df()
+    pose_tracks_3d = (
+        poses_3d
+        .join(
+            pose_tracks_3d.output_df(),
+            how='inner'
+        )
+    )
+    return pose_tracks_3d
 
 def update_pose_tracks_3d(
     poses_3d_df,
