@@ -13,7 +13,7 @@ import copy
 
 logger = logging.getLogger(__name__)
 
-def generate_pose_tracks_3d(
+def add_pose_tracks_3d(
     poses_3d,
     max_match_distance=1.0,
     max_iterations_since_last_match=20,
@@ -45,14 +45,14 @@ def generate_pose_tracks_3d(
             num_poses_min=num_poses_per_track_min,
             inplace=True
         )
-    pose_tracks_3d = (
+    poses_3d_with_tracks = (
         poses_3d
         .join(
             pose_tracks_3d.output_df(),
             how='inner'
         )
     )
-    return pose_tracks_3d
+    return poses_3d_with_tracks
 
 def update_pose_tracks_3d(
     poses_3d_df,
@@ -102,12 +102,12 @@ def update_pose_tracks_3d(
     return pose_tracks_3d
 
 def interpolate_pose_tracks(
-    pose_tracks_3d,
+    poses_3d_with_tracks,
     frames_per_second=10
 ):
-    pose_tracks_3d = pose_connect.utils.ingest_pose_tracks_3d(pose_tracks_3d)
+    poses_3d_with_tracks = pose_connect.utils.ingest_poses_3d_with_tracks(poses_3d_with_tracks)
     poses_3d_new_list=list()
-    for pose_track_3d_id, pose_track in pose_tracks_3d.groupby('pose_track_3d_id'):
+    for pose_track_3d_id, pose_track in poses_3d_with_tracks.groupby('pose_track_3d_id'):
         poses_3d_new_track = interpolate_pose_track(
             pose_track,
             frames_per_second=frames_per_second
@@ -115,12 +115,12 @@ def interpolate_pose_tracks(
         poses_3d_new_track['pose_track_3d_id'] = pose_track_3d_id
         poses_3d_new_list.append(poses_3d_new_track)
     poses_3d_new = pd.concat(poses_3d_new_list)
-    pose_tracks_3d_interpolated= pd.concat((
-        pose_tracks_3d,
+    poses_3d_with_tracks_interpolated= pd.concat((
+        poses_3d_with_tracks,
         poses_3d_new
     ))
-    pose_tracks_3d_interpolated.sort_values('timestamp', inplace=True)
-    return pose_tracks_3d_interpolated
+    poses_3d_with_tracks.sort_values('timestamp', inplace=True)
+    return poses_3d_with_tracks
 
 def interpolate_pose_track(
     pose_track_3d,

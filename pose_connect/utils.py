@@ -75,7 +75,7 @@ def ingest_poses_3d(data_object):
     df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
     return df
 
-def ingest_pose_tracks_3d(data_object):
+def ingest_poses_3d_with_tracks(data_object):
     df = convert_to_df(data_object)
     df = set_index_columns(
         df=df,
