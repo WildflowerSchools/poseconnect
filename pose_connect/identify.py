@@ -89,6 +89,38 @@ def calculate_track_identification(
     )
     return pose_track_identification_df
 
+def add_person_ids(
+    poses_3d_with_tracks,
+    sensor_data_resampled,
+    sensor_position_keypoint_index=None,
+    active_person_ids=None,
+    ignore_z=False,
+    max_distance=None,
+):
+    poses_3d_with_tracks = pose_connect.utils.ingest_poses_3d_with_tracks(poses_3d_with_tracks)
+    sensor_data_resampled = pose_connect.utils.ingest_sensor_data(sensor_data_resampled)
+    pose_identification = identify_poses(
+        poses_3d_with_tracks_df=poses_3d_with_tracks,
+        sensor_data_resampled = sensor_data_resampled,
+        sensor_position_keypoint_index=sensor_position_keypoint_index,
+        active_person_ids=active_person_ids,
+        ignore_z=ignore_z,
+        max_distance=max_distance,
+        return_match_statistics=False
+    )
+    pose_track_identification = identify_pose_tracks(
+        pose_identification_df = pose_identification
+    )
+    poses_3d_with_person_ids = (
+        poses_3d_with_tracks
+        .join(
+            pose_track_identification.set_index('pose_track_3d_id')['person_id'],
+            how='left',
+            on='pose_track_3d_id'
+        )
+    )
+    return poses_3d_with_person_ids
+
 def identify_poses(
     poses_3d_with_tracks_df,
     sensor_data_resampled,
