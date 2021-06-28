@@ -100,15 +100,15 @@ def update_pose_tracks_3d(
         )
     return pose_tracks_3d
 
-def interpolate_pose_track(pose_track_3d_df):
-    if pose_track_3d_df['timestamp'].duplicated().any():
+def interpolate_pose_track(pose_tracks_3d):
+    if pose_tracks_3d['timestamp'].duplicated().any():
         raise ValueError('Pose data for single pose track contains duplicate timestamps')
-    pose_track_3d_df = pose_track_3d_df.copy()
-    pose_track_3d_df.sort_values('timestamp', inplace=True)
-    old_time_index = pd.DatetimeIndex(pose_track_3d_df['timestamp'])
+    pose_tracks_3d = pose_tracks_3d.copy()
+    pose_tracks_3d.sort_values('timestamp', inplace=True)
+    old_time_index = pd.DatetimeIndex(pose_tracks_3d['timestamp'])
     combined_time_index = pd.date_range(
-        start=pose_track_3d_df['timestamp'].min(),
-        end=pose_track_3d_df['timestamp'].max(),
+        start=pose_tracks_3d['timestamp'].min(),
+        end=pose_tracks_3d['timestamp'].max(),
         freq='100ms',
         name='timestamp'
     )
@@ -117,23 +117,23 @@ def interpolate_pose_track(pose_track_3d_df):
     combined_num_poses = len(combined_time_index)
     new_num_poses = len(new_time_index)
     keypoints_flattened_df = pd.DataFrame(
-        np.stack(pose_track_3d_df['keypoint_coordinates_3d']).reshape((old_num_poses, -1)),
+        np.stack(pose_tracks_3d['keypoint_coordinates_3d']).reshape((old_num_poses, -1)),
         index=old_time_index
     )
     keypoints_flattened_interpolated_df = keypoints_flattened_df.reindex(combined_time_index).interpolate(method='time')
     keypoints_flattened_interpolated_array = keypoints_flattened_interpolated_df.values
     keypoints_interpolated_array = keypoints_flattened_interpolated_array.reshape((combined_num_poses, -1, 3))
     keypoints_interpolated_array_unstacked = [keypoints_interpolated_array[i] for i in range(keypoints_interpolated_array.shape[0])]
-    poses_3d_interpolated_df = pd.Series(
+    poses_3d_interpolated = pd.Series(
         keypoints_interpolated_array_unstacked,
         index=combined_time_index,
         name='keypoint_coordinates_3d'
     ).to_frame()
-    poses_3d_new_df = poses_3d_interpolated_df.reindex(new_time_index)
-    pose_3d_ids_new = [uuid4().hex for _ in range(len(poses_3d_new_df))]
-    poses_3d_new_df['pose_3d_id'] = pose_3d_ids_new
-    poses_3d_new_df = poses_3d_new_df.reset_index().set_index('pose_3d_id')
-    return poses_3d_new_df
+    poses_3d_new = poses_3d_interpolated.reindex(new_time_index)
+    pose_3d_ids_new = [uuid4().hex for _ in range(len(poses_3d_new))]
+    poses_3d_new['pose_3d_id'] = pose_3d_ids_new
+    poses_3d_new = poses_3d_new.reset_index().set_index('pose_3d_id')
+    return poses_3d_new
 
 class PoseTracks3D:
     def __init__(
