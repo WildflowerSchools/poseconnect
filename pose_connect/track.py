@@ -1,3 +1,4 @@
+import pose_connect.utils
 import smc_kalman
 import pandas as pd
 import numpy as np
@@ -7,9 +8,51 @@ from uuid import uuid4
 import logging
 import time
 import itertools
+import functools
 import copy
 
 logger = logging.getLogger(__name__)
+
+def add_pose_tracks_3d(
+    poses_3d,
+    max_match_distance=1.0,
+    max_iterations_since_last_match=20,
+    centroid_position_initial_sd=1.0,
+    centroid_velocity_initial_sd=1.0,
+    reference_delta_t_seconds=1.0,
+    reference_velocity_drift=0.30,
+    position_observation_sd=0.5,
+    num_poses_per_track_min=11,
+    progress_bar=False,
+    notebook=False
+):
+    poses_3d = pose_connect.utils.ingest_poses_3d(poses_3d)
+    pose_tracks_3d = update_pose_tracks_3d(
+        poses_3d_df=poses_3d,
+        pose_tracks_3d=None,
+        max_match_distance=max_match_distance,
+        max_iterations_since_last_match=max_iterations_since_last_match,
+        centroid_position_initial_sd=centroid_position_initial_sd,
+        centroid_velocity_initial_sd=centroid_velocity_initial_sd,
+        reference_delta_t_seconds=reference_delta_t_seconds,
+        reference_velocity_drift=reference_velocity_drift,
+        position_observation_sd=position_observation_sd,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
+    if num_poses_per_track_min is not None:
+        pose_tracks_3d.filter(
+            num_poses_min=num_poses_per_track_min,
+            inplace=True
+        )
+    poses_3d_with_tracks = (
+        poses_3d
+        .join(
+            pose_tracks_3d.output_df(),
+            how='inner'
+        )
+    )
+    return poses_3d_with_tracks
 
 def update_pose_tracks_3d(
     poses_3d_df,
@@ -58,16 +101,45 @@ def update_pose_tracks_3d(
         )
     return pose_tracks_3d
 
-def interpolate_pose_track(pose_track_3d_df):
-    if pose_track_3d_df['timestamp'].duplicated().any():
+def interpolate_pose_tracks(
+    poses_3d_with_tracks,
+    frames_per_second=10
+):
+    poses_3d_with_tracks = pose_connect.utils.ingest_poses_3d_with_tracks(poses_3d_with_tracks)
+    poses_3d_new_list=list()
+    for pose_track_3d_id, pose_track in poses_3d_with_tracks.groupby('pose_track_3d_id'):
+        poses_3d_new_track = interpolate_pose_track(
+            pose_track,
+            frames_per_second=frames_per_second
+        )
+        poses_3d_new_track['pose_track_3d_id'] = pose_track_3d_id
+        poses_3d_new_list.append(poses_3d_new_track)
+    poses_3d_new = pd.concat(poses_3d_new_list)
+    poses_3d_with_tracks_interpolated= pd.concat((
+        poses_3d_with_tracks,
+        poses_3d_new
+    ))
+    poses_3d_with_tracks.sort_values('timestamp', inplace=True)
+    return poses_3d_with_tracks
+
+def interpolate_pose_track(
+    pose_track_3d,
+    frames_per_second=10
+):
+    if not isinstance(frames_per_second, int):
+        raise ValueError('Only integer frame rates currently supported')
+    if not 1000 % frames_per_second == 0:
+        raise ValueError('Only frame periods with integer number of milliseconds currently supported')
+    frame_period_milliseconds = 1000//frames_per_second
+    if pose_track_3d['timestamp'].duplicated().any():
         raise ValueError('Pose data for single pose track contains duplicate timestamps')
-    pose_track_3d_df = pose_track_3d_df.copy()
-    pose_track_3d_df.sort_values('timestamp', inplace=True)
-    old_time_index = pd.DatetimeIndex(pose_track_3d_df['timestamp'])
+    pose_track_3d = pose_track_3d.copy()
+    pose_track_3d.sort_values('timestamp', inplace=True)
+    old_time_index = pd.DatetimeIndex(pose_track_3d['timestamp'])
     combined_time_index = pd.date_range(
-        start=pose_track_3d_df['timestamp'].min(),
-        end=pose_track_3d_df['timestamp'].max(),
-        freq='100ms',
+        start=pose_track_3d['timestamp'].min(),
+        end=pose_track_3d['timestamp'].max(),
+        freq='{}ms'.format(frame_period_milliseconds),
         name='timestamp'
     )
     new_time_index = combined_time_index.difference(old_time_index)
@@ -75,23 +147,23 @@ def interpolate_pose_track(pose_track_3d_df):
     combined_num_poses = len(combined_time_index)
     new_num_poses = len(new_time_index)
     keypoints_flattened_df = pd.DataFrame(
-        np.stack(pose_track_3d_df['keypoint_coordinates_3d']).reshape((old_num_poses, -1)),
+        np.stack(pose_track_3d['keypoint_coordinates_3d']).reshape((old_num_poses, -1)),
         index=old_time_index
     )
     keypoints_flattened_interpolated_df = keypoints_flattened_df.reindex(combined_time_index).interpolate(method='time')
     keypoints_flattened_interpolated_array = keypoints_flattened_interpolated_df.values
     keypoints_interpolated_array = keypoints_flattened_interpolated_array.reshape((combined_num_poses, -1, 3))
     keypoints_interpolated_array_unstacked = [keypoints_interpolated_array[i] for i in range(keypoints_interpolated_array.shape[0])]
-    poses_3d_interpolated_df = pd.Series(
+    poses_3d_interpolated = pd.Series(
         keypoints_interpolated_array_unstacked,
         index=combined_time_index,
         name='keypoint_coordinates_3d'
     ).to_frame()
-    poses_3d_new_df = poses_3d_interpolated_df.reindex(new_time_index)
-    pose_3d_ids_new = [uuid4().hex for _ in range(len(poses_3d_new_df))]
-    poses_3d_new_df['pose_3d_id'] = pose_3d_ids_new
-    poses_3d_new_df = poses_3d_new_df.reset_index().set_index('pose_3d_id')
-    return poses_3d_new_df
+    poses_3d_new = poses_3d_interpolated.reindex(new_time_index)
+    pose_3d_ids_new = [uuid4().hex for _ in range(len(poses_3d_new))]
+    poses_3d_new['pose_3d_id'] = pose_3d_ids_new
+    poses_3d_new = poses_3d_new.reset_index().set_index('pose_3d_id')
+    return poses_3d_new
 
 class PoseTracks3D:
     def __init__(

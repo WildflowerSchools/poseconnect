@@ -1,3 +1,4 @@
+import pose_connect.utils
 import pandas as pd
 import numpy as np
 import scipy
@@ -7,67 +8,80 @@ logger = logging.getLogger(__name__)
 
 def generate_track_identification(
     poses_3d_with_tracks_df,
-    sensor_data_df,
+    sensor_data,
     sensor_position_keypoint_index=None
 ):
-    sensor_data_resampled_df = resample_sensor_data(sensor_data_df)
+    sensor_data_resampled = resample_sensor_data(sensor_data)
     identification_df = calculate_track_identification(
         poses_3d_with_tracks_df=poses_3d_with_tracks_df,
-        sensor_data_resampled_df=sensor_data_resampled_df,
+        sensor_data_resampled=sensor_data_resampled,
         sensor_position_keypoint_index=sensor_position_keypoint_index
     )
     return identification_df
 
 def resample_sensor_data(
-    sensor_data_df,
+    sensor_data,
+    frames_per_second=10,
     id_field_names=['person_id'],
-    interpolation_field_names = ['x_position', 'y_position', 'z_position'],
+    interpolation_field_names=['x_position', 'y_position', 'z_position'],
     timestamp_field_name='timestamp'
 ):
-    if len(sensor_data_df) == 0:
-        return sensor_data_df
-    sensor_data_resampled_df = (
-        sensor_data_df
+    sensor_data = pose_connect.utils.ingest_sensor_data(sensor_data)
+    if sensor_data.duplicated().any():
+        logger.warning('Duplicate position records found in sensor data. Deleting duplicates.')
+        sensor_data.drop_duplicates(inplace=True)
+    if len(sensor_data) == 0:
+        return sensor_data
+    sensor_data_resampled = (
+        sensor_data
         .reset_index()
         .set_index(timestamp_field_name)
         .groupby(id_field_names)
         .apply(
             lambda group_df: resample_sensor_data_person(
-                sensor_data_person_df=group_df,
+                sensor_data_person=group_df,
+                frames_per_second=frames_per_second,
                 interpolation_field_names=interpolation_field_names
             )
         )
         .reset_index()
         .reindex(columns = [timestamp_field_name] + id_field_names + interpolation_field_names)
     )
-    return sensor_data_resampled_df
+    return sensor_data_resampled
 
 def resample_sensor_data_person(
-    sensor_data_person_df,
+    sensor_data_person,
+    frames_per_second=10,
     interpolation_field_names = ['x_position', 'y_position', 'z_position']
 ):
-    sensor_data_person_df = sensor_data_person_df.reindex(columns=interpolation_field_names)
-    old_index = sensor_data_person_df.index
+    if not isinstance(frames_per_second, int):
+        raise ValueError('Only integer frame rates currently supported')
+    if not 1000 % frames_per_second == 0:
+        raise ValueError('Only frame periods with integer number of milliseconds currently supported')
+    frame_period_milliseconds = 1000//frames_per_second
+    frame_period_string = '{}ms'.format(frame_period_milliseconds)
+    sensor_data_person = sensor_data_person.reindex(columns=interpolation_field_names)
+    old_index = sensor_data_person.index
     new_index = pd.date_range(
-        start = old_index.min().ceil('100ms'),
-        end = old_index.max().floor('100ms'),
-        freq = '100ms',
+        start = old_index.min().ceil(frame_period_string),
+        end = old_index.max().floor(frame_period_string),
+        freq = frame_period_string,
         name='timestamp'
     )
     combined_index = old_index.union(new_index).sort_values()
-    sensor_data_person_df = sensor_data_person_df.reindex(combined_index)
-    sensor_data_person_df = sensor_data_person_df.interpolate(method='time')
-    sensor_data_person_df = sensor_data_person_df.reindex(new_index)
-    return sensor_data_person_df
+    sensor_data_person = sensor_data_person.reindex(combined_index)
+    sensor_data_person = sensor_data_person.interpolate(method='time')
+    sensor_data_person = sensor_data_person.reindex(new_index)
+    return sensor_data_person
 
 def calculate_track_identification(
     poses_3d_with_tracks_df,
-    sensor_data_resampled_df,
+    sensor_data_resampled,
     sensor_position_keypoint_index=None
 ):
     pose_identification_df = identify_poses(
         poses_3d_with_tracks_df=poses_3d_with_tracks_df,
-        sensor_data_resampled_df=sensor_data_resampled_df,
+        sensor_data_resampled=sensor_data_resampled,
         sensor_position_keypoint_index=sensor_position_keypoint_index
     )
     pose_track_identification_df = identify_pose_tracks(
@@ -75,9 +89,41 @@ def calculate_track_identification(
     )
     return pose_track_identification_df
 
+def add_person_ids(
+    poses_3d_with_tracks,
+    sensor_data_resampled,
+    sensor_position_keypoint_index=None,
+    active_person_ids=None,
+    ignore_z=False,
+    max_distance=None,
+):
+    poses_3d_with_tracks = pose_connect.utils.ingest_poses_3d_with_tracks(poses_3d_with_tracks)
+    sensor_data_resampled = pose_connect.utils.ingest_sensor_data(sensor_data_resampled)
+    pose_identification = identify_poses(
+        poses_3d_with_tracks_df=poses_3d_with_tracks,
+        sensor_data_resampled = sensor_data_resampled,
+        sensor_position_keypoint_index=sensor_position_keypoint_index,
+        active_person_ids=active_person_ids,
+        ignore_z=ignore_z,
+        max_distance=max_distance,
+        return_match_statistics=False
+    )
+    pose_track_identification = identify_pose_tracks(
+        pose_identification_df = pose_identification
+    )
+    poses_3d_with_person_ids = (
+        poses_3d_with_tracks
+        .join(
+            pose_track_identification.set_index('pose_track_3d_id')['person_id'],
+            how='left',
+            on='pose_track_3d_id'
+        )
+    )
+    return poses_3d_with_person_ids
+
 def identify_poses(
     poses_3d_with_tracks_df,
-    sensor_data_resampled_df,
+    sensor_data_resampled,
     sensor_position_keypoint_index=None,
     active_person_ids=None,
     ignore_z=False,
@@ -88,7 +134,7 @@ def identify_poses(
     if return_match_statistics:
         match_statistics_list = list()
     for timestamp, poses_3d_with_tracks_timestamp_df in poses_3d_with_tracks_df.groupby('timestamp'):
-        sensor_data_resampled_timestamp_df = sensor_data_resampled_df.loc[sensor_data_resampled_df['timestamp'] == timestamp]
+        sensor_data_resampled_timestamp_df = sensor_data_resampled.loc[sensor_data_resampled['timestamp'] == timestamp]
         if return_match_statistics:
             pose_identification_timestamp_df, match_statistics = identify_poses_timestamp(
                 poses_3d_with_tracks_timestamp_df=poses_3d_with_tracks_timestamp_df,
