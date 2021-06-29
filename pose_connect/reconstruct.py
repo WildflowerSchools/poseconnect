@@ -97,7 +97,7 @@ def reconstruct_poses_3d(
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
         include_track_labels=include_track_labels,
-        validate_df=False
+        validate=False
     )
     num_frames = len(poses_2d['timestamp'].unique())
     logger.info('Reconstructing 3D poses from {} 2D poses across {} frames ({} to {})'.format(
@@ -112,17 +112,17 @@ def reconstruct_poses_3d(
             tqdm.notebook.tqdm.pandas()
         else:
             tqdm.tqdm.pandas()
-        poses_3d_df = poses_2d.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial)
+        poses_3d = poses_2d.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial)
     else:
-        poses_3d_df = poses_2d.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial)
+        poses_3d = poses_2d.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial)
     elapsed_time = time.time() - start_time
     logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
-        len(poses_3d_df),
+        len(poses_3d),
         elapsed_time,
         1000*elapsed_time/num_frames
     ))
-    poses_3d_df.reset_index('timestamp', drop=True, inplace=True)
-    return poses_3d_df
+    poses_3d.reset_index('timestamp', drop=True, inplace=True)
+    return poses_3d
 
 def pose_3d_limits_by_pose_model(
     room_x_limits,
@@ -217,7 +217,7 @@ def reconstruct_poses_3d_timestamp(
     pose_3d_graph_initial_edge_threshold=2,
     pose_3d_graph_max_dispersion=0.20,
     include_track_labels=False,
-    validate_df=True,
+    validate=True,
     return_diagnostics=False
 ):
     poses_2d_timestamp_copy = poses_2d_timestamp.copy()
@@ -226,7 +226,7 @@ def reconstruct_poses_3d_timestamp(
         'poses_2d': poses_2d_timestamp_copy.copy(),
         'pose_2d_ids_original': poses_2d_timestamp_copy.index
         }
-    if validate_df:
+    if validate:
         if len(poses_2d_timestamp_copy['timestamp'].unique()) > 1:
             raise ValueError('More than one timestamp found in data frame')
     timestamp = poses_2d_timestamp_copy['timestamp'][0]
@@ -256,87 +256,87 @@ def reconstruct_poses_3d_timestamp(
         )
     if return_diagnostics:
         diagnostics['pose_2d_ids_after_min_pose_quality_filter'] = poses_2d_timestamp_copy.index
-    pose_pairs_2d_df_timestamp = generate_pose_pairs_timestamp(
+    pose_pairs_2d_timestamp = generate_pose_pairs_timestamp(
         poses_2d_timestamp=poses_2d_timestamp_copy,
         pose_2d_id_column_name=pose_2d_id_column_name
     )
-    pose_pairs_2d_df_timestamp = calculate_3d_poses(
-        pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+    pose_pairs_2d_timestamp = calculate_3d_poses(
+        pose_pairs_2d=pose_pairs_2d_timestamp,
         camera_calibrations=camera_calibrations
     )
     if return_diagnostics:
-        diagnostics['pose_pairs_2d_df'] = pose_pairs_2d_df_timestamp.copy()
-    pose_pairs_2d_df_timestamp =  pose_connect.filter.remove_empty_3d_poses(
-        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+        diagnostics['pose_pairs_2d'] = pose_pairs_2d_timestamp.copy()
+    pose_pairs_2d_timestamp =  pose_connect.filter.remove_empty_3d_poses(
+        pose_pairs_2d=pose_pairs_2d_timestamp
     )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_empty_3d_pose_filter'] = pose_pairs_2d_df_timestamp.index
-    pose_pairs_2d_df_timestamp =  pose_connect.filter.remove_empty_reprojected_2d_poses(
-        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+        diagnostics['pose_pair_ids_2d_after_empty_3d_pose_filter'] = pose_pairs_2d_timestamp.index
+    pose_pairs_2d_timestamp =  pose_connect.filter.remove_empty_reprojected_2d_poses(
+        pose_pairs_2d=pose_pairs_2d_timestamp
     )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_empty_reprojected_2d_pose_filter'] = pose_pairs_2d_df_timestamp.index
-    pose_pairs_2d_df_timestamp = score_pose_pairs(
-        pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+        diagnostics['pose_pair_ids_2d_after_empty_reprojected_2d_pose_filter'] = pose_pairs_2d_timestamp.index
+    pose_pairs_2d_timestamp = score_pose_pairs(
+        pose_pairs_2d=pose_pairs_2d_timestamp,
         distance_method=pose_pair_score_distance_method,
         summary_method=pose_pair_score_summary_method,
         pixel_distance_scale=pose_pair_score_pixel_distance_scale
     )
     if return_diagnostics:
-        diagnostics['pose_pair_2d_scores'] = pose_pairs_2d_df_timestamp['score']
-    pose_pairs_2d_df_timestamp =  pose_connect.filter.remove_invalid_pose_pair_scores(
-        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+        diagnostics['pose_pair_2d_scores'] = pose_pairs_2d_timestamp['score']
+    pose_pairs_2d_timestamp =  pose_connect.filter.remove_invalid_pose_pair_scores(
+        pose_pairs_2d=pose_pairs_2d_timestamp
     )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_invalid_pose_pair_score_filter'] = pose_pairs_2d_df_timestamp.index
+        diagnostics['pose_pair_ids_2d_after_invalid_pose_pair_score_filter'] = pose_pairs_2d_timestamp.index
     if min_pose_pair_score is not None or max_pose_pair_score is not None:
-        pose_pairs_2d_df_timestamp = pose_connect.filter.filter_pose_pairs_by_score(
-            pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+        pose_pairs_2d_timestamp = pose_connect.filter.filter_pose_pairs_by_score(
+            pose_pairs_2d=pose_pairs_2d_timestamp,
             min_score=min_pose_pair_score,
             max_score=max_pose_pair_score
         )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_min_max_pose_pair_score_filter'] = pose_pairs_2d_df_timestamp.index
+        diagnostics['pose_pair_ids_2d_after_min_max_pose_pair_score_filter'] = pose_pairs_2d_timestamp.index
     if pose_3d_limits is not None:
-        pose_pairs_2d_df_timestamp = pose_connect.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
-            pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+        pose_pairs_2d_timestamp = pose_connect.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
+            pose_pairs_2d=pose_pairs_2d_timestamp,
             pose_3d_limits=pose_3d_limits
         )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_3d_pose_spatial_limit_filter'] = pose_pairs_2d_df_timestamp.index
-    pose_pairs_2d_df_timestamp = pose_connect.filter.filter_pose_pairs_by_best_match(
-        pose_pairs_2d_df_timestamp,
+        diagnostics['pose_pair_ids_2d_after_3d_pose_spatial_limit_filter'] = pose_pairs_2d_timestamp.index
+    pose_pairs_2d_timestamp = pose_connect.filter.filter_pose_pairs_by_best_match(
+        pose_pairs_2d_timestamp,
         pose_2d_id_column_name=pose_2d_id_column_name
     )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_best_match_filter'] = pose_pairs_2d_df_timestamp.index
+        diagnostics['pose_pair_ids_2d_after_best_match_filter'] = pose_pairs_2d_timestamp.index
     if return_diagnostics:
-        poses_3d_df_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp(
-            pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        poses_3d_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp(
+            pose_pairs_2d_timestamp=pose_pairs_2d_timestamp,
             pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             max_dispersion=pose_3d_graph_max_dispersion,
             include_track_labels=include_track_labels,
-            validate_df=validate_df,
+            validate=validate,
             return_diagnostics=return_diagnostics
         )
         diagnostics.update(pose_graph_diagnostics)
     else:
-        poses_3d_df_timestamp = generate_3d_poses_timestamp(
-            pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        poses_3d_timestamp = generate_3d_poses_timestamp(
+            pose_pairs_2d_timestamp=pose_pairs_2d_timestamp,
             pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             max_dispersion=pose_3d_graph_max_dispersion,
             include_track_labels=include_track_labels,
-            validate_df=validate_df
+            validate=validate
         )
-    if len(poses_3d_df_timestamp) == 0:
-        return poses_3d_df_timestamp
-    poses_3d_df_timestamp.set_index('pose_3d_id', inplace=True)
+    if len(poses_3d_timestamp) == 0:
+        return poses_3d_timestamp
+    poses_3d_timestamp.set_index('pose_3d_id', inplace=True)
     if return_diagnostics:
-        return poses_3d_df_timestamp, diagnostics
+        return poses_3d_timestamp, diagnostics
     else:
-        return poses_3d_df_timestamp
+        return poses_3d_timestamp
 
 def reconstruct_poses_3d_timestamp_legacy(
     poses_2d_timestamp,
@@ -355,7 +355,7 @@ def reconstruct_poses_3d_timestamp_legacy(
     pose_3d_graph_initial_edge_threshold=2,
     pose_3d_graph_max_dispersion=0.20,
     include_track_labels=False,
-    validate_df=True,
+    validate=True,
     return_diagnostics=False
 ):
     poses_2d_timestamp_copy = poses_2d_timestamp.copy()
@@ -364,7 +364,7 @@ def reconstruct_poses_3d_timestamp_legacy(
         'poses_2d': poses_2d_timestamp_copy.copy(),
         'pose_2d_ids_original': poses_2d_timestamp_copy.index
         }
-    if validate_df:
+    if validate:
         if len(poses_2d_timestamp_copy['timestamp'].unique()) > 1:
             raise ValueError('More than one timestamp found in data frame')
     timestamp = poses_2d_timestamp_copy['timestamp'][0]
@@ -394,87 +394,87 @@ def reconstruct_poses_3d_timestamp_legacy(
         )
     if return_diagnostics:
         diagnostics['pose_2d_ids_after_min_pose_quality_filter'] = poses_2d_timestamp_copy.index
-    pose_pairs_2d_df_timestamp = generate_pose_pairs_timestamp(
+    pose_pairs_2d_timestamp = generate_pose_pairs_timestamp(
         poses_2d_timestamp=poses_2d_timestamp_copy,
         pose_2d_id_column_name=pose_2d_id_column_name
     )
-    pose_pairs_2d_df_timestamp = calculate_3d_poses(
-        pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+    pose_pairs_2d_timestamp = calculate_3d_poses(
+        pose_pairs_2d=pose_pairs_2d_timestamp,
         camera_calibrations=camera_calibrations
     )
     if return_diagnostics:
-        diagnostics['pose_pairs_2d_df'] = pose_pairs_2d_df_timestamp.copy()
-    pose_pairs_2d_df_timestamp =  pose_connect.filter.remove_empty_3d_poses(
-        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+        diagnostics['pose_pairs_2d'] = pose_pairs_2d_timestamp.copy()
+    pose_pairs_2d_timestamp =  pose_connect.filter.remove_empty_3d_poses(
+        pose_pairs_2d=pose_pairs_2d_timestamp
     )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_empty_3d_pose_filter'] = pose_pairs_2d_df_timestamp.index
-    pose_pairs_2d_df_timestamp =  pose_connect.filter.remove_empty_reprojected_2d_poses(
-        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+        diagnostics['pose_pair_ids_2d_after_empty_3d_pose_filter'] = pose_pairs_2d_timestamp.index
+    pose_pairs_2d_timestamp =  pose_connect.filter.remove_empty_reprojected_2d_poses(
+        pose_pairs_2d=pose_pairs_2d_timestamp
     )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_empty_reprojected_2d_pose_filter'] = pose_pairs_2d_df_timestamp.index
-    pose_pairs_2d_df_timestamp = score_pose_pairs(
-        pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+        diagnostics['pose_pair_ids_2d_after_empty_reprojected_2d_pose_filter'] = pose_pairs_2d_timestamp.index
+    pose_pairs_2d_timestamp = score_pose_pairs(
+        pose_pairs_2d=pose_pairs_2d_timestamp,
         distance_method=pose_pair_score_distance_method,
         summary_method=pose_pair_score_summary_method,
         pixel_distance_scale=pose_pair_score_pixel_distance_scale
     )
     if return_diagnostics:
-        diagnostics['pose_pair_2d_scores'] = pose_pairs_2d_df_timestamp['score']
-    pose_pairs_2d_df_timestamp =  pose_connect.filter.remove_invalid_pose_pair_scores(
-        pose_pairs_2d_df=pose_pairs_2d_df_timestamp
+        diagnostics['pose_pair_2d_scores'] = pose_pairs_2d_timestamp['score']
+    pose_pairs_2d_timestamp =  pose_connect.filter.remove_invalid_pose_pair_scores(
+        pose_pairs_2d=pose_pairs_2d_timestamp
     )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_invalid_pose_pair_score_filter'] = pose_pairs_2d_df_timestamp.index
+        diagnostics['pose_pair_ids_2d_after_invalid_pose_pair_score_filter'] = pose_pairs_2d_timestamp.index
     if min_pose_pair_score is not None or max_pose_pair_score is not None:
-        pose_pairs_2d_df_timestamp = pose_connect.filter.filter_pose_pairs_by_score(
-            pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+        pose_pairs_2d_timestamp = pose_connect.filter.filter_pose_pairs_by_score(
+            pose_pairs_2d=pose_pairs_2d_timestamp,
             min_score=min_pose_pair_score,
             max_score=max_pose_pair_score
         )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_min_max_pose_pair_score_filter'] = pose_pairs_2d_df_timestamp.index
+        diagnostics['pose_pair_ids_2d_after_min_max_pose_pair_score_filter'] = pose_pairs_2d_timestamp.index
     if pose_3d_limits is not None:
-        pose_pairs_2d_df_timestamp = pose_connect.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
-            pose_pairs_2d_df=pose_pairs_2d_df_timestamp,
+        pose_pairs_2d_timestamp = pose_connect.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
+            pose_pairs_2d=pose_pairs_2d_timestamp,
             pose_3d_limits=pose_3d_limits
         )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_3d_pose_spatial_limit_filter'] = pose_pairs_2d_df_timestamp.index
-    pose_pairs_2d_df_timestamp = pose_connect.filter.filter_pose_pairs_by_best_match(
-        pose_pairs_2d_df_timestamp,
+        diagnostics['pose_pair_ids_2d_after_3d_pose_spatial_limit_filter'] = pose_pairs_2d_timestamp.index
+    pose_pairs_2d_timestamp = pose_connect.filter.filter_pose_pairs_by_best_match(
+        pose_pairs_2d_timestamp,
         pose_2d_id_column_name=pose_2d_id_column_name
     )
     if return_diagnostics:
-        diagnostics['pose_pair_ids_2d_after_best_match_filter'] = pose_pairs_2d_df_timestamp.index
+        diagnostics['pose_pair_ids_2d_after_best_match_filter'] = pose_pairs_2d_timestamp.index
     if return_diagnostics:
-        poses_3d_df_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp_legacy(
-            pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        poses_3d_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp_legacy(
+            pose_pairs_2d_timestamp=pose_pairs_2d_timestamp,
             pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             max_dispersion=pose_3d_graph_max_dispersion,
             include_track_labels=include_track_labels,
-            validate_df=validate_df,
+            validate=validate,
             return_diagnostics=return_diagnostics
         )
         diagnostics.update(pose_graph_diagnostics)
     else:
-        poses_3d_df_timestamp = generate_3d_poses_timestamp_legacy(
-            pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        poses_3d_timestamp = generate_3d_poses_timestamp_legacy(
+            pose_pairs_2d_timestamp=pose_pairs_2d_timestamp,
             pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             max_dispersion=pose_3d_graph_max_dispersion,
             include_track_labels=include_track_labels,
-            validate_df=validate_df
+            validate=validate
         )
-    if len(poses_3d_df_timestamp) == 0:
-        return poses_3d_df_timestamp
-    poses_3d_df_timestamp.set_index('pose_3d_id', inplace=True)
+    if len(poses_3d_timestamp) == 0:
+        return poses_3d_timestamp
+    poses_3d_timestamp.set_index('pose_3d_id', inplace=True)
     if return_diagnostics:
-        return poses_3d_df_timestamp, diagnostics
+        return poses_3d_timestamp, diagnostics
     else:
-        return poses_3d_df_timestamp
+        return poses_3d_timestamp
 
 def generate_pose_pairs_timestamp(
     poses_2d_timestamp,
@@ -496,57 +496,57 @@ def generate_pose_pairs_timestamp(
     pose_2d_ids_b = list()
     if len(pose_2d_id_pairs) > 0:
         pose_2d_ids_a, pose_2d_ids_b = map(list, zip(*pose_2d_id_pairs))
-    pose_pairs_2d_df_timestamp = pd.concat(
+    pose_pairs_2d_timestamp = pd.concat(
         (poses_2d_timestamp.loc[pose_2d_ids_a].reset_index(), poses_2d_timestamp.loc[pose_2d_ids_b].reset_index()),
         keys=['a', 'b'],
         axis=1
     )
-    pose_pairs_2d_df_timestamp.set_index(
+    pose_pairs_2d_timestamp.set_index(
         [('a', pose_2d_id_column_name), ('b', pose_2d_id_column_name)],
         inplace=True
     )
-    pose_pairs_2d_df_timestamp.rename_axis(
+    pose_pairs_2d_timestamp.rename_axis(
         [pose_2d_id_column_name + '_a', pose_2d_id_column_name + '_b'],
         inplace=True
     )
-    pose_pairs_2d_df_timestamp.columns = ['{}_{}'.format(column_name[1], column_name[0]) for column_name in pose_pairs_2d_df_timestamp.columns.values]
-    pose_pairs_2d_df_timestamp.rename(
+    pose_pairs_2d_timestamp.columns = ['{}_{}'.format(column_name[1], column_name[0]) for column_name in pose_pairs_2d_timestamp.columns.values]
+    pose_pairs_2d_timestamp.rename(
         columns = {'timestamp_a': 'timestamp'},
         inplace=True
     )
-    pose_pairs_2d_df_timestamp.drop(
+    pose_pairs_2d_timestamp.drop(
         columns=['timestamp_b'],
         inplace=True
     )
-    return pose_pairs_2d_df_timestamp
+    return pose_pairs_2d_timestamp
 
 def calculate_3d_poses(
-    pose_pairs_2d_df,
+    pose_pairs_2d,
     camera_calibrations=None
 ):
-    if len(pose_pairs_2d_df) == 0:
-        return pose_pairs_2d_df
+    if len(pose_pairs_2d) == 0:
+        return pose_pairs_2d
     if camera_calibrations is None:
         raise ValueError('Must specify camera calibration information')
-    pose_pairs_2d_df = pose_pairs_2d_df.groupby(['camera_id_a', 'camera_id_b']).apply(
+    pose_pairs_2d = pose_pairs_2d.groupby(['camera_id_a', 'camera_id_b']).apply(
         lambda x: calculate_3d_poses_camera_pair(
-            pose_pairs_2d_df_camera_pair=x,
+            pose_pairs_2d_camera_pair=x,
             camera_calibrations=camera_calibrations,
             inplace=False
         )
     )
-    return pose_pairs_2d_df
+    return pose_pairs_2d
 
 def calculate_3d_poses_camera_pair(
-    pose_pairs_2d_df_camera_pair,
+    pose_pairs_2d_camera_pair,
     camera_calibrations,
     inplace=False
 ):
     if not inplace:
-        pose_pairs_2d_df_camera_pair = pose_pairs_2d_df_camera_pair.copy()
-    num_pose_pairs = len(pose_pairs_2d_df_camera_pair)
-    camera_ids_a = pose_pairs_2d_df_camera_pair['camera_id_a'].unique()
-    camera_ids_b = pose_pairs_2d_df_camera_pair['camera_id_b'].unique()
+        pose_pairs_2d_camera_pair = pose_pairs_2d_camera_pair.copy()
+    num_pose_pairs = len(pose_pairs_2d_camera_pair)
+    camera_ids_a = pose_pairs_2d_camera_pair['camera_id_a'].unique()
+    camera_ids_b = pose_pairs_2d_camera_pair['camera_id_b'].unique()
     if len(camera_ids_a) > 1:
         raise ValueError('More than one camera ID found for camera A')
     if len(camera_ids_b) > 1:
@@ -563,16 +563,16 @@ def calculate_3d_poses_camera_pair(
         ))
     camera_calibration_a = camera_calibrations[camera_id_a]
     camera_calibration_b = camera_calibrations[camera_id_b]
-    keypoint_a_lengths = pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_a'].apply(lambda x: x.shape[0]).unique()
-    keypoint_b_lengths = pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_b'].apply(lambda x: x.shape[0]).unique()
+    keypoint_a_lengths = pose_pairs_2d_camera_pair['keypoint_coordinates_2d_a'].apply(lambda x: x.shape[0]).unique()
+    keypoint_b_lengths = pose_pairs_2d_camera_pair['keypoint_coordinates_2d_b'].apply(lambda x: x.shape[0]).unique()
     if len(keypoint_a_lengths) > 1:
         raise ValueError('Keypoint arrays in column A have differing numbers of keypoints')
     if len(keypoint_b_lengths) > 1:
         raise ValueError('Keypoint arrays in column B have differing numbers of keypoints')
     if keypoint_a_lengths[0] != keypoint_b_lengths[0]:
         raise ValueError('Keypoint arrays in column A have different number of keypoints than keypoint arrays in column B')
-    keypoints_a = np.concatenate(pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_a'].values)
-    keypoints_b = np.concatenate(pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_b'].values)
+    keypoints_a = np.concatenate(pose_pairs_2d_camera_pair['keypoint_coordinates_2d_a'].values)
+    keypoints_b = np.concatenate(pose_pairs_2d_camera_pair['keypoint_coordinates_2d_b'].values)
     keypoints_3d = triangulate_image_points(
         image_points_1=keypoints_a,
         image_points_2=keypoints_b,
@@ -601,11 +601,11 @@ def calculate_3d_poses_camera_pair(
         distortion_coefficients=camera_calibration_b['distortion_coefficients'],
         remove_behind_camera=True
     )
-    pose_pairs_2d_df_camera_pair['keypoint_coordinates_3d'] = np.split(keypoints_3d, num_pose_pairs)
-    pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_a_reprojected'] = np.split(keypoints_a_reprojected, num_pose_pairs)
-    pose_pairs_2d_df_camera_pair['keypoint_coordinates_2d_b_reprojected'] = np.split(keypoints_b_reprojected, num_pose_pairs)
+    pose_pairs_2d_camera_pair['keypoint_coordinates_3d'] = np.split(keypoints_3d, num_pose_pairs)
+    pose_pairs_2d_camera_pair['keypoint_coordinates_2d_a_reprojected'] = np.split(keypoints_a_reprojected, num_pose_pairs)
+    pose_pairs_2d_camera_pair['keypoint_coordinates_2d_b_reprojected'] = np.split(keypoints_b_reprojected, num_pose_pairs)
     if not inplace:
-        return pose_pairs_2d_df_camera_pair
+        return pose_pairs_2d_camera_pair
 
 def triangulate_image_points(
     image_points_1,
@@ -675,22 +675,22 @@ def triangulate_image_points(
     return object_points
 
 def score_pose_pairs(
-    pose_pairs_2d_df,
+    pose_pairs_2d,
     distance_method='pixels',
     summary_method='rms',
     pixel_distance_scale=5.0
 ):
-    if len(pose_pairs_2d_df) == 0:
-        return pose_pairs_2d_df.copy()
+    if len(pose_pairs_2d) == 0:
+        return pose_pairs_2d.copy()
     reprojection_difference = np.stack(
         (
             np.subtract(
-                np.stack(pose_pairs_2d_df['keypoint_coordinates_2d_a_reprojected']),
-                np.stack(pose_pairs_2d_df['keypoint_coordinates_2d_a'])
+                np.stack(pose_pairs_2d['keypoint_coordinates_2d_a_reprojected']),
+                np.stack(pose_pairs_2d['keypoint_coordinates_2d_a'])
             ),
             np.subtract(
-                np.stack(pose_pairs_2d_df['keypoint_coordinates_2d_b_reprojected']),
-                np.stack(pose_pairs_2d_df['keypoint_coordinates_2d_b'])
+                np.stack(pose_pairs_2d['keypoint_coordinates_2d_b_reprojected']),
+                np.stack(pose_pairs_2d['keypoint_coordinates_2d_b'])
             )
         ),
         axis=-2
@@ -710,9 +710,9 @@ def score_pose_pairs(
         score = np.nansum(distance, axis=(-1, -2))
     else:
         raise ValueError('Summary method not recognized')
-    pose_pairs_2d_df_copy = pose_pairs_2d_df.copy()
-    pose_pairs_2d_df_copy['score'] = score
-    return pose_pairs_2d_df_copy
+    pose_pairs_2d_copy = pose_pairs_2d.copy()
+    pose_pairs_2d_copy['score'] = score
+    return pose_pairs_2d_copy
 
 def pixel_distance(image_point_differences):
     return np.linalg.norm(image_point_differences, axis=-1)
@@ -748,32 +748,32 @@ def pose_3d_in_range(
     )
 
 def extract_best_score_indices_timestamp_camera_pair(
-    pose_pairs_2d_df,
+    pose_pairs_2d,
     pose_2d_id_column_name='pose_2d_id'
 ):
-    best_a_score_for_b = pose_pairs_2d_df['score'].groupby(pose_2d_id_column_name + '_b').idxmin().dropna()
-    best_b_score_for_a = pose_pairs_2d_df['score'].groupby(pose_2d_id_column_name + '_a').idxmin().dropna()
+    best_a_score_for_b = pose_pairs_2d['score'].groupby(pose_2d_id_column_name + '_b').idxmin().dropna()
+    best_b_score_for_a = pose_pairs_2d['score'].groupby(pose_2d_id_column_name + '_a').idxmin().dropna()
     best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
     return best_score_indices
 
 def generate_3d_poses_timestamp(
-    pose_pairs_2d_df_timestamp,
+    pose_pairs_2d_timestamp,
     pose_2d_ids_column_name='pose_2d_ids',
     initial_edge_threshold=2,
     max_dispersion=0.20,
     include_track_labels=False,
-    validate_df=True,
+    validate=True,
     return_diagnostics=False
 ):
-    if len(pose_pairs_2d_df_timestamp) == 0:
+    if len(pose_pairs_2d_timestamp) == 0:
         return pd.DataFrame()
-    timestamps = pose_pairs_2d_df_timestamp['timestamp'].unique()
-    if validate_df:
+    timestamps = pose_pairs_2d_timestamp['timestamp'].unique()
+    if validate:
         if len(timestamps) > 1:
             raise ValueError('More than one timestamp found in data frame')
     timestamp = timestamps[0]
     pose_graph = generate_pose_graph(
-        pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        pose_pairs_2d_timestamp=pose_pairs_2d_timestamp,
         include_track_labels=include_track_labels
     )
     if return_diagnostics:
@@ -822,7 +822,7 @@ def generate_3d_poses_timestamp(
     if len(pose_3d_ids) == 0:
         return pd.DataFrame()
     if include_track_labels:
-        poses_3d_df_timestamp = pd.DataFrame({
+        poses_3d_timestamp = pd.DataFrame({
             'pose_3d_id': pose_3d_ids,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
@@ -830,35 +830,35 @@ def generate_3d_poses_timestamp(
             'track_labels_2d': track_labels
         })
     else:
-        poses_3d_df_timestamp = pd.DataFrame({
+        poses_3d_timestamp = pd.DataFrame({
             'pose_3d_id': pose_3d_ids,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
             pose_2d_ids_column_name: pose_2d_ids
         })
     if return_diagnostics:
-        return poses_3d_df_timestamp, diagnostics
+        return poses_3d_timestamp, diagnostics
     else:
-        return poses_3d_df_timestamp
+        return poses_3d_timestamp
 
 def generate_3d_poses_timestamp_legacy(
-    pose_pairs_2d_df_timestamp,
+    pose_pairs_2d_timestamp,
     pose_2d_ids_column_name='pose_2d_ids',
     initial_edge_threshold=2,
     max_dispersion=0.20,
     include_track_labels=False,
-    validate_df=True,
+    validate=True,
     return_diagnostics=False
 ):
-    if len(pose_pairs_2d_df_timestamp) == 0:
+    if len(pose_pairs_2d_timestamp) == 0:
         return pd.DataFrame()
-    timestamps = pose_pairs_2d_df_timestamp['timestamp'].unique()
-    if validate_df:
+    timestamps = pose_pairs_2d_timestamp['timestamp'].unique()
+    if validate:
         if len(timestamps) > 1:
             raise ValueError('More than one timestamp found in data frame')
     timestamp = timestamps[0]
     pose_graph = generate_pose_graph_legacy(
-        pose_pairs_2d_df_timestamp=pose_pairs_2d_df_timestamp,
+        pose_pairs_2d_timestamp=pose_pairs_2d_timestamp,
         include_track_labels=include_track_labels
     )
     if return_diagnostics:
@@ -906,7 +906,7 @@ def generate_3d_poses_timestamp_legacy(
     if len(pose_3d_ids) == 0:
         return pd.DataFrame()
     if include_track_labels:
-        poses_3d_df_timestamp = pd.DataFrame({
+        poses_3d_timestamp = pd.DataFrame({
             'pose_3d_id': pose_3d_ids,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
@@ -914,23 +914,23 @@ def generate_3d_poses_timestamp_legacy(
             'track_labels_2d': track_labels
         })
     else:
-        poses_3d_df_timestamp = pd.DataFrame({
+        poses_3d_timestamp = pd.DataFrame({
             'pose_3d_id': pose_3d_ids,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
             pose_2d_ids_column_name: pose_2d_ids
         })
     if return_diagnostics:
-        return poses_3d_df_timestamp, diagnostics
+        return poses_3d_timestamp, diagnostics
     else:
-        return poses_3d_df_timestamp
+        return poses_3d_timestamp
 
 def generate_pose_graph(
-    pose_pairs_2d_df_timestamp,
+    pose_pairs_2d_timestamp,
     include_track_labels=False
 ):
     pose_graph = nx.Graph()
-    for pose_2d_ids, row in pose_pairs_2d_df_timestamp.iterrows():
+    for pose_2d_ids, row in pose_pairs_2d_timestamp.iterrows():
         if include_track_labels:
             pose_graph.add_node(
                 pose_2d_ids[0],
@@ -961,11 +961,11 @@ def generate_pose_graph(
     return pose_graph
 
 def generate_pose_graph_legacy(
-    pose_pairs_2d_df_timestamp,
+    pose_pairs_2d_timestamp,
     include_track_labels=False
 ):
     pose_graph = nx.Graph()
-    for pose_2d_ids, row in pose_pairs_2d_df_timestamp.iterrows():
+    for pose_2d_ids, row in pose_pairs_2d_timestamp.iterrows():
         if include_track_labels:
             pose_graph.add_node(
                 pose_2d_ids[0],

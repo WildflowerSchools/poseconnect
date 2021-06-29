@@ -34,7 +34,7 @@ def keypoint_quality_histogram_by_camera(
     if display_camera_name:
         if camera_names is None:
             raise ValueError('If display_camera_name is set to True, must specify camera names dict')
-    for camera_id, group_df in df.groupby('camera_id'):
+    for camera_id, group in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
         else:
@@ -42,7 +42,7 @@ def keypoint_quality_histogram_by_camera(
         plot_title = camera_id_string
         file_identifier = camera_id_string
         keypoint_quality_histogram(
-            df=group_df,
+            df=group,
             bins=bins,
             plot_title=plot_title,
             plot_title_datetime_format=plot_title_datetime_format,
@@ -137,7 +137,7 @@ def num_valid_keypoints_histogram_by_camera(
     if display_camera_name:
         if camera_names is None:
             raise ValueError('If display_camera_name is set to True, must specify camera names dict')
-    for camera_id, group_df in df.groupby('camera_id'):
+    for camera_id, group in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
         else:
@@ -145,7 +145,7 @@ def num_valid_keypoints_histogram_by_camera(
         plot_title = camera_id_string
         file_identifier = camera_id_string
         num_valid_keypoints_histogram(
-            df=group_df,
+            df=group,
             bins=bins,
             plot_title=plot_title,
             plot_title_datetime_format=plot_title_datetime_format,
@@ -242,7 +242,7 @@ def pose_quality_histogram_by_camera(
     if display_camera_name:
         if camera_names is None:
             raise ValueError('If display_camera_name is set to True, must specify camera names dict')
-    for camera_id, group_df in df.groupby('camera_id'):
+    for camera_id, group in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
         else:
@@ -250,7 +250,7 @@ def pose_quality_histogram_by_camera(
         plot_title = camera_id_string
         file_identifier = camera_id_string
         pose_quality_histogram(
-            df=group_df,
+            df=group,
             bins=bins,
             plot_title=plot_title,
             plot_title_datetime_format=plot_title_datetime_format,
@@ -345,7 +345,7 @@ def mean_keypoint_quality_histogram_by_camera(
     if display_camera_name:
         if camera_names is None:
             raise ValueError('If display_camera_name is set to True, must specify camera names dict')
-    for camera_id, group_df in df.groupby('camera_id'):
+    for camera_id, group in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
         else:
@@ -353,7 +353,7 @@ def mean_keypoint_quality_histogram_by_camera(
         plot_title = camera_id_string
         file_identifier = camera_id_string
         mean_keypoint_quality_histogram(
-            df=group_df,
+            df=group,
             bins=bins,
             plot_title=plot_title,
             plot_title_datetime_format=plot_title_datetime_format,
@@ -447,7 +447,7 @@ def mean_keypoint_quality_pose_quality_scatter_by_camera(
     if display_camera_name:
         if camera_names is None:
             raise ValueError('If display_camera_name is set to True, must specify camera names dict')
-    for camera_id, group_df in df.groupby('camera_id'):
+    for camera_id, group in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
         else:
@@ -455,7 +455,7 @@ def mean_keypoint_quality_pose_quality_scatter_by_camera(
         plot_title = camera_id_string
         file_identifier = camera_id_string
         mean_keypoint_quality_pose_quality_scatter(
-            df=group_df,
+            df=group,
             plot_title=plot_title,
             plot_title_datetime_format=plot_title_datetime_format,
             show=show,
@@ -681,18 +681,18 @@ def pose_pair_score_heatmap_timestamp_camera_pair(
         else:
             pose_labels_b = range(len(pose_2d_ids_b))
         pose_label_map_b = dict(zip(pose_2d_ids_b, pose_labels_b))
-    scores_df=df.reset_index().pivot(index='pose_2d_id_a', columns='pose_2d_id_b', values='score')
-    scores_df.rename(index=pose_label_map_a, inplace=True)
-    scores_df.rename(columns=pose_label_map_b, inplace=True)
-    scores_df.sort_index(axis=0, inplace=True)
-    scores_df.sort_index(axis=1, inplace=True)
-    matches_df=df.reset_index().pivot(index='pose_2d_id_a', columns='pose_2d_id_b', values='match')
-    matches_df.rename(index=pose_label_map_a, inplace=True)
-    matches_df.rename(columns=pose_label_map_b, inplace=True)
-    matches_df.sort_index(axis=0, inplace=True)
-    matches_df.sort_index(axis=1, inplace=True)
+    scores=df.reset_index().pivot(index='pose_2d_id_a', columns='pose_2d_id_b', values='score')
+    scores.rename(index=pose_label_map_a, inplace=True)
+    scores.rename(columns=pose_label_map_b, inplace=True)
+    scores.sort_index(axis=0, inplace=True)
+    scores.sort_index(axis=1, inplace=True)
+    matches=df.reset_index().pivot(index='pose_2d_id_a', columns='pose_2d_id_b', values='match')
+    matches.rename(index=pose_label_map_a, inplace=True)
+    matches.rename(columns=pose_label_map_b, inplace=True)
+    matches.sort_index(axis=0, inplace=True)
+    matches.sort_index(axis=1, inplace=True)
     if color_rule == 'score':
-        data = scores_df
+        data = scores
         cmap = score_color_map_name
         annot=True
         cbar = True
@@ -700,8 +700,8 @@ def pose_pair_score_heatmap_timestamp_camera_pair(
             'label': 'Pose pair score'
         }
     elif color_rule == 'match':
-        data = matches_df
-        annot = scores_df
+        data = matches
+        annot = scores
         cmap = matplotlib.colors.ListedColormap(['lightgray', 'lightgreen'])
         cbar = False
         cbar_kws = None
@@ -713,7 +713,7 @@ def pose_pair_score_heatmap_timestamp_camera_pair(
         linewidths=0.1,
         linecolor='gray',
         annot=annot,
-        mask=scores_df.isnull(),
+        mask=scores.isnull(),
         square=True,
         cbar=cbar,
         cbar_kws = cbar_kws
@@ -843,7 +843,7 @@ def pose_track_3d_timelines_by_camera(
     if display_camera_name:
         if camera_names is None:
             raise ValueError('If display_camera_name is set to True, must specify camera names dict')
-    for camera_id, group_df in df.groupby('camera_id'):
+    for camera_id, group in df.groupby('camera_id'):
         if display_camera_name:
             camera_id_string = camera_names.get(camera_id)
         else:
@@ -851,7 +851,7 @@ def pose_track_3d_timelines_by_camera(
         plot_title = camera_id_string
         file_identifier = camera_id_string
         pose_track_3d_timelines(
-            df=group_df,
+            df=group,
             color_by_pose_quality=color_by_pose_quality,
             plot_title=plot_title,
             plot_title_datetime_format=plot_title_datetime_format,
