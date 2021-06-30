@@ -203,8 +203,7 @@ def pose_3d_limits(
 def reconstruct_poses_3d_timestamp(
     poses_2d_timestamp,
     camera_calibrations,
-    pose_2d_id_column_name='pose_2d_id',
-    pose_2d_ids_column_name='pose_2d_ids',
+    pose_3d_limits=None,
     min_keypoint_quality=None,
     min_num_keypoints=None,
     min_pose_quality=None,
@@ -213,10 +212,11 @@ def reconstruct_poses_3d_timestamp(
     pose_pair_score_distance_method='pixels',
     pose_pair_score_pixel_distance_scale=5.0,
     pose_pair_score_summary_method='rms',
-    pose_3d_limits=None,
     pose_3d_graph_initial_edge_threshold=2,
     pose_3d_graph_max_dispersion=0.20,
     include_track_labels=False,
+    pose_2d_id_column_name='pose_2d_id',
+    pose_2d_ids_column_name='pose_2d_ids',
     validate=True,
     return_diagnostics=False
 ):
