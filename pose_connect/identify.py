@@ -27,7 +27,7 @@ def resample_sensor_data(
     timestamp_field_name='timestamp'
 ):
     sensor_data = pose_connect.utils.ingest_sensor_data(
-        df=sensor_data,
+        data_object=sensor_data,
         id_field_names=id_field_names
     )
     if sensor_data.duplicated().any():
