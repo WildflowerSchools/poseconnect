@@ -6,18 +6,50 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def generate_track_identification(
+def identify_pose_tracks_3d(
     poses_3d_with_tracks,
-    sensor_data,
-    sensor_position_keypoint_index=None
+    sensor_data_resampled,
+    sensor_position_keypoint_index=None,
+    active_person_ids=None,
+    ignore_z=False,
+    max_distance=None,
 ):
-    sensor_data_resampled = resample_sensor_data(sensor_data)
-    identification = calculate_track_identification(
+    poses_3d_with_tracks = pose_connect.utils.ingest_poses_3d_with_tracks(poses_3d_with_tracks)
+    sensor_data_resampled = pose_connect.utils.ingest_sensor_data(sensor_data_resampled)
+    pose_identification = generate_pose_identification(
         poses_3d_with_tracks=poses_3d_with_tracks,
-        sensor_data_resampled=sensor_data_resampled,
-        sensor_position_keypoint_index=sensor_position_keypoint_index
+        sensor_data_resampled = sensor_data_resampled,
+        sensor_position_keypoint_index=sensor_position_keypoint_index,
+        active_person_ids=active_person_ids,
+        ignore_z=ignore_z,
+        max_distance=max_distance,
+        return_match_statistics=False
     )
-    return identification
+    pose_track_identification = generate_pose_track_identification(
+        pose_identification = pose_identification
+    )
+    poses_3d_with_person_ids = (
+        poses_3d_with_tracks
+        .join(
+            pose_track_identification.set_index('pose_track_3d_id')['person_id'],
+            how='left',
+            on='pose_track_3d_id'
+        )
+    )
+    return poses_3d_with_person_ids
+
+# def generate_track_identification(
+#     poses_3d_with_tracks,
+#     sensor_data,
+#     sensor_position_keypoint_index=None
+# ):
+#     sensor_data_resampled = resample_sensor_data(sensor_data)
+#     identification = calculate_track_identification(
+#         poses_3d_with_tracks=poses_3d_with_tracks,
+#         sensor_data_resampled=sensor_data_resampled,
+#         sensor_position_keypoint_index=sensor_position_keypoint_index
+#     )
+#     return identification
 
 def resample_sensor_data(
     sensor_data,
@@ -77,54 +109,22 @@ def resample_sensor_data_person(
     sensor_data_person = sensor_data_person.reindex(new_index)
     return sensor_data_person
 
-def calculate_track_identification(
-    poses_3d_with_tracks,
-    sensor_data_resampled,
-    sensor_position_keypoint_index=None
-):
-    pose_identification = identify_poses(
-        poses_3d_with_tracks=poses_3d_with_tracks,
-        sensor_data_resampled=sensor_data_resampled,
-        sensor_position_keypoint_index=sensor_position_keypoint_index
-    )
-    pose_track_identification = identify_pose_tracks(
-        pose_identification=pose_identification
-    )
-    return pose_track_identification
+# def calculate_track_identification(
+#     poses_3d_with_tracks,
+#     sensor_data_resampled,
+#     sensor_position_keypoint_index=None
+# ):
+#     pose_identification = generate_pose_identification(
+#         poses_3d_with_tracks=poses_3d_with_tracks,
+#         sensor_data_resampled=sensor_data_resampled,
+#         sensor_position_keypoint_index=sensor_position_keypoint_index
+#     )
+#     pose_track_identification = generate_pose_track_identification(
+#         pose_identification=pose_identification
+#     )
+#     return pose_track_identification
 
-def add_person_ids(
-    poses_3d_with_tracks,
-    sensor_data_resampled,
-    sensor_position_keypoint_index=None,
-    active_person_ids=None,
-    ignore_z=False,
-    max_distance=None,
-):
-    poses_3d_with_tracks = pose_connect.utils.ingest_poses_3d_with_tracks(poses_3d_with_tracks)
-    sensor_data_resampled = pose_connect.utils.ingest_sensor_data(sensor_data_resampled)
-    pose_identification = identify_poses(
-        poses_3d_with_tracks=poses_3d_with_tracks,
-        sensor_data_resampled = sensor_data_resampled,
-        sensor_position_keypoint_index=sensor_position_keypoint_index,
-        active_person_ids=active_person_ids,
-        ignore_z=ignore_z,
-        max_distance=max_distance,
-        return_match_statistics=False
-    )
-    pose_track_identification = identify_pose_tracks(
-        pose_identification = pose_identification
-    )
-    poses_3d_with_person_ids = (
-        poses_3d_with_tracks
-        .join(
-            pose_track_identification.set_index('pose_track_3d_id')['person_id'],
-            how='left',
-            on='pose_track_3d_id'
-        )
-    )
-    return poses_3d_with_person_ids
-
-def identify_poses(
+def generate_pose_identification(
     poses_3d_with_tracks,
     sensor_data_resampled,
     sensor_position_keypoint_index=None,
@@ -139,7 +139,7 @@ def identify_poses(
     for timestamp, poses_3d_with_tracks_timestamp in poses_3d_with_tracks.groupby('timestamp'):
         sensor_data_resampled_timestamp = sensor_data_resampled.loc[sensor_data_resampled['timestamp'] == timestamp]
         if return_match_statistics:
-            pose_identification_timestamp, match_statistics = identify_poses_timestamp(
+            pose_identification_timestamp, match_statistics = generate_pose_identification_timestamp(
                 poses_3d_with_tracks_timestamp=poses_3d_with_tracks_timestamp,
                 sensor_data_resampled_timestamp=sensor_data_resampled_timestamp,
                 sensor_position_keypoint_index=sensor_position_keypoint_index,
@@ -149,7 +149,7 @@ def identify_poses(
             )
             match_statistics_list.append([timestamp] + match_statistics)
         else:
-            pose_identification_timestamp = identify_poses_timestamp(
+            pose_identification_timestamp = generate_pose_identification_timestamp(
                 poses_3d_with_tracks_timestamp=poses_3d_with_tracks_timestamp,
                 sensor_data_resampled_timestamp=sensor_data_resampled_timestamp,
                 sensor_position_keypoint_index=sensor_position_keypoint_index,
@@ -173,7 +173,7 @@ def identify_poses(
         return pose_identification, match_statistics
     return pose_identification
 
-def identify_poses_timestamp(
+def generate_pose_identification_timestamp(
     poses_3d_with_tracks_timestamp,
     sensor_data_resampled_timestamp,
     sensor_position_keypoint_index=None,
@@ -278,7 +278,7 @@ def identify_poses_timestamp(
     return pose_identification_timestamp
 
 
-def identify_pose_tracks(
+def generate_pose_track_identification(
     pose_identification
 ):
     pose_track_identification_list = list()

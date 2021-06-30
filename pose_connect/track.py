@@ -13,7 +13,7 @@ import copy
 
 logger = logging.getLogger(__name__)
 
-def add_pose_tracks_3d(
+def track_poses_3d(
     poses_3d,
     max_match_distance=1.0,
     max_iterations_since_last_match=20,
@@ -101,7 +101,7 @@ def update_pose_tracks_3d(
         )
     return pose_tracks_3d
 
-def interpolate_pose_tracks(
+def interpolate_pose_tracks_3d(
     poses_3d_with_tracks,
     frames_per_second=10
 ):
