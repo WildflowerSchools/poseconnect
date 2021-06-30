@@ -108,7 +108,7 @@ def ingest_sensor_data(
     )
     target_columns = (
         ['timestamp'] +
-        id_field_nams +
+        id_field_names +
         [
             'x_position',
             'y_position',
