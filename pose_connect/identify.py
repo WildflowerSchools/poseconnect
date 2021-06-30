@@ -26,7 +26,10 @@ def resample_sensor_data(
     interpolation_field_names=['x_position', 'y_position', 'z_position'],
     timestamp_field_name='timestamp'
 ):
-    sensor_data = pose_connect.utils.ingest_sensor_data(sensor_data)
+    sensor_data = pose_connect.utils.ingest_sensor_data(
+        df=sensor_data,
+        id_field_names=id_field_names
+    )
     if sensor_data.duplicated().any():
         logger.warning('Duplicate position records found in sensor data. Deleting duplicates.')
         sensor_data.drop_duplicates(inplace=True)
