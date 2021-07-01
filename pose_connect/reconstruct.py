@@ -36,7 +36,7 @@ def reconstruct_poses_3d(
     min_num_keypoints=pose_connect.defaults.RECONSTRUCTION_MIN_NUM_KEYPOINTS,
     min_pose_quality=pose_connect.defaults.RECONSTRUCTION_MIN_POSE_QUALITY,
     min_pose_pair_score=pose_connect.defaults.RECONSTRUCTION_MIN_POSE_PAIR_SCORE,
-    max_pose_pair_score=pose_connect.defaults.ECONSTRUCTION_MAX_POSE_PAIR_SCORE,
+    max_pose_pair_score=pose_connect.defaults.RECONSTRUCTION_MAX_POSE_PAIR_SCORE,
     pose_pair_score_distance_method=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
     pose_pair_score_pixel_distance_scale=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE,
     pose_pair_score_summary_method=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
