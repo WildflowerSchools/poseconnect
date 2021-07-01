@@ -128,17 +128,17 @@ def pose_3d_limits_by_pose_model(
     room_x_limits,
     room_y_limits,
     pose_model_name,
-    floor_z=None,
-    foot_z_limits=None,
-    knee_z_limits=None,
-    hip_z_limits=None,
-    thorax_z_limits=None,
-    shoulder_z_limits=None,
-    elbow_z_limits=None,
-    hand_z_limits=None,
-    neck_z_limits=None,
-    head_z_limits=None,
-    tolerance=None
+    floor_z=pose_connect.defaults.POSE_3D_FLOOR_Z,
+    foot_z_limits=pose_connect.defaults.POSE_3D_FOOT_Z_LIMITS,
+    knee_z_limits=pose_connect.defaults.POSE_3D_KNEE_Z_LIMITS,
+    hip_z_limits=pose_connect.defaults.POSE_3D_HIP_Z_LIMITS,
+    thorax_z_limits=pose_connect.defaults.POSE_3D_THORAX_Z_LIMITS,
+    shoulder_z_limits=pose_connect.defaults.POSE_3D_SHOULDER_Z_LIMITS,
+    elbow_z_limits=pose_connect.defaults.POSE_3D_ELBOW_Z_LIMITS,
+    hand_z_limits=pose_connect.defaults.POSE_3D_HAND_Z_LIMITS,
+    neck_z_limits=pose_connect.defaults.POSE_3D_NECK_Z_LIMITS,
+    head_z_limits=pose_connect.defaults.POSE_3D_HEAD_Z_LIMITS,
+    tolerance=pose_connect.defaults.POSE_3D_LIMITS_TOLERANCE
 ):
     keypoint_categories = KEYPOINT_CATEGORIES_BY_POSE_MODEL[pose_model_name]
     return pose_3d_limits(
