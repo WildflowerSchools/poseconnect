@@ -33,7 +33,6 @@ POSE_3D_HEAD_Z_LIMITS = (0.0,2.0)
 POSE_3D_LIMITS_TOLERANCE = 0.2
 
 # Single timestamp 3D pose reconstruction defaults
-RECONSTRUCTION_VALIDATE = False
 RECONSTRUCTION_RETURN_DIAGNOSTICS = False
 
 # 3D pose tracking defaults

@@ -96,8 +96,7 @@ def reconstruct_poses_3d(
         pose_3d_limits=pose_3d_limits,
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
-        include_track_labels=include_track_labels,
-        validate=False
+        include_track_labels=include_track_labels
     )
     num_frames = len(poses_2d['timestamp'].unique())
     logger.info('Reconstructing 3D poses from {} 2D poses across {} frames ({} to {})'.format(
@@ -217,7 +216,6 @@ def reconstruct_poses_3d_timestamp(
     include_track_labels=pose_connect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
     pose_2d_id_column_name=pose_connect.defaults.POSE_2D_ID_COLUMN_NAME,
     pose_2d_ids_column_name=pose_connect.defaults.POSE_2D_IDS_COLUMN_NAME,
-    validate=pose_connect.defaults.RECONSTRUCTION_VALIDATE,
     return_diagnostics=pose_connect.defaults.RECONSTRUCTION_RETURN_DIAGNOSTICS
 ):
     poses_2d_timestamp_copy = poses_2d_timestamp.copy()
@@ -226,9 +224,6 @@ def reconstruct_poses_3d_timestamp(
         'poses_2d': poses_2d_timestamp_copy.copy(),
         'pose_2d_ids_original': poses_2d_timestamp_copy.index
         }
-    if validate:
-        if len(poses_2d_timestamp_copy['timestamp'].unique()) > 1:
-            raise ValueError('More than one timestamp found in data frame')
     timestamp = poses_2d_timestamp_copy['timestamp'][0]
     if min_keypoint_quality is not None:
         poses_2d_timestamp_copy = pose_connect.filter.filter_keypoints_by_quality(
@@ -317,7 +312,6 @@ def reconstruct_poses_3d_timestamp(
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             max_dispersion=pose_3d_graph_max_dispersion,
             include_track_labels=include_track_labels,
-            validate=validate,
             return_diagnostics=return_diagnostics
         )
         diagnostics.update(pose_graph_diagnostics)
@@ -328,7 +322,6 @@ def reconstruct_poses_3d_timestamp(
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             max_dispersion=pose_3d_graph_max_dispersion,
             include_track_labels=include_track_labels,
-            validate=validate
         )
     if len(poses_3d_timestamp) == 0:
         return poses_3d_timestamp
@@ -622,15 +615,11 @@ def generate_3d_poses_timestamp(
     initial_edge_threshold=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
     max_dispersion=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
     include_track_labels=pose_connect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
-    validate=pose_connect.defaults.RECONSTRUCTION_VALIDATE,
     return_diagnostics=pose_connect.defaults.RECONSTRUCTION_RETURN_DIAGNOSTICS
 ):
     if len(pose_pairs_2d_timestamp) == 0:
         return pd.DataFrame()
     timestamps = pose_pairs_2d_timestamp['timestamp'].unique()
-    if validate:
-        if len(timestamps) > 1:
-            raise ValueError('More than one timestamp found in data frame')
     timestamp = timestamps[0]
     pose_graph = generate_pose_graph(
         pose_pairs_2d_timestamp=pose_pairs_2d_timestamp,
