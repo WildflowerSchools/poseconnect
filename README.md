@@ -4,8 +4,6 @@ Tools for constructing 3D pose tracks from multi-camera 2D poses
 
 ## Task list
 
-* Consider removing `validate` options throughout (robustness vs. unintended efficiency hit)
-* Remove (obsolete?) `generate_k_edge_subgraph_list_iteratively()` function
 * Remove default in `depth` option for pose graph analysis
 * Regularize use of parameters for column names (everywhere or nowhere)
 * Regularize use of progress bars (everywhere or nowhere)
