@@ -1,4 +1,5 @@
 import pose_connect.utils
+import pose_connect.defaults
 import pandas as pd
 import numpy as np
 import scipy
@@ -9,14 +10,14 @@ logger = logging.getLogger(__name__)
 def identify_pose_tracks_3d(
     poses_3d_with_tracks,
     sensor_data,
-    frames_per_second=10,
-    id_field_names=['person_id'],
-    interpolation_field_names=['x_position', 'y_position', 'z_position'],
-    timestamp_field_name='timestamp',
-    sensor_position_keypoint_index=None,
-    active_person_ids=None,
-    ignore_z=False,
-    max_distance=None
+    frames_per_second=pose_connect.defaults.FRAMES_PER_SECOND,
+    id_field_names=pose_connect.defaults.IDENTIFICATION_ID_FIELD_NAMES,
+    interpolation_field_names=pose_connect.defaults.IDENTIFICATION_INTERPOLATION_FIELD_NAMES,
+    timestamp_field_name=pose_connect.defaults.IDENTIFICATION_TIMESTAMP_FIELD_NAME,
+    sensor_position_keypoint_index=pose_connect.defaults.IDENTIFICATION_SENSOR_POSITION_KEYPOINT_INDEX,
+    active_person_ids=pose_connect.defaults.IDENTIFICATION_ACTIVE_PERSON_IDS,
+    ignore_z=pose_connect.defaults.IDENTIFICATION_IGNORE_Z,
+    max_distance=pose_connect.defaults.IDENTIFICATION_MAX_DISTANCE
 ):
     poses_3d_with_tracks = pose_connect.utils.ingest_poses_3d_with_tracks(poses_3d_with_tracks)
     sensor_data_resampled = resample_sensor_data(
@@ -50,10 +51,10 @@ def identify_pose_tracks_3d(
 
 def resample_sensor_data(
     sensor_data,
-    frames_per_second=10,
-    id_field_names=['person_id'],
-    interpolation_field_names=['x_position', 'y_position', 'z_position'],
-    timestamp_field_name='timestamp'
+    frames_per_second=pose_connect.defaults.FRAMES_PER_SECOND,
+    id_field_names=pose_connect.defaults.IDENTIFICATION_ID_FIELD_NAMES,
+    interpolation_field_names=pose_connect.defaults.IDENTIFICATION_INTERPOLATION_FIELD_NAMES,
+    timestamp_field_name=pose_connect.defaults.IDENTIFICATION_TIMESTAMP_FIELD_NAME
 ):
     sensor_data = pose_connect.utils.ingest_sensor_data(
         data_object=sensor_data,
@@ -83,8 +84,8 @@ def resample_sensor_data(
 
 def resample_sensor_data_person(
     sensor_data_person,
-    frames_per_second=10,
-    interpolation_field_names = ['x_position', 'y_position', 'z_position']
+    frames_per_second=pose_connect.defaults.FRAMES_PER_SECOND,
+    interpolation_field_names=pose_connect.defaults.IDENTIFICATION_INTERPOLATION_FIELD_NAMES
 ):
     if not isinstance(frames_per_second, int):
         raise ValueError('Only integer frame rates currently supported')
@@ -109,11 +110,11 @@ def resample_sensor_data_person(
 def generate_pose_identification(
     poses_3d_with_tracks,
     sensor_data_resampled,
-    sensor_position_keypoint_index=None,
-    active_person_ids=None,
-    ignore_z=False,
-    max_distance=None,
-    return_match_statistics=False
+    sensor_position_keypoint_index=pose_connect.defaults.IDENTIFICATION_SENSOR_POSITION_KEYPOINT_INDEX,
+    active_person_ids=pose_connect.defaults.IDENTIFICATION_ACTIVE_PERSON_IDS,
+    ignore_z=pose_connect.defaults.IDENTIFICATION_IGNORE_Z,
+    max_distance=pose_connect.defaults.IDENTIFICATION_MAX_DISTANCE,
+    return_match_statistics=pose_connect.defaults.IDENTIFICATION_RETURN_MATCH_STATISTICS
 ):
     pose_identification_timestamp_list = list()
     if return_match_statistics:
@@ -158,11 +159,11 @@ def generate_pose_identification(
 def generate_pose_identification_timestamp(
     poses_3d_with_tracks_timestamp,
     sensor_data_resampled_timestamp,
-    sensor_position_keypoint_index=None,
-    active_person_ids=None,
-    ignore_z=False,
-    max_distance=None,
-    return_match_statistics=False
+    sensor_position_keypoint_index=pose_connect.defaults.IDENTIFICATION_SENSOR_POSITION_KEYPOINT_INDEX,
+    active_person_ids=pose_connect.defaults.IDENTIFICATION_ACTIVE_PERSON_IDS,
+    ignore_z=pose_connect.defaults.IDENTIFICATION_IGNORE_Z,
+    max_distance=pose_connect.defaults.IDENTIFICATION_MAX_DISTANCE,
+    return_match_statistics=pose_connect.defaults.IDENTIFICATION_RETURN_MATCH_STATISTICS
 ):
     num_poses = len(poses_3d_with_tracks_timestamp)
     if len(sensor_data_resampled_timestamp) > 0:
