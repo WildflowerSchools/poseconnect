@@ -17,7 +17,8 @@ def identify_pose_tracks_3d(
     sensor_position_keypoint_index=pose_connect.defaults.IDENTIFICATION_SENSOR_POSITION_KEYPOINT_INDEX,
     active_person_ids=pose_connect.defaults.IDENTIFICATION_ACTIVE_PERSON_IDS,
     ignore_z=pose_connect.defaults.IDENTIFICATION_IGNORE_Z,
-    max_distance=pose_connect.defaults.IDENTIFICATION_MAX_DISTANCE
+    max_distance=pose_connect.defaults.IDENTIFICATION_MAX_DISTANCE,
+    min_fraction_matched=pose_connect.defaults.IDENTIFICATION_MIN_TRACK_FRACTION_MATCHED
 ):
     poses_3d_with_tracks = pose_connect.utils.ingest_poses_3d_with_tracks(poses_3d_with_tracks)
     sensor_data_resampled = resample_sensor_data(
@@ -39,6 +40,11 @@ def identify_pose_tracks_3d(
     pose_track_identification = generate_pose_track_identification(
         pose_identification = pose_identification
     )
+    num_poses = poses_3d_with_tracks.groupby('pose_track_3d_id').size().to_frame(name='num_poses')
+    pose_track_identification = pose_track_identification.join(num_poses, on='pose_track_3d_id')
+    pose_track_identification['fraction_matched'] = pose_track_identification['max_matches']/pose_track_identification['num_poses']
+    if min_fraction_matched is not None:
+        pose_track_identification = pose_track_identification.loc[pose_track_identification['fraction_matched'] >= min_fraction_matched]
     poses_3d_with_person_ids = (
         poses_3d_with_tracks
         .join(

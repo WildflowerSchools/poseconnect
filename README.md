@@ -7,10 +7,14 @@ Tools for constructing 3D pose tracks from multi-camera 2D poses
 * Consider removing `validate` options throughout (robustness vs. unintended efficiency hit)
 * Remove (obsolete?) `generate_k_edge_subgraph_list_iteratively()` function
 * Remove default in `depth` option for pose graph analysis
+* Regularize use of parameters for column names (everywhere or nowhere)
+* Regularize use of progress bars (everywhere or nowhere)
 * Set up defaults for visualization functions
 * Rename package to facilitate command line simplicity (`poseconnect`?)
 * Add `dotenv` layer for setting parameters
 * Add command line interface
+* Add basic batching processing capabilities
+* Add basic parallelization
 * Separate Wildflower-specific and non-Wildflower-specific portions of `colmap` helper library
 * Separate Wildflower-specific and non-Wildflower-specific portions of `smc_kalman` library
 * Switch parallel overlay code back to `imap_unordered()` (for less chunky progress bars) but sort output before concatenating
