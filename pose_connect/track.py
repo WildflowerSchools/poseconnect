@@ -1,4 +1,5 @@
 import pose_connect.utils
+import pose_connect.defaults
 import smc_kalman
 import pandas as pd
 import numpy as np
@@ -13,22 +14,22 @@ import copy
 
 logger = logging.getLogger(__name__)
 
-def add_pose_tracks_3d(
+def track_poses_3d(
     poses_3d,
-    max_match_distance=1.0,
-    max_iterations_since_last_match=20,
-    centroid_position_initial_sd=1.0,
-    centroid_velocity_initial_sd=1.0,
-    reference_delta_t_seconds=1.0,
-    reference_velocity_drift=0.30,
-    position_observation_sd=0.5,
-    num_poses_per_track_min=11,
-    progress_bar=False,
-    notebook=False
+    max_match_distance=pose_connect.defaults.TRACKING_MAX_MATCH_DISTANCE,
+    max_iterations_since_last_match=pose_connect.defaults.TRACKING_MAX_ITERATIONS_SINCE_LAST_MATCH,
+    centroid_position_initial_sd=pose_connect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
+    centroid_velocity_initial_sd=pose_connect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
+    reference_delta_t_seconds=pose_connect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
+    reference_velocity_drift=pose_connect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
+    position_observation_sd=pose_connect.defaults.TRACKING_POSITION_OBSERVATION_SD,
+    num_poses_per_track_min=pose_connect.defaults.TRACKING_NUM_POSES_PER_TRACK_MIN,
+    progress_bar=pose_connect.defaults.PROGRESS_BAR,
+    notebook=pose_connect.defaults.NOTEBOOK
 ):
     poses_3d = pose_connect.utils.ingest_poses_3d(poses_3d)
     pose_tracks_3d = update_pose_tracks_3d(
-        poses_3d_df=poses_3d,
+        poses_3d=poses_3d,
         pose_tracks_3d=None,
         max_match_distance=max_match_distance,
         max_iterations_since_last_match=max_iterations_since_last_match,
@@ -55,27 +56,27 @@ def add_pose_tracks_3d(
     return poses_3d_with_tracks
 
 def update_pose_tracks_3d(
-    poses_3d_df,
+    poses_3d,
     pose_tracks_3d=None,
-    max_match_distance=1.0,
-    max_iterations_since_last_match=20,
-    centroid_position_initial_sd=1.0,
-    centroid_velocity_initial_sd=1.0,
-    reference_delta_t_seconds=1.0,
-    reference_velocity_drift=0.30,
-    position_observation_sd=0.5,
-    progress_bar=False,
-    notebook=False
+    max_match_distance=pose_connect.defaults.TRACKING_MAX_MATCH_DISTANCE,
+    max_iterations_since_last_match=pose_connect.defaults.TRACKING_MAX_ITERATIONS_SINCE_LAST_MATCH,
+    centroid_position_initial_sd=pose_connect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
+    centroid_velocity_initial_sd=pose_connect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
+    reference_delta_t_seconds=pose_connect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
+    reference_velocity_drift=pose_connect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
+    position_observation_sd=pose_connect.defaults.TRACKING_POSITION_OBSERVATION_SD,
+    progress_bar=pose_connect.defaults.PROGRESS_BAR,
+    notebook=pose_connect.defaults.NOTEBOOK
 ):
-    if len(poses_3d_df) == 0:
+    if len(poses_3d) == 0:
         return pose_tracks_3d
     if pose_tracks_3d is None:
-        initial_timestamp = poses_3d_df['timestamp'].min()
-        initial_pose_3d_ids = poses_3d_df.loc[
-            poses_3d_df['timestamp'] == initial_timestamp
+        initial_timestamp = poses_3d['timestamp'].min()
+        initial_pose_3d_ids = poses_3d.loc[
+            poses_3d['timestamp'] == initial_timestamp
         ].index.values.tolist()
-        initial_keypoint_coordinates_3d = poses_3d_df.loc[
-            poses_3d_df['timestamp'] == initial_timestamp,
+        initial_keypoint_coordinates_3d = poses_3d.loc[
+            poses_3d['timestamp'] == initial_timestamp,
             'keypoint_coordinates_3d'
         ].values.tolist()
         initial_poses_3d = dict(zip(initial_pose_3d_ids, initial_keypoint_coordinates_3d))
@@ -89,21 +90,21 @@ def update_pose_tracks_3d(
             position_observation_sd=position_observation_sd
         )
         pose_tracks_3d.update_df(
-            poses_3d_df=poses_3d_df.loc[poses_3d_df['timestamp'] != initial_timestamp],
+            poses_3d=poses_3d.loc[poses_3d['timestamp'] != initial_timestamp],
             progress_bar=progress_bar,
             notebook=notebook
         )
     else:
         pose_tracks_3d.update_df(
-            poses_3d_df=poses_3d_df,
+            poses_3d=poses_3d,
             progress_bar=progress_bar,
             notebook=notebook
         )
     return pose_tracks_3d
 
-def interpolate_pose_tracks(
+def interpolate_pose_tracks_3d(
     poses_3d_with_tracks,
-    frames_per_second=10
+    frames_per_second=pose_connect.defaults.FRAMES_PER_SECOND
 ):
     poses_3d_with_tracks = pose_connect.utils.ingest_poses_3d_with_tracks(poses_3d_with_tracks)
     poses_3d_new_list=list()
@@ -124,7 +125,7 @@ def interpolate_pose_tracks(
 
 def interpolate_pose_track(
     pose_track_3d,
-    frames_per_second=10
+    frames_per_second=pose_connect.defaults.FRAMES_PER_SECOND
 ):
     if not isinstance(frames_per_second, int):
         raise ValueError('Only integer frame rates currently supported')
@@ -170,13 +171,13 @@ class PoseTracks3D:
         self,
         timestamp,
         poses_3d,
-        max_match_distance=1.0,
-        max_iterations_since_last_match=20,
-        centroid_position_initial_sd=1.0,
-        centroid_velocity_initial_sd=1.0,
-        reference_delta_t_seconds=1.0,
-        reference_velocity_drift=0.30,
-        position_observation_sd=0.5
+        max_match_distance=pose_connect.defaults.TRACKING_MAX_MATCH_DISTANCE,
+        max_iterations_since_last_match=pose_connect.defaults.TRACKING_MAX_ITERATIONS_SINCE_LAST_MATCH,
+        centroid_position_initial_sd=pose_connect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
+        centroid_velocity_initial_sd=pose_connect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
+        reference_delta_t_seconds=pose_connect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
+        reference_velocity_drift=pose_connect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
+        position_observation_sd=pose_connect.defaults.TRACKING_POSITION_OBSERVATION_SD
     ):
         self.max_match_distance = max_match_distance
         self.max_iterations_since_last_match = max_iterations_since_last_match
@@ -202,11 +203,11 @@ class PoseTracks3D:
 
     def update_df(
         self,
-        poses_3d_df,
-        progress_bar=False,
-        notebook=False
+        poses_3d,
+        progress_bar=pose_connect.defaults.PROGRESS_BAR,
+        notebook=pose_connect.defaults.NOTEBOOK
     ):
-        timestamps = np.sort(poses_3d_df['timestamp'].unique())
+        timestamps = np.sort(poses_3d['timestamp'].unique())
         if progress_bar:
             if notebook:
                 timestamp_iterator = tqdm.notebook.tqdm(timestamps)
@@ -215,11 +216,11 @@ class PoseTracks3D:
         else:
             timestamp_iterator = timestamps
         for current_timestamp in timestamp_iterator:
-            current_pose_3d_ids = poses_3d_df.loc[
-                poses_3d_df['timestamp'] == current_timestamp
+            current_pose_3d_ids = poses_3d.loc[
+                poses_3d['timestamp'] == current_timestamp
             ].index.values.tolist()
-            current_keypoint_coordinates_3d = poses_3d_df.loc[
-                poses_3d_df['timestamp'] == current_timestamp,
+            current_keypoint_coordinates_3d = poses_3d.loc[
+                poses_3d['timestamp'] == current_timestamp,
                 'keypoint_coordinates_3d'
             ].values.tolist()
             current_poses_3d = dict(zip(current_pose_3d_ids, current_keypoint_coordinates_3d))
@@ -289,7 +290,7 @@ class PoseTracks3D:
     ):
         pose_track_3d_ids = self.active_tracks.keys()
         pose_3d_ids = poses_3d.keys()
-        distances_df = pd.DataFrame(
+        distances = pd.DataFrame(
             index = pose_track_3d_ids,
             columns = pose_3d_ids,
             dtype='float'
@@ -304,9 +305,9 @@ class PoseTracks3D:
                 )
             )
             if distance < self.max_match_distance:
-                distances_df.loc[pose_track_3d_id, pose_3d_id] = distance
-        best_track_for_each_pose = distances_df.idxmin(axis=0)
-        best_pose_for_each_track = distances_df.idxmin(axis=1)
+                distances.loc[pose_track_3d_id, pose_3d_id] = distance
+        best_track_for_each_pose = distances.idxmin(axis=0)
+        best_pose_for_each_track = distances.idxmin(axis=1)
         matches = dict(
             set(zip(best_pose_for_each_track.index, best_pose_for_each_track.values)) &
             set(zip(best_track_for_each_pose.values, best_track_for_each_pose.index))
@@ -315,7 +316,7 @@ class PoseTracks3D:
 
     def filter(
         self,
-        num_poses_min=11,
+        num_poses_min=pose_connect.defaults.TRACKING_NUM_POSES_PER_TRACK_MIN,
         inplace=False
     ):
         if not inplace:
@@ -335,20 +336,20 @@ class PoseTracks3D:
 
     def extract_pose_tracks_3d(
         self,
-        poses_3d_df,
-        pose_3d_id_column_name='pose_3d_id',
-        pose_track_3d_id_column_name='pose_track_3d_id'
+        poses_3d,
+        pose_3d_id_column_name=pose_connect.defaults.POSE_3D_ID_COLUMN_NAME,
+        pose_track_3d_id_column_name=pose_connect.defaults.POSE_TRACK_3D_ID_COLUMN_NAME
     ):
-        input_index_name = poses_3d_df.index.name
-        poses_3d_with_tracks_df = poses_3d_df.join(
+        input_index_name = poses_3d.index.name
+        poses_3d_with_tracks = poses_3d.join(
             self.output_df(
                 pose_3d_id_column_name=pose_3d_id_column_name,
                 pose_track_3d_id_column_name=pose_track_3d_id_column_name
             ),
             how='inner'
         )
-        poses_3d_with_tracks_df.index.name = input_index_name
-        return poses_3d_with_tracks_df
+        poses_3d_with_tracks.index.name = input_index_name
+        return poses_3d_with_tracks
 
     def output(self):
         output = {pose_track_3d_id: pose_track_3d.output() for pose_track_3d_id, pose_track_3d in self.tracks().items()}
@@ -356,8 +357,8 @@ class PoseTracks3D:
 
     def output_df(
         self,
-        pose_3d_id_column_name='pose_3d_id',
-        pose_track_3d_id_column_name='pose_track_3d_id'
+        pose_3d_id_column_name=pose_connect.defaults.POSE_3D_ID_COLUMN_NAME,
+        pose_track_3d_id_column_name=pose_connect.defaults.POSE_TRACK_3D_ID_COLUMN_NAME
     ):
         df = pd.concat(
             [pose_track_3d.output_df(
@@ -402,11 +403,11 @@ class PoseTrack3D:
         timestamp,
         pose_3d_id,
         keypoint_coordinates_3d,
-        centroid_position_initial_sd=1.0,
-        centroid_velocity_initial_sd=1.0,
-        reference_delta_t_seconds=1.0,
-        reference_velocity_drift=0.30,
-        position_observation_sd=0.5
+        centroid_position_initial_sd=pose_connect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
+        centroid_velocity_initial_sd=pose_connect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
+        reference_delta_t_seconds=pose_connect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
+        reference_velocity_drift=pose_connect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
+        position_observation_sd=pose_connect.defaults.TRACKING_POSITION_OBSERVATION_SD
     ):
         keypoint_coordinates_3d = np.asarray(keypoint_coordinates_3d)
         if keypoint_coordinates_3d.ndim != 2:
@@ -502,8 +503,8 @@ class PoseTrack3D:
 
     def output_df(
         self,
-        pose_3d_id_column_name='pose_3d_id',
-        pose_track_3d_id_column_name='pose_track_3d_id'
+        pose_3d_id_column_name=pose_connect.defaults.POSE_3D_ID_COLUMN_NAME,
+        pose_track_3d_id_column_name=pose_connect.defaults.POSE_TRACK_3D_ID_COLUMN_NAME
     ):
         df = pd.DataFrame([
             {pose_3d_id_column_name: pose_id, pose_track_3d_id_column_name: self.pose_track_3d_id}
@@ -562,9 +563,9 @@ class PoseTrack3D:
 
 def constant_velocity_model(
     delta_t_seconds,
-    reference_delta_t_seconds=1.0,
-    reference_velocity_drift=1.0,
-    position_observation_sd=0.5
+    reference_delta_t_seconds=pose_connect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
+    reference_velocity_drift=pose_connect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
+    position_observation_sd=pose_connect.defaults.TRACKING_POSITION_OBSERVATION_SD
 ):
     if delta_t_seconds is not None:
         velocity_drift = reference_velocity_drift*np.sqrt(delta_t_seconds/reference_delta_t_seconds)
