@@ -235,10 +235,15 @@ def cli_interpolate_pose_tracks_3d(
         path_type=None
     )
 )
+@click.option(
+    '--sensor-position-keypoint-index',
+    help='Sensor position on each person (int or JSON-encoded dict)'
+)
 def cli_identify_pose_tracks_3d(
     poses_3d_with_tracks_path,
     sensor_data_path,
-    output_path
+    output_path,
+    sensor_position_keypoint_index
 ):
     poses_3d_with_person_ids = poseconnect.identify.identify_pose_tracks_3d(
         poses_3d_with_tracks=poses_3d_with_tracks_path,
@@ -247,7 +252,7 @@ def cli_identify_pose_tracks_3d(
         id_field_names=poseconnect.defaults.IDENTIFICATION_ID_FIELD_NAMES,
         interpolation_field_names=poseconnect.defaults.IDENTIFICATION_INTERPOLATION_FIELD_NAMES,
         timestamp_field_name=poseconnect.defaults.IDENTIFICATION_TIMESTAMP_FIELD_NAME,
-        sensor_position_keypoint_index=poseconnect.defaults.IDENTIFICATION_SENSOR_POSITION_KEYPOINT_INDEX,
+        sensor_position_keypoint_index=sensor_position_keypoint_index,
         active_person_ids=poseconnect.defaults.IDENTIFICATION_ACTIVE_PERSON_IDS,
         ignore_z=poseconnect.defaults.IDENTIFICATION_IGNORE_Z,
         max_distance=poseconnect.defaults.IDENTIFICATION_MAX_DISTANCE,
