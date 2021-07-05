@@ -122,6 +122,7 @@ def generate_pose_identification(
     max_distance=poseconnect.defaults.IDENTIFICATION_MAX_DISTANCE,
     return_match_statistics=poseconnect.defaults.IDENTIFICATION_RETURN_MATCH_STATISTICS
 ):
+    sensor_position_keypoint_index = poseconnect.utils.ingest_sensor_position_keypoint_index(sensor_position_keypoint_index)
     pose_identification_timestamp_list = list()
     if return_match_statistics:
         match_statistics_list = list()

@@ -188,6 +188,38 @@ def ingest_sensor_data(
     df['z_position'] = pd.to_numeric(df['z_position']).astype('float')
     return df
 
+def ingest_sensor_position_keypoint_index(data_object):
+    if isinstance(data_object, int):
+        return data_object
+    if isinstance(data_object, dict):
+        return data_object
+    if isinstance(data_object, str) and os.path.isfile(data_object):
+        file_extension = os.path.splitext(data_object)[1]
+        if len(file_extension) == 0:
+            raise ValueError('Data object appears to be a filename, but it has no extension')
+        if file_extension.lower() == '.pickle' or file_extension.lower() == '.pkl':
+            try:
+                data_deserialized = pickle.load(open(data_object, 'rb'))
+            except:
+                raise ValueError('File has extension \'pickle\' or \'pkl\', but pickle deserialization failed')
+            return data_deserialized
+        if file_extension.lower() == '.json':
+            try:
+                data_deserialized = json.load(open(data_object, 'r'))
+            except:
+                raise ValueError('File has extension \'json\', but JSON deserialization failed')
+            return data_deserialized
+        raise ValueError('Data object appears to be a filename, but extension \'{}\' isn\'t currently handled'.format(
+            file_extension
+        ))
+    if isinstance(data_object, str):
+            try:
+                data_deserialized = json.loads(data_object)
+            except:
+                raise ValueError('Data object is a string but it doesn\'t appear to be a valid filename or valid JSON')
+            return data_deserialized
+    raise ValueError('Failed to parse data object')
+
 def convert_to_array(data_object):
     if isinstance(data_object, str):
         try:
