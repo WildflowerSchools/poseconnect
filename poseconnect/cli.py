@@ -1,4 +1,5 @@
 import poseconnect.reconstruct
+import poseconnect.track
 import poseconnect.utils
 import click
 
@@ -17,7 +18,7 @@ def cli():
     type=click.Path(
         exists=True,
         file_okay=True,
-        dir_okay=True,
+        dir_okay=False,
         writable=False,
         readable=True,
         resolve_path=True,
@@ -30,7 +31,7 @@ def cli():
     type=click.Path(
         exists=False,
         file_okay=True,
-        dir_okay=True,
+        dir_okay=False,
         writable=False,
         readable=False,
         resolve_path=True,
@@ -42,10 +43,6 @@ def cli():
     'output-path',
     type=click.Path(
         exists=False,
-        file_okay=True,
-        dir_okay=True,
-        writable=False,
-        readable=True,
         resolve_path=True,
         allow_dash=False,
         path_type=None
@@ -110,4 +107,58 @@ def cli_reconstruct_poses_3d(
     )
     poseconnect.utils.output_poses_3d(poses_3d, output_path)
 
+@click.command(
+    name='track',
+    help='Connect 3D poses into 3D pose tracks'
+)
+@click.argument(
+    'poses-3d-path',
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        resolve_path=True,
+        allow_dash=False,
+        path_type=None
+    )
+)
+@click.argument(
+    'output-path',
+    type=click.Path(
+        exists=False,
+        resolve_path=True,
+        allow_dash=False,
+        path_type=None
+    )
+)
+@click.option(
+    '--progress-bar/--no-progress-bar',
+    default=False,
+    required=False,
+    help='Display progress bar',
+    show_default=True
+)
+def cli_track_poses_3d(
+    poses_3d_path,
+    output_path,
+    progress_bar
+):
+    poses_3d_with_tracks = poseconnect.track.track_poses_3d(
+        poses_3d=poses_3d_path,
+        max_match_distance=poseconnect.defaults.TRACKING_MAX_MATCH_DISTANCE,
+        max_iterations_since_last_match=poseconnect.defaults.TRACKING_MAX_ITERATIONS_SINCE_LAST_MATCH,
+        centroid_position_initial_sd=poseconnect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
+        centroid_velocity_initial_sd=poseconnect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
+        reference_delta_t_seconds=poseconnect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
+        reference_velocity_drift=poseconnect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
+        position_observation_sd=poseconnect.defaults.TRACKING_POSITION_OBSERVATION_SD,
+        num_poses_per_track_min=poseconnect.defaults.TRACKING_NUM_POSES_PER_TRACK_MIN,
+        progress_bar=progress_bar,
+        notebook=False
+    )
+    poseconnect.utils.output_poses_3d_with_tracks(poses_3d_with_tracks, output_path)
+
 cli.add_command(cli_reconstruct_poses_3d)
+cli.add_command(cli_track_poses_3d)
