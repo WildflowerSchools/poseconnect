@@ -197,6 +197,18 @@ def convert_to_array(data_object):
     return np.asarray(data_object)
 
 def convert_to_list(data_object):
+    if data_object is None:
+        return None
+    try:
+        if pd.isnull(data_object):
+            return None
+    except:
+        pass
+    try:
+        if pd.isnull(data_object).all():
+            return None
+    except:
+        pass
     if isinstance(data_object, str):
         try:
             data_object = json.loads(data_object)
