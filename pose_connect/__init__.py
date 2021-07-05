@@ -5,4 +5,4 @@ from pose_connect.track import *
 from pose_connect.identify import *
 from pose_connect.utils import *
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
