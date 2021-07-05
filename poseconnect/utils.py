@@ -75,6 +75,37 @@ def ingest_poses_3d(data_object):
     df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
     return df
 
+def output_poses_3d(df, path):
+    file_extension = os.path.splitext(path)[1]
+    if len(file_extension) == 0:
+        raise ValueError('Output path has no extension')
+    if file_extension.lower() == '.pickle' or file_extension.lower() == '.pkl':
+        try:
+            df.to_pickle(path)
+        except:
+            raise ValueError('Output path has extension \'pickle\' or \'pkl\', but pickle serialization failed')
+    elif file_extension.lower() == '.json':
+        try:
+            df.reset_index().to_json(
+                path,
+                orient='records',
+                date_format='iso',
+                indent=2
+            )
+        except:
+            raise ValueError('Output path has extension \'json\', but JSON serialization failed')
+    elif file_extension.lower() == '.csv':
+        try:
+            df['timestamp'] = df['timestamp'].apply(lambda x: x.isoformat())
+            df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].tolist()
+            df.to_csv(path)
+        except:
+            raise ValueError('Output path has extension \'csv\', but conversion to CSV failed')
+    else:
+        raise ValueError('Data object appears to be a filename, but extension \'{}\' isn\'t currently handled'.format(
+            file_extension
+        ))
+
 def ingest_poses_3d_with_tracks(data_object):
     df = convert_to_df(data_object)
     df = set_index_columns(
