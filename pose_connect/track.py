@@ -491,7 +491,7 @@ class PoseTrack3D:
 
     def output_df(self):
         df = pd.DataFrame([
-            {'pose_3d_id': pose_id, 'pose_3d_id': self.pose_track_3d_id}
+            {'pose_3d_id': pose_id, 'pose_track_3d_id': self.pose_track_3d_id}
             for pose_id in self.pose_3d_ids
         ]).set_index('pose_3d_id')
         return df
