@@ -1,10 +1,9 @@
-# pose_connect
+# poseconnect
 
 Tools for constructing 3D pose tracks from multi-camera 2D poses
 
 ## Task list
 
-* Rename package to facilitate command line simplicity (`poseconnect`?)
 * Add command line interface
 * Regularize use of progress bars (everywhere or nowhere)
 * Add `dotenv` layer for setting parameters

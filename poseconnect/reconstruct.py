@@ -1,6 +1,6 @@
-import pose_connect.filter
-import pose_connect.utils
-import pose_connect.defaults
+import poseconnect.filter
+import poseconnect.utils
+import poseconnect.defaults
 import cv_utils
 import cv2 as cv
 import pandas as pd
@@ -32,23 +32,23 @@ def reconstruct_poses_3d(
     pose_model_name=None,
     room_x_limits=None,
     room_y_limits=None,
-    min_keypoint_quality=pose_connect.defaults.RECONSTRUCTION_MIN_KEYPOINT_QUALITY,
-    min_num_keypoints=pose_connect.defaults.RECONSTRUCTION_MIN_NUM_KEYPOINTS,
-    min_pose_quality=pose_connect.defaults.RECONSTRUCTION_MIN_POSE_QUALITY,
-    min_pose_pair_score=pose_connect.defaults.RECONSTRUCTION_MIN_POSE_PAIR_SCORE,
-    max_pose_pair_score=pose_connect.defaults.RECONSTRUCTION_MAX_POSE_PAIR_SCORE,
-    pose_pair_score_distance_method=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
-    pose_pair_score_pixel_distance_scale=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE,
-    pose_pair_score_summary_method=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
-    pose_3d_graph_initial_edge_threshold=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
-    pose_3d_graph_max_dispersion=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
-    include_track_labels=pose_connect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
-    progress_bar=pose_connect.defaults.PROGRESS_BAR,
-    notebook=pose_connect.defaults.NOTEBOOK
+    min_keypoint_quality=poseconnect.defaults.RECONSTRUCTION_MIN_KEYPOINT_QUALITY,
+    min_num_keypoints=poseconnect.defaults.RECONSTRUCTION_MIN_NUM_KEYPOINTS,
+    min_pose_quality=poseconnect.defaults.RECONSTRUCTION_MIN_POSE_QUALITY,
+    min_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MIN_POSE_PAIR_SCORE,
+    max_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MAX_POSE_PAIR_SCORE,
+    pose_pair_score_distance_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
+    pose_pair_score_pixel_distance_scale=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE,
+    pose_pair_score_summary_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
+    pose_3d_graph_initial_edge_threshold=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
+    pose_3d_graph_max_dispersion=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
+    include_track_labels=poseconnect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
+    progress_bar=poseconnect.defaults.PROGRESS_BAR,
+    notebook=poseconnect.defaults.NOTEBOOK
 ):
-    poses_2d = pose_connect.utils.ingest_poses_2d(poses_2d)
+    poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
     camera_calibrations = (
-        pose_connect.utils.ingest_camera_calibrations(camera_calibrations)
+        poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
         .to_dict(orient='index')
     )
     camera_ids = poses_2d['camera_id'].unique().tolist()
@@ -123,17 +123,17 @@ def pose_3d_limits_by_pose_model(
     room_x_limits,
     room_y_limits,
     pose_model_name,
-    floor_z=pose_connect.defaults.POSE_3D_FLOOR_Z,
-    foot_z_limits=pose_connect.defaults.POSE_3D_FOOT_Z_LIMITS,
-    knee_z_limits=pose_connect.defaults.POSE_3D_KNEE_Z_LIMITS,
-    hip_z_limits=pose_connect.defaults.POSE_3D_HIP_Z_LIMITS,
-    thorax_z_limits=pose_connect.defaults.POSE_3D_THORAX_Z_LIMITS,
-    shoulder_z_limits=pose_connect.defaults.POSE_3D_SHOULDER_Z_LIMITS,
-    elbow_z_limits=pose_connect.defaults.POSE_3D_ELBOW_Z_LIMITS,
-    hand_z_limits=pose_connect.defaults.POSE_3D_HAND_Z_LIMITS,
-    neck_z_limits=pose_connect.defaults.POSE_3D_NECK_Z_LIMITS,
-    head_z_limits=pose_connect.defaults.POSE_3D_HEAD_Z_LIMITS,
-    tolerance=pose_connect.defaults.POSE_3D_LIMITS_TOLERANCE
+    floor_z=poseconnect.defaults.POSE_3D_FLOOR_Z,
+    foot_z_limits=poseconnect.defaults.POSE_3D_FOOT_Z_LIMITS,
+    knee_z_limits=poseconnect.defaults.POSE_3D_KNEE_Z_LIMITS,
+    hip_z_limits=poseconnect.defaults.POSE_3D_HIP_Z_LIMITS,
+    thorax_z_limits=poseconnect.defaults.POSE_3D_THORAX_Z_LIMITS,
+    shoulder_z_limits=poseconnect.defaults.POSE_3D_SHOULDER_Z_LIMITS,
+    elbow_z_limits=poseconnect.defaults.POSE_3D_ELBOW_Z_LIMITS,
+    hand_z_limits=poseconnect.defaults.POSE_3D_HAND_Z_LIMITS,
+    neck_z_limits=poseconnect.defaults.POSE_3D_NECK_Z_LIMITS,
+    head_z_limits=poseconnect.defaults.POSE_3D_HEAD_Z_LIMITS,
+    tolerance=poseconnect.defaults.POSE_3D_LIMITS_TOLERANCE
 ):
     keypoint_categories = KEYPOINT_CATEGORIES_BY_POSE_MODEL[pose_model_name]
     return pose_3d_limits(
@@ -157,17 +157,17 @@ def pose_3d_limits(
     room_x_limits,
     room_y_limits,
     keypoint_categories,
-    floor_z=pose_connect.defaults.POSE_3D_FLOOR_Z,
-    foot_z_limits=pose_connect.defaults.POSE_3D_FOOT_Z_LIMITS,
-    knee_z_limits=pose_connect.defaults.POSE_3D_KNEE_Z_LIMITS,
-    hip_z_limits=pose_connect.defaults.POSE_3D_HIP_Z_LIMITS,
-    thorax_z_limits=pose_connect.defaults.POSE_3D_THORAX_Z_LIMITS,
-    shoulder_z_limits=pose_connect.defaults.POSE_3D_SHOULDER_Z_LIMITS,
-    elbow_z_limits=pose_connect.defaults.POSE_3D_ELBOW_Z_LIMITS,
-    hand_z_limits=pose_connect.defaults.POSE_3D_HAND_Z_LIMITS,
-    neck_z_limits=pose_connect.defaults.POSE_3D_NECK_Z_LIMITS,
-    head_z_limits=pose_connect.defaults.POSE_3D_HEAD_Z_LIMITS,
-    tolerance=pose_connect.defaults.POSE_3D_LIMITS_TOLERANCE
+    floor_z=poseconnect.defaults.POSE_3D_FLOOR_Z,
+    foot_z_limits=poseconnect.defaults.POSE_3D_FOOT_Z_LIMITS,
+    knee_z_limits=poseconnect.defaults.POSE_3D_KNEE_Z_LIMITS,
+    hip_z_limits=poseconnect.defaults.POSE_3D_HIP_Z_LIMITS,
+    thorax_z_limits=poseconnect.defaults.POSE_3D_THORAX_Z_LIMITS,
+    shoulder_z_limits=poseconnect.defaults.POSE_3D_SHOULDER_Z_LIMITS,
+    elbow_z_limits=poseconnect.defaults.POSE_3D_ELBOW_Z_LIMITS,
+    hand_z_limits=poseconnect.defaults.POSE_3D_HAND_Z_LIMITS,
+    neck_z_limits=poseconnect.defaults.POSE_3D_NECK_Z_LIMITS,
+    head_z_limits=poseconnect.defaults.POSE_3D_HEAD_Z_LIMITS,
+    tolerance=poseconnect.defaults.POSE_3D_LIMITS_TOLERANCE
 ):
     z_limits_dict = {
         'foot': foot_z_limits,
@@ -199,18 +199,18 @@ def reconstruct_poses_3d_timestamp(
     poses_2d_timestamp,
     camera_calibrations,
     pose_3d_limits=None,
-    min_keypoint_quality=pose_connect.defaults.RECONSTRUCTION_MIN_KEYPOINT_QUALITY,
-    min_num_keypoints=pose_connect.defaults.RECONSTRUCTION_MIN_NUM_KEYPOINTS,
-    min_pose_quality=pose_connect.defaults.RECONSTRUCTION_MIN_POSE_QUALITY,
-    min_pose_pair_score=pose_connect.defaults.RECONSTRUCTION_MIN_POSE_PAIR_SCORE,
-    max_pose_pair_score=pose_connect.defaults.RECONSTRUCTION_MAX_POSE_PAIR_SCORE,
-    pose_pair_score_distance_method=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
-    pose_pair_score_pixel_distance_scale=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE,
-    pose_pair_score_summary_method=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
-    pose_3d_graph_initial_edge_threshold=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
-    pose_3d_graph_max_dispersion=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
-    include_track_labels=pose_connect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
-    return_diagnostics=pose_connect.defaults.RECONSTRUCTION_RETURN_DIAGNOSTICS
+    min_keypoint_quality=poseconnect.defaults.RECONSTRUCTION_MIN_KEYPOINT_QUALITY,
+    min_num_keypoints=poseconnect.defaults.RECONSTRUCTION_MIN_NUM_KEYPOINTS,
+    min_pose_quality=poseconnect.defaults.RECONSTRUCTION_MIN_POSE_QUALITY,
+    min_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MIN_POSE_PAIR_SCORE,
+    max_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MAX_POSE_PAIR_SCORE,
+    pose_pair_score_distance_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
+    pose_pair_score_pixel_distance_scale=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE,
+    pose_pair_score_summary_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
+    pose_3d_graph_initial_edge_threshold=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
+    pose_3d_graph_max_dispersion=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
+    include_track_labels=poseconnect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
+    return_diagnostics=poseconnect.defaults.RECONSTRUCTION_RETURN_DIAGNOSTICS
 ):
     poses_2d_timestamp_copy = poses_2d_timestamp.copy()
     if return_diagnostics:
@@ -220,26 +220,26 @@ def reconstruct_poses_3d_timestamp(
         }
     timestamp = poses_2d_timestamp_copy['timestamp'][0]
     if min_keypoint_quality is not None:
-        poses_2d_timestamp_copy = pose_connect.filter.filter_keypoints_by_quality(
+        poses_2d_timestamp_copy = poseconnect.filter.filter_keypoints_by_quality(
             poses_2d=poses_2d_timestamp_copy,
             min_keypoint_quality=min_keypoint_quality
         )
     if return_diagnostics:
         diagnostics['pose_2d_ids_after_min_keypoint_quality_filter'] = poses_2d_timestamp_copy.index
-    poses_2d_timestamp_copy = pose_connect.filter.remove_empty_2d_poses(
+    poses_2d_timestamp_copy = poseconnect.filter.remove_empty_2d_poses(
         poses_2d=poses_2d_timestamp_copy
     )
     if return_diagnostics:
         diagnostics['pose_2d_ids_after_empty_2d_poses_filter'] = poses_2d_timestamp_copy.index
     if min_num_keypoints is not None:
-        poses_2d_timestamp_copy = pose_connect.filter.filter_poses_by_num_valid_keypoints(
+        poses_2d_timestamp_copy = poseconnect.filter.filter_poses_by_num_valid_keypoints(
             poses_2d=poses_2d_timestamp_copy,
             min_num_keypoints=min_num_keypoints
         )
     if return_diagnostics:
         diagnostics['pose_2d_ids_after_min_num_keypoints_filter'] = poses_2d_timestamp_copy.index
     if min_pose_quality is not None:
-        poses_2d_timestamp_copy = pose_connect.filter.filter_poses_by_quality(
+        poses_2d_timestamp_copy = poseconnect.filter.filter_poses_by_quality(
             poses_2d=poses_2d_timestamp_copy,
             min_pose_quality=min_pose_quality
         )
@@ -254,12 +254,12 @@ def reconstruct_poses_3d_timestamp(
     )
     if return_diagnostics:
         diagnostics['pose_pairs_2d'] = pose_pairs_2d_timestamp.copy()
-    pose_pairs_2d_timestamp =  pose_connect.filter.remove_empty_3d_poses(
+    pose_pairs_2d_timestamp =  poseconnect.filter.remove_empty_3d_poses(
         pose_pairs_2d=pose_pairs_2d_timestamp
     )
     if return_diagnostics:
         diagnostics['pose_pair_ids_2d_after_empty_3d_pose_filter'] = pose_pairs_2d_timestamp.index
-    pose_pairs_2d_timestamp =  pose_connect.filter.remove_empty_reprojected_2d_poses(
+    pose_pairs_2d_timestamp =  poseconnect.filter.remove_empty_reprojected_2d_poses(
         pose_pairs_2d=pose_pairs_2d_timestamp
     )
     if return_diagnostics:
@@ -272,13 +272,13 @@ def reconstruct_poses_3d_timestamp(
     )
     if return_diagnostics:
         diagnostics['pose_pair_2d_scores'] = pose_pairs_2d_timestamp['score']
-    pose_pairs_2d_timestamp =  pose_connect.filter.remove_invalid_pose_pair_scores(
+    pose_pairs_2d_timestamp =  poseconnect.filter.remove_invalid_pose_pair_scores(
         pose_pairs_2d=pose_pairs_2d_timestamp
     )
     if return_diagnostics:
         diagnostics['pose_pair_ids_2d_after_invalid_pose_pair_score_filter'] = pose_pairs_2d_timestamp.index
     if min_pose_pair_score is not None or max_pose_pair_score is not None:
-        pose_pairs_2d_timestamp = pose_connect.filter.filter_pose_pairs_by_score(
+        pose_pairs_2d_timestamp = poseconnect.filter.filter_pose_pairs_by_score(
             pose_pairs_2d=pose_pairs_2d_timestamp,
             min_score=min_pose_pair_score,
             max_score=max_pose_pair_score
@@ -286,13 +286,13 @@ def reconstruct_poses_3d_timestamp(
     if return_diagnostics:
         diagnostics['pose_pair_ids_2d_after_min_max_pose_pair_score_filter'] = pose_pairs_2d_timestamp.index
     if pose_3d_limits is not None:
-        pose_pairs_2d_timestamp = pose_connect.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
+        pose_pairs_2d_timestamp = poseconnect.filter.filter_pose_pairs_by_3d_pose_spatial_limits(
             pose_pairs_2d=pose_pairs_2d_timestamp,
             pose_3d_limits=pose_3d_limits
         )
     if return_diagnostics:
         diagnostics['pose_pair_ids_2d_after_3d_pose_spatial_limit_filter'] = pose_pairs_2d_timestamp.index
-    pose_pairs_2d_timestamp = pose_connect.filter.filter_pose_pairs_by_best_match(
+    pose_pairs_2d_timestamp = poseconnect.filter.filter_pose_pairs_by_best_match(
         pose_pairs_2d_timestamp=pose_pairs_2d_timestamp
     )
     if return_diagnostics:
@@ -516,9 +516,9 @@ def triangulate_image_points(
 
 def score_pose_pairs(
     pose_pairs_2d,
-    distance_method=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
-    summary_method=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
-    pixel_distance_scale=pose_connect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE
+    distance_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
+    summary_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
+    pixel_distance_scale=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE
 ):
     if len(pose_pairs_2d) == 0:
         return pose_pairs_2d.copy()
@@ -595,10 +595,10 @@ def extract_best_score_indices_timestamp_camera_pair(pose_pairs_2d):
 
 def generate_3d_poses_timestamp(
     pose_pairs_2d_timestamp,
-    initial_edge_threshold=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
-    max_dispersion=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
-    include_track_labels=pose_connect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
-    return_diagnostics=pose_connect.defaults.RECONSTRUCTION_RETURN_DIAGNOSTICS
+    initial_edge_threshold=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
+    max_dispersion=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
+    include_track_labels=poseconnect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
+    return_diagnostics=poseconnect.defaults.RECONSTRUCTION_RETURN_DIAGNOSTICS
 ):
     if len(pose_pairs_2d_timestamp) == 0:
         return pd.DataFrame()
@@ -675,7 +675,7 @@ def generate_3d_poses_timestamp(
 
 def generate_pose_graph(
     pose_pairs_2d_timestamp,
-    include_track_labels=pose_connect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS
+    include_track_labels=poseconnect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS
 ):
     pose_graph = nx.Graph()
     for pose_2d_ids, row in pose_pairs_2d_timestamp.iterrows():
@@ -710,9 +710,9 @@ def generate_pose_graph(
 
 def analyze_pose_graph(
     pose_graph,
-    initial_edge_threshold=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
-    max_dispersion=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
-    return_diagnostics=pose_connect.defaults.RECONSTRUCTION_RETURN_DIAGNOSTICS
+    initial_edge_threshold=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
+    max_dispersion=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
+    return_diagnostics=poseconnect.defaults.RECONSTRUCTION_RETURN_DIAGNOSTICS
 ):
     logger.debug('Starting with initial graph')
     graph_analysis_diagnostics = {}
@@ -758,10 +758,10 @@ def analyze_pose_graph(
 
 def analyze_pose_subgraph(
     pose_subgraph,
-    initial_edge_threshold=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
-    max_dispersion=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
+    initial_edge_threshold=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
+    max_dispersion=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
     depth=1,
-    return_diagnostics=pose_connect.defaults.RECONSTRUCTION_RETURN_DIAGNOSTICS
+    return_diagnostics=poseconnect.defaults.RECONSTRUCTION_RETURN_DIAGNOSTICS
 ):
     subgraph_analysis_diagnostics_item = {
         'depth': depth,
@@ -796,7 +796,7 @@ def analyze_pose_subgraph(
             return [pose_subgraph], [subgraph_analysis_diagnostics_item]
         else:
             return [pose_subgraph]
-    dispersion = pose_connect.pose_3d_dispersion(pose_subgraph)
+    dispersion = poseconnect.pose_3d_dispersion(pose_subgraph)
     logger.debug('Dispersion: {}'.format(dispersion))
     if dispersion < max_dispersion:
         logger.debug('Dispersion meets threshold. Done.')
@@ -819,7 +819,7 @@ def analyze_pose_subgraph(
         subgraph_node_removed = pose_subgraph.subgraph(set(pose_subgraph.nodes) - {node_to_remove})
         num_edges_node_removed = subgraph_node_removed.number_of_edges()
         if num_edges_node_removed > 1:
-            dispersion_node_removed = pose_connect.pose_3d_dispersion(subgraph_node_removed)
+            dispersion_node_removed = poseconnect.pose_3d_dispersion(subgraph_node_removed)
         else:
             dispersion_node_removed = None
         if (

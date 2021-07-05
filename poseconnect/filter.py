@@ -1,4 +1,4 @@
-import pose_connect.reconstruct
+import poseconnect.reconstruct
 import pandas as pd
 import numpy as np
 import logging
@@ -109,7 +109,7 @@ def filter_pose_pairs_by_3d_pose_spatial_limits(
     if len(pose_pairs_2d) == 0:
         return pose_pairs_2d
     valid_3d_poses = pose_pairs_2d['keypoint_coordinates_3d'].apply(
-        lambda x: pose_connect.reconstruct.pose_3d_in_range(x, pose_3d_limits)
+        lambda x: poseconnect.reconstruct.pose_3d_in_range(x, pose_3d_limits)
     )
     pose_pairs_2d = pose_pairs_2d.loc[valid_3d_poses].copy()
     return pose_pairs_2d
@@ -120,7 +120,7 @@ def filter_pose_pairs_by_best_match(pose_pairs_2d_timestamp):
     pose_pairs_2d_timestamp.sort_index(inplace=True)
     best_score_indices = list()
     for group_name, group in pose_pairs_2d_timestamp.groupby(['camera_id_a', 'camera_id_b']):
-        best_score_indices.extend(pose_connect.reconstruct.extract_best_score_indices_timestamp_camera_pair(
+        best_score_indices.extend(poseconnect.reconstruct.extract_best_score_indices_timestamp_camera_pair(
             pose_pairs_2d=group
         ))
     pose_pairs_2d_timestamp = pose_pairs_2d_timestamp.loc[best_score_indices].copy()

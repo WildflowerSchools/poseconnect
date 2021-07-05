@@ -1,5 +1,5 @@
-import pose_connect.utils
-import pose_connect.defaults
+import poseconnect.utils
+import poseconnect.defaults
 import smc_kalman
 import pandas as pd
 import numpy as np
@@ -16,18 +16,18 @@ logger = logging.getLogger(__name__)
 
 def track_poses_3d(
     poses_3d,
-    max_match_distance=pose_connect.defaults.TRACKING_MAX_MATCH_DISTANCE,
-    max_iterations_since_last_match=pose_connect.defaults.TRACKING_MAX_ITERATIONS_SINCE_LAST_MATCH,
-    centroid_position_initial_sd=pose_connect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
-    centroid_velocity_initial_sd=pose_connect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
-    reference_delta_t_seconds=pose_connect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
-    reference_velocity_drift=pose_connect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
-    position_observation_sd=pose_connect.defaults.TRACKING_POSITION_OBSERVATION_SD,
-    num_poses_per_track_min=pose_connect.defaults.TRACKING_NUM_POSES_PER_TRACK_MIN,
-    progress_bar=pose_connect.defaults.PROGRESS_BAR,
-    notebook=pose_connect.defaults.NOTEBOOK
+    max_match_distance=poseconnect.defaults.TRACKING_MAX_MATCH_DISTANCE,
+    max_iterations_since_last_match=poseconnect.defaults.TRACKING_MAX_ITERATIONS_SINCE_LAST_MATCH,
+    centroid_position_initial_sd=poseconnect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
+    centroid_velocity_initial_sd=poseconnect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
+    reference_delta_t_seconds=poseconnect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
+    reference_velocity_drift=poseconnect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
+    position_observation_sd=poseconnect.defaults.TRACKING_POSITION_OBSERVATION_SD,
+    num_poses_per_track_min=poseconnect.defaults.TRACKING_NUM_POSES_PER_TRACK_MIN,
+    progress_bar=poseconnect.defaults.PROGRESS_BAR,
+    notebook=poseconnect.defaults.NOTEBOOK
 ):
-    poses_3d = pose_connect.utils.ingest_poses_3d(poses_3d)
+    poses_3d = poseconnect.utils.ingest_poses_3d(poses_3d)
     pose_tracks_3d = update_pose_tracks_3d(
         poses_3d=poses_3d,
         pose_tracks_3d=None,
@@ -58,15 +58,15 @@ def track_poses_3d(
 def update_pose_tracks_3d(
     poses_3d,
     pose_tracks_3d=None,
-    max_match_distance=pose_connect.defaults.TRACKING_MAX_MATCH_DISTANCE,
-    max_iterations_since_last_match=pose_connect.defaults.TRACKING_MAX_ITERATIONS_SINCE_LAST_MATCH,
-    centroid_position_initial_sd=pose_connect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
-    centroid_velocity_initial_sd=pose_connect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
-    reference_delta_t_seconds=pose_connect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
-    reference_velocity_drift=pose_connect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
-    position_observation_sd=pose_connect.defaults.TRACKING_POSITION_OBSERVATION_SD,
-    progress_bar=pose_connect.defaults.PROGRESS_BAR,
-    notebook=pose_connect.defaults.NOTEBOOK
+    max_match_distance=poseconnect.defaults.TRACKING_MAX_MATCH_DISTANCE,
+    max_iterations_since_last_match=poseconnect.defaults.TRACKING_MAX_ITERATIONS_SINCE_LAST_MATCH,
+    centroid_position_initial_sd=poseconnect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
+    centroid_velocity_initial_sd=poseconnect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
+    reference_delta_t_seconds=poseconnect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
+    reference_velocity_drift=poseconnect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
+    position_observation_sd=poseconnect.defaults.TRACKING_POSITION_OBSERVATION_SD,
+    progress_bar=poseconnect.defaults.PROGRESS_BAR,
+    notebook=poseconnect.defaults.NOTEBOOK
 ):
     if len(poses_3d) == 0:
         return pose_tracks_3d
@@ -104,9 +104,9 @@ def update_pose_tracks_3d(
 
 def interpolate_pose_tracks_3d(
     poses_3d_with_tracks,
-    frames_per_second=pose_connect.defaults.FRAMES_PER_SECOND
+    frames_per_second=poseconnect.defaults.FRAMES_PER_SECOND
 ):
-    poses_3d_with_tracks = pose_connect.utils.ingest_poses_3d_with_tracks(poses_3d_with_tracks)
+    poses_3d_with_tracks = poseconnect.utils.ingest_poses_3d_with_tracks(poses_3d_with_tracks)
     poses_3d_new_list=list()
     for pose_track_3d_id, pose_track in poses_3d_with_tracks.groupby('pose_track_3d_id'):
         poses_3d_new_track = interpolate_pose_track(
@@ -125,7 +125,7 @@ def interpolate_pose_tracks_3d(
 
 def interpolate_pose_track(
     pose_track_3d,
-    frames_per_second=pose_connect.defaults.FRAMES_PER_SECOND
+    frames_per_second=poseconnect.defaults.FRAMES_PER_SECOND
 ):
     if not isinstance(frames_per_second, int):
         raise ValueError('Only integer frame rates currently supported')
@@ -171,13 +171,13 @@ class PoseTracks3D:
         self,
         timestamp,
         poses_3d,
-        max_match_distance=pose_connect.defaults.TRACKING_MAX_MATCH_DISTANCE,
-        max_iterations_since_last_match=pose_connect.defaults.TRACKING_MAX_ITERATIONS_SINCE_LAST_MATCH,
-        centroid_position_initial_sd=pose_connect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
-        centroid_velocity_initial_sd=pose_connect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
-        reference_delta_t_seconds=pose_connect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
-        reference_velocity_drift=pose_connect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
-        position_observation_sd=pose_connect.defaults.TRACKING_POSITION_OBSERVATION_SD
+        max_match_distance=poseconnect.defaults.TRACKING_MAX_MATCH_DISTANCE,
+        max_iterations_since_last_match=poseconnect.defaults.TRACKING_MAX_ITERATIONS_SINCE_LAST_MATCH,
+        centroid_position_initial_sd=poseconnect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
+        centroid_velocity_initial_sd=poseconnect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
+        reference_delta_t_seconds=poseconnect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
+        reference_velocity_drift=poseconnect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
+        position_observation_sd=poseconnect.defaults.TRACKING_POSITION_OBSERVATION_SD
     ):
         self.max_match_distance = max_match_distance
         self.max_iterations_since_last_match = max_iterations_since_last_match
@@ -204,8 +204,8 @@ class PoseTracks3D:
     def update_df(
         self,
         poses_3d,
-        progress_bar=pose_connect.defaults.PROGRESS_BAR,
-        notebook=pose_connect.defaults.NOTEBOOK
+        progress_bar=poseconnect.defaults.PROGRESS_BAR,
+        notebook=poseconnect.defaults.NOTEBOOK
     ):
         timestamps = np.sort(poses_3d['timestamp'].unique())
         if progress_bar:
@@ -316,7 +316,7 @@ class PoseTracks3D:
 
     def filter(
         self,
-        num_poses_min=pose_connect.defaults.TRACKING_NUM_POSES_PER_TRACK_MIN,
+        num_poses_min=poseconnect.defaults.TRACKING_NUM_POSES_PER_TRACK_MIN,
         inplace=False
     ):
         if not inplace:
@@ -391,11 +391,11 @@ class PoseTrack3D:
         timestamp,
         pose_3d_id,
         keypoint_coordinates_3d,
-        centroid_position_initial_sd=pose_connect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
-        centroid_velocity_initial_sd=pose_connect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
-        reference_delta_t_seconds=pose_connect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
-        reference_velocity_drift=pose_connect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
-        position_observation_sd=pose_connect.defaults.TRACKING_POSITION_OBSERVATION_SD
+        centroid_position_initial_sd=poseconnect.defaults.TRACKING_CENTROID_POSITION_INITIAL_SD,
+        centroid_velocity_initial_sd=poseconnect.defaults.TRACKING_CENTROID_VELOCITY_INITIAL_SD,
+        reference_delta_t_seconds=poseconnect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
+        reference_velocity_drift=poseconnect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
+        position_observation_sd=poseconnect.defaults.TRACKING_POSITION_OBSERVATION_SD
     ):
         keypoint_coordinates_3d = np.asarray(keypoint_coordinates_3d)
         if keypoint_coordinates_3d.ndim != 2:
@@ -547,9 +547,9 @@ class PoseTrack3D:
 
 def constant_velocity_model(
     delta_t_seconds,
-    reference_delta_t_seconds=pose_connect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
-    reference_velocity_drift=pose_connect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
-    position_observation_sd=pose_connect.defaults.TRACKING_POSITION_OBSERVATION_SD
+    reference_delta_t_seconds=poseconnect.defaults.TRACKING_REFERENCE_DELTA_T_SECONDS,
+    reference_velocity_drift=poseconnect.defaults.TRACKING_REFERENCE_VELOCITY_DRIFT,
+    position_observation_sd=poseconnect.defaults.TRACKING_POSITION_OBSERVATION_SD
 ):
     if delta_t_seconds is not None:
         velocity_drift = reference_velocity_drift*np.sqrt(delta_t_seconds/reference_delta_t_seconds)
