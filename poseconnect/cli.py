@@ -160,5 +160,42 @@ def cli_track_poses_3d(
     )
     poseconnect.utils.output_poses_3d_with_tracks(poses_3d_with_tracks, output_path)
 
+@click.command(
+    name='interpolate',
+    help='Interpolate to fill gaps in 3D pose tracks'
+)
+@click.argument(
+    'poses-3d-with-tracks-path',
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        resolve_path=True,
+        allow_dash=False,
+        path_type=None
+    )
+)
+@click.argument(
+    'output-path',
+    type=click.Path(
+        exists=False,
+        resolve_path=True,
+        allow_dash=False,
+        path_type=None
+    )
+)
+def cli_interpolate_pose_tracks_3d(
+    poses_3d_with_tracks_path,
+    output_path
+):
+    poses_3d_with_tracks_interpolated = poseconnect.track.interpolate_pose_tracks_3d(
+        poses_3d_with_tracks=poses_3d_with_tracks_path,
+        frames_per_second=poseconnect.defaults.FRAMES_PER_SECOND
+    )
+    poseconnect.utils.output_poses_3d_with_tracks(poses_3d_with_tracks_interpolated, output_path)
+
 cli.add_command(cli_reconstruct_poses_3d)
 cli.add_command(cli_track_poses_3d)
+cli.add_command(cli_interpolate_pose_tracks_3d)
