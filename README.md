@@ -4,13 +4,11 @@ Tools for constructing 3D pose tracks from multi-camera 2D poses
 
 ## Task list
 
-* Remove default in `depth` option for pose graph analysis
-* Regularize use of parameters for column names (everywhere or nowhere)
-* Regularize use of progress bars (everywhere or nowhere)
-* Set up defaults for visualization functions
 * Rename package to facilitate command line simplicity (`poseconnect`?)
-* Add `dotenv` layer for setting parameters
 * Add command line interface
+* Regularize use of progress bars (everywhere or nowhere)
+* Add `dotenv` layer for setting parameters
+* Set up defaults for visualization functions
 * Add basic batching processing capabilities
 * Add basic parallelization
 * Separate Wildflower-specific and non-Wildflower-specific portions of `colmap` helper library

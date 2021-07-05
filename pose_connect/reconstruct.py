@@ -43,8 +43,6 @@ def reconstruct_poses_3d(
     pose_3d_graph_initial_edge_threshold=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
     pose_3d_graph_max_dispersion=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
     include_track_labels=pose_connect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
-    pose_2d_id_column_name=pose_connect.defaults.POSE_2D_ID_COLUMN_NAME,
-    pose_2d_ids_column_name=pose_connect.defaults.POSE_2D_IDS_COLUMN_NAME,
     progress_bar=pose_connect.defaults.PROGRESS_BAR,
     notebook=pose_connect.defaults.NOTEBOOK
 ):
@@ -83,8 +81,6 @@ def reconstruct_poses_3d(
     reconstruct_poses_3d_timestamp_partial = partial(
         reconstruct_poses_3d_timestamp,
         camera_calibrations=camera_calibrations,
-        pose_2d_id_column_name=pose_2d_id_column_name,
-        pose_2d_ids_column_name=pose_2d_ids_column_name,
         min_keypoint_quality=min_keypoint_quality,
         min_num_keypoints=min_num_keypoints,
         min_pose_quality=min_pose_quality,
@@ -214,8 +210,6 @@ def reconstruct_poses_3d_timestamp(
     pose_3d_graph_initial_edge_threshold=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
     pose_3d_graph_max_dispersion=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
     include_track_labels=pose_connect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
-    pose_2d_id_column_name=pose_connect.defaults.POSE_2D_ID_COLUMN_NAME,
-    pose_2d_ids_column_name=pose_connect.defaults.POSE_2D_IDS_COLUMN_NAME,
     return_diagnostics=pose_connect.defaults.RECONSTRUCTION_RETURN_DIAGNOSTICS
 ):
     poses_2d_timestamp_copy = poses_2d_timestamp.copy()
@@ -252,8 +246,7 @@ def reconstruct_poses_3d_timestamp(
     if return_diagnostics:
         diagnostics['pose_2d_ids_after_min_pose_quality_filter'] = poses_2d_timestamp_copy.index
     pose_pairs_2d_timestamp = generate_pose_pairs_timestamp(
-        poses_2d_timestamp=poses_2d_timestamp_copy,
-        pose_2d_id_column_name=pose_2d_id_column_name
+        poses_2d_timestamp=poses_2d_timestamp_copy
     )
     pose_pairs_2d_timestamp = calculate_3d_poses(
         pose_pairs_2d=pose_pairs_2d_timestamp,
@@ -300,15 +293,13 @@ def reconstruct_poses_3d_timestamp(
     if return_diagnostics:
         diagnostics['pose_pair_ids_2d_after_3d_pose_spatial_limit_filter'] = pose_pairs_2d_timestamp.index
     pose_pairs_2d_timestamp = pose_connect.filter.filter_pose_pairs_by_best_match(
-        pose_pairs_2d_timestamp,
-        pose_2d_id_column_name=pose_2d_id_column_name
+        pose_pairs_2d_timestamp=pose_pairs_2d_timestamp
     )
     if return_diagnostics:
         diagnostics['pose_pair_ids_2d_after_best_match_filter'] = pose_pairs_2d_timestamp.index
     if return_diagnostics:
         poses_3d_timestamp, pose_graph_diagnostics = generate_3d_poses_timestamp(
             pose_pairs_2d_timestamp=pose_pairs_2d_timestamp,
-            pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             max_dispersion=pose_3d_graph_max_dispersion,
             include_track_labels=include_track_labels,
@@ -318,7 +309,6 @@ def reconstruct_poses_3d_timestamp(
     else:
         poses_3d_timestamp = generate_3d_poses_timestamp(
             pose_pairs_2d_timestamp=pose_pairs_2d_timestamp,
-            pose_2d_ids_column_name=pose_2d_ids_column_name,
             initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             max_dispersion=pose_3d_graph_max_dispersion,
             include_track_labels=include_track_labels,
@@ -331,10 +321,7 @@ def reconstruct_poses_3d_timestamp(
     else:
         return poses_3d_timestamp
 
-def generate_pose_pairs_timestamp(
-    poses_2d_timestamp,
-    pose_2d_id_column_name=pose_connect.defaults.POSE_2D_ID_COLUMN_NAME
-):
+def generate_pose_pairs_timestamp(poses_2d_timestamp):
     if len(poses_2d_timestamp) == 0:
         return pd.DataFrame()
     timestamps = poses_2d_timestamp['timestamp'].unique()
@@ -357,11 +344,11 @@ def generate_pose_pairs_timestamp(
         axis=1
     )
     pose_pairs_2d_timestamp.set_index(
-        [('a', pose_2d_id_column_name), ('b', pose_2d_id_column_name)],
+        [('a', 'pose_2d_id'), ('b', 'pose_2d_id')],
         inplace=True
     )
     pose_pairs_2d_timestamp.rename_axis(
-        [pose_2d_id_column_name + '_a', pose_2d_id_column_name + '_b'],
+        ['pose_2d_id' + '_a', 'pose_2d_id' + '_b'],
         inplace=True
     )
     pose_pairs_2d_timestamp.columns = ['{}_{}'.format(column_name[1], column_name[0]) for column_name in pose_pairs_2d_timestamp.columns.values]
@@ -600,18 +587,14 @@ def pose_3d_in_range(
         ))
     )
 
-def extract_best_score_indices_timestamp_camera_pair(
-    pose_pairs_2d,
-    pose_2d_id_column_name=pose_connect.defaults.POSE_2D_ID_COLUMN_NAME
-):
-    best_a_score_for_b = pose_pairs_2d['score'].groupby(pose_2d_id_column_name + '_b').idxmin().dropna()
-    best_b_score_for_a = pose_pairs_2d['score'].groupby(pose_2d_id_column_name + '_a').idxmin().dropna()
+def extract_best_score_indices_timestamp_camera_pair(pose_pairs_2d):
+    best_a_score_for_b = pose_pairs_2d['score'].groupby('pose_2d_id' + '_b').idxmin().dropna()
+    best_b_score_for_a = pose_pairs_2d['score'].groupby('pose_2d_id' + '_a').idxmin().dropna()
     best_score_indices = list(set(best_a_score_for_b).intersection(best_b_score_for_a))
     return best_score_indices
 
 def generate_3d_poses_timestamp(
     pose_pairs_2d_timestamp,
-    pose_2d_ids_column_name=pose_connect.defaults.POSE_2D_IDS_COLUMN_NAME,
     initial_edge_threshold=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
     max_dispersion=pose_connect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
     include_track_labels=pose_connect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
@@ -675,7 +658,7 @@ def generate_3d_poses_timestamp(
             'pose_3d_id': pose_3d_ids,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
-            pose_2d_ids_column_name: pose_2d_ids,
+            'pose_2d_ids': pose_2d_ids,
             'track_labels_2d': track_labels
         })
     else:
@@ -683,7 +666,7 @@ def generate_3d_poses_timestamp(
             'pose_3d_id': pose_3d_ids,
             'timestamp': timestamp,
             'keypoint_coordinates_3d': keypoint_coordinates_3d,
-            pose_2d_ids_column_name: pose_2d_ids
+            'pose_2d_ids': pose_2d_ids
         })
     if return_diagnostics:
         return poses_3d_timestamp, diagnostics

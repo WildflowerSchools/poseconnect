@@ -336,16 +336,11 @@ class PoseTracks3D:
 
     def extract_pose_tracks_3d(
         self,
-        poses_3d,
-        pose_3d_id_column_name=pose_connect.defaults.POSE_3D_ID_COLUMN_NAME,
-        pose_track_3d_id_column_name=pose_connect.defaults.POSE_TRACK_3D_ID_COLUMN_NAME
+        poses_3d
     ):
         input_index_name = poses_3d.index.name
         poses_3d_with_tracks = poses_3d.join(
-            self.output_df(
-                pose_3d_id_column_name=pose_3d_id_column_name,
-                pose_track_3d_id_column_name=pose_track_3d_id_column_name
-            ),
+            self.output_df(),
             how='inner'
         )
         poses_3d_with_tracks.index.name = input_index_name
@@ -355,16 +350,9 @@ class PoseTracks3D:
         output = {pose_track_3d_id: pose_track_3d.output() for pose_track_3d_id, pose_track_3d in self.tracks().items()}
         return output
 
-    def output_df(
-        self,
-        pose_3d_id_column_name=pose_connect.defaults.POSE_3D_ID_COLUMN_NAME,
-        pose_track_3d_id_column_name=pose_connect.defaults.POSE_TRACK_3D_ID_COLUMN_NAME
-    ):
+    def output_df(self):
         df = pd.concat(
-            [pose_track_3d.output_df(
-                pose_3d_id_column_name=pose_3d_id_column_name,
-                pose_track_3d_id_column_name=pose_track_3d_id_column_name
-            ) for pose_track_3d in self.tracks().values()]
+            [pose_track_3d.output_df() for pose_track_3d in self.tracks().values()]
         )
         return df
 
@@ -501,15 +489,11 @@ class PoseTrack3D:
         }
         return output
 
-    def output_df(
-        self,
-        pose_3d_id_column_name=pose_connect.defaults.POSE_3D_ID_COLUMN_NAME,
-        pose_track_3d_id_column_name=pose_connect.defaults.POSE_TRACK_3D_ID_COLUMN_NAME
-    ):
+    def output_df(self):
         df = pd.DataFrame([
-            {pose_3d_id_column_name: pose_id, pose_track_3d_id_column_name: self.pose_track_3d_id}
+            {'pose_3d_id': pose_id, 'pose_3d_id': self.pose_track_3d_id}
             for pose_id in self.pose_3d_ids
-        ]).set_index(pose_3d_id_column_name)
+        ]).set_index('pose_3d_id')
         return df
 
     def plot_trajectory(
