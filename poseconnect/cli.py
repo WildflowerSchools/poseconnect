@@ -196,6 +196,66 @@ def cli_interpolate_pose_tracks_3d(
     )
     poseconnect.utils.output_poses_3d_with_tracks(poses_3d_with_tracks_interpolated, output_path)
 
+@click.command(
+    name='identify',
+    help='Identify 3D pose tracks using sensor data'
+)
+@click.argument(
+    'poses-3d-with-tracks-path',
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        resolve_path=True,
+        allow_dash=False,
+        path_type=None
+    )
+)
+@click.argument(
+    'sensor-data-path',
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        writable=False,
+        readable=True,
+        resolve_path=True,
+        allow_dash=False,
+        path_type=None
+    )
+)
+@click.argument(
+    'output-path',
+    type=click.Path(
+        exists=False,
+        resolve_path=True,
+        allow_dash=False,
+        path_type=None
+    )
+)
+def cli_identify_pose_tracks_3d(
+    poses_3d_with_tracks_path,
+    sensor_data_path,
+    output_path
+):
+    poses_3d_with_person_ids = poseconnect.identify.identify_pose_tracks_3d(
+        poses_3d_with_tracks=poses_3d_with_tracks_path,
+        sensor_data=sensor_data_path,
+        frames_per_second=poseconnect.defaults.FRAMES_PER_SECOND,
+        id_field_names=poseconnect.defaults.IDENTIFICATION_ID_FIELD_NAMES,
+        interpolation_field_names=poseconnect.defaults.IDENTIFICATION_INTERPOLATION_FIELD_NAMES,
+        timestamp_field_name=poseconnect.defaults.IDENTIFICATION_TIMESTAMP_FIELD_NAME,
+        sensor_position_keypoint_index=poseconnect.defaults.IDENTIFICATION_SENSOR_POSITION_KEYPOINT_INDEX,
+        active_person_ids=poseconnect.defaults.IDENTIFICATION_ACTIVE_PERSON_IDS,
+        ignore_z=poseconnect.defaults.IDENTIFICATION_IGNORE_Z,
+        max_distance=poseconnect.defaults.IDENTIFICATION_MAX_DISTANCE,
+        min_fraction_matched=poseconnect.defaults.IDENTIFICATION_MIN_TRACK_FRACTION_MATCHED
+    )
+    poseconnect.utils.output_poses_3d_with_tracks(poses_3d_with_person_ids, output_path)
+
 cli.add_command(cli_reconstruct_poses_3d)
 cli.add_command(cli_track_poses_3d)
 cli.add_command(cli_interpolate_pose_tracks_3d)
+cli.add_command(cli_identify_pose_tracks_3d)
