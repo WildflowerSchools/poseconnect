@@ -1,8 +1,8 @@
-from pose_connect.filter import *
-from pose_connect.reconstruct import *
-from pose_connect.visualize import *
-from pose_connect.track import *
-from pose_connect.identify import *
-from pose_connect.utils import *
+from poseconnect.filter import *
+from poseconnect.reconstruct import *
+from poseconnect.visualize import *
+from poseconnect.track import *
+from poseconnect.identify import *
+from poseconnect.utils import *
 
 __version__ = '0.3.1'
