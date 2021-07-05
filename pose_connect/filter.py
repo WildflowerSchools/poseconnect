@@ -114,18 +114,14 @@ def filter_pose_pairs_by_3d_pose_spatial_limits(
     pose_pairs_2d = pose_pairs_2d.loc[valid_3d_poses].copy()
     return pose_pairs_2d
 
-def filter_pose_pairs_by_best_match(
-    pose_pairs_2d_timestamp,
-    pose_2d_id_column_name='pose_2d_id'
-):
+def filter_pose_pairs_by_best_match(pose_pairs_2d_timestamp):
     if len(pose_pairs_2d_timestamp) == 0:
         return pose_pairs_2d_timestamp
     pose_pairs_2d_timestamp.sort_index(inplace=True)
     best_score_indices = list()
     for group_name, group in pose_pairs_2d_timestamp.groupby(['camera_id_a', 'camera_id_b']):
         best_score_indices.extend(pose_connect.reconstruct.extract_best_score_indices_timestamp_camera_pair(
-            pose_pairs_2d=group,
-            pose_2d_id_column_name=pose_2d_id_column_name
+            pose_pairs_2d=group
         ))
     pose_pairs_2d_timestamp = pose_pairs_2d_timestamp.loc[best_score_indices].copy()
     return pose_pairs_2d_timestamp
@@ -308,7 +304,6 @@ def select_pose_pair(
 
 def select_pose_pairs(
     pose_pairs_2d,
-    pose_2d_id_column_name='pose_2d_id',
     pose_2d_id_a=None,
     pose_2d_id_b=None,
     timestamp=None,
@@ -322,10 +317,10 @@ def select_pose_pairs(
 ):
     filter_list = list()
     if pose_2d_id_a is not None:
-        pose_2d_id_a_filter = (pose_pairs_2d.index.get_level_values(pose_2d_id_column_name + '_a') == pose_2d_id_a)
+        pose_2d_id_a_filter = (pose_pairs_2d.index.get_level_values('pose_2d_id' + '_a') == pose_2d_id_a)
         filter_list.append(pose_2d_id_a_filter)
     if pose_2d_id_b is not None:
-        pose_2d_id_b_filter = (pose_pairs_2d.index.get_level_values(pose_2d_id_column_name + '_b') == pose_2d_id_b)
+        pose_2d_id_b_filter = (pose_pairs_2d.index.get_level_values('pose_2d_id' + '_b') == pose_2d_id_b)
         filter_list.append(pose_2d_id_b_filter)
     if timestamp is not None:
         timestamp_pandas = pd.to_datetime(timestamp, utc=True)
