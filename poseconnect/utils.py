@@ -189,6 +189,8 @@ def ingest_sensor_data(
     return df
 
 def ingest_sensor_position_keypoint_index(data_object):
+    if data_object is None:
+        return None
     if isinstance(data_object, int):
         return data_object
     if isinstance(data_object, dict):

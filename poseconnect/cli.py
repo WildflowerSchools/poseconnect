@@ -237,7 +237,10 @@ def cli_interpolate_pose_tracks_3d(
 )
 @click.option(
     '--sensor-position-keypoint-index',
-    help='Sensor position on each person (int or JSON-encoded dict)'
+    multiple=True,
+    nargs=2,
+    type=(str, int),
+    help='Sensor position on each person'
 )
 @click.option(
     '--active-person-id',
@@ -251,6 +254,7 @@ def cli_identify_pose_tracks_3d(
     sensor_position_keypoint_index,
     active_person_id
 ):
+    sensor_position_keypoint_index = dict(sensor_position_keypoint_index)
     poses_3d_with_person_ids = poseconnect.identify.identify_pose_tracks_3d(
         poses_3d_with_tracks=poses_3d_with_tracks_path,
         sensor_data=sensor_data_path,
