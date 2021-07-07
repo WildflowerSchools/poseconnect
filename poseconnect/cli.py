@@ -4,7 +4,7 @@ import poseconnect.utils
 import click
 
 @click.group(
-    help='Process and transform human pose data'
+    help='Tools for constructing 3D pose tracks from multi-camera 2D poses'
 )
 def cli():
     pass

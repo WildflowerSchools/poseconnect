@@ -4,21 +4,34 @@ Tools for constructing 3D pose tracks from multi-camera 2D poses
 
 ## Task list
 
-* Add command line interface
+* Remove duplicates from sample sensor data
+* Add ability to set command line defaults using environment variables
+* Add ability to set library defaults using environment variables
+* Add ability to specify environment variables using `dotenv`
+* Provide better command line UI for which `None` value has specific meaning
 * Regularize use of progress bars (everywhere or nowhere)
-* Add `dotenv` layer for setting parameters
-* Set up defaults for visualization functions
-* Add basic batching processing capabilities
-* Add basic parallelization
+* Consider removing pose pair score distance method options
+* Consider removing pose pair score summary method options
+* Add documentation for command line interface
+* Add documentation for library interface
+* Add documentation for installation
+* Add documentation for sample/demo usage
+* Add documentation for help functionality
+* Add simple video overlay capability
+* Add basic batch processing capabilities
+* Add basic multiprocessing capabilities
 * Separate Wildflower-specific and non-Wildflower-specific portions of `colmap` helper library
 * Separate Wildflower-specific and non-Wildflower-specific portions of `smc_kalman` library
+* Design and implement better 3D pose smoothing method than simple interpolation
+* Consider moving core of reconstruction algorithm to `numpy`
+* Consider moving all of pose pair portion of reconstruction algorithm to `networkx`
+* Diagnose bottlenecks in reconstruction algorithms
+* Set up defaults for visualization functions
 * Switch parallel overlay code back to `imap_unordered()` (for less chunky progress bars) but sort output before concatenating
 * Ensure that all visual specs (colors, line widths, etc.) propagate to video overlay
 * Add drawing primitive to `wf-cv-utils` for text with background
 * Use new text-with-background drawing primitive for pose labels
 * Add timestamp to video overlays
-* Consider getting rid of `geom_render` module
-* Add additional machinery for checking UWB data integrity (e.g., duplicates)
 * Rewrite all log messages so formatting isn't called if log isn't printed
 * Make functions handle empty poses (all keypoints `NaN`) more gracefully (e.g., `score_pose_pairs()`, `draw_pose_2d()`)
 * Make visualization functions handle missing fields (e.g., `pose_quality`) more gracefully
