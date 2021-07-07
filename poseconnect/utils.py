@@ -75,6 +75,37 @@ def ingest_poses_3d(data_object):
     df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
     return df
 
+def output_poses_3d(df, path):
+    file_extension = os.path.splitext(path)[1]
+    if len(file_extension) == 0:
+        raise ValueError('Output path has no extension')
+    if file_extension.lower() == '.pickle' or file_extension.lower() == '.pkl':
+        try:
+            df.to_pickle(path)
+        except:
+            raise ValueError('Output path has extension \'pickle\' or \'pkl\', but pickle serialization failed')
+    elif file_extension.lower() == '.json':
+        try:
+            df.reset_index().to_json(
+                path,
+                orient='records',
+                date_format='iso',
+                indent=2
+            )
+        except:
+            raise ValueError('Output path has extension \'json\', but JSON serialization failed')
+    elif file_extension.lower() == '.csv':
+        try:
+            df['timestamp'] = df['timestamp'].apply(lambda x: x.isoformat())
+            df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].tolist()
+            df.to_csv(path)
+        except:
+            raise ValueError('Output path has extension \'csv\', but conversion to CSV failed')
+    else:
+        raise ValueError('Data object appears to be a filename, but extension \'{}\' isn\'t currently handled'.format(
+            file_extension
+        ))
+
 def ingest_poses_3d_with_tracks(data_object):
     df = convert_to_df(data_object)
     df = set_index_columns(
@@ -96,6 +127,37 @@ def ingest_poses_3d_with_tracks(data_object):
     df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(convert_to_array)
     df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
     return df
+
+def output_poses_3d_with_tracks(df, path):
+    file_extension = os.path.splitext(path)[1]
+    if len(file_extension) == 0:
+        raise ValueError('Output path has no extension')
+    if file_extension.lower() == '.pickle' or file_extension.lower() == '.pkl':
+        try:
+            df.to_pickle(path)
+        except:
+            raise ValueError('Output path has extension \'pickle\' or \'pkl\', but pickle serialization failed')
+    elif file_extension.lower() == '.json':
+        try:
+            df.reset_index().to_json(
+                path,
+                orient='records',
+                date_format='iso',
+                indent=2
+            )
+        except:
+            raise ValueError('Output path has extension \'json\', but JSON serialization failed')
+    elif file_extension.lower() == '.csv':
+        try:
+            df['timestamp'] = df['timestamp'].apply(lambda x: x.isoformat())
+            df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].tolist()
+            df.to_csv(path)
+        except:
+            raise ValueError('Output path has extension \'csv\', but conversion to CSV failed')
+    else:
+        raise ValueError('Data object appears to be a filename, but extension \'{}\' isn\'t currently handled'.format(
+            file_extension
+        ))
 
 def ingest_sensor_data(
     data_object,
@@ -126,6 +188,40 @@ def ingest_sensor_data(
     df['z_position'] = pd.to_numeric(df['z_position']).astype('float')
     return df
 
+def ingest_sensor_position_keypoint_index(data_object):
+    if data_object is None:
+        return None
+    if isinstance(data_object, int):
+        return data_object
+    if isinstance(data_object, dict):
+        return data_object
+    if isinstance(data_object, str) and os.path.isfile(data_object):
+        file_extension = os.path.splitext(data_object)[1]
+        if len(file_extension) == 0:
+            raise ValueError('Data object appears to be a filename, but it has no extension')
+        if file_extension.lower() == '.pickle' or file_extension.lower() == '.pkl':
+            try:
+                data_deserialized = pickle.load(open(data_object, 'rb'))
+            except:
+                raise ValueError('File has extension \'pickle\' or \'pkl\', but pickle deserialization failed')
+            return data_deserialized
+        if file_extension.lower() == '.json':
+            try:
+                data_deserialized = json.load(open(data_object, 'r'))
+            except:
+                raise ValueError('File has extension \'json\', but JSON deserialization failed')
+            return data_deserialized
+        raise ValueError('Data object appears to be a filename, but extension \'{}\' isn\'t currently handled'.format(
+            file_extension
+        ))
+    if isinstance(data_object, str):
+            try:
+                data_deserialized = json.loads(data_object)
+            except:
+                raise ValueError('Data object is a string but it doesn\'t appear to be a valid filename or valid JSON')
+            return data_deserialized
+    raise ValueError('Failed to parse data object')
+
 def convert_to_array(data_object):
     if isinstance(data_object, str):
         try:
@@ -135,6 +231,18 @@ def convert_to_array(data_object):
     return np.asarray(data_object)
 
 def convert_to_list(data_object):
+    if data_object is None:
+        return None
+    try:
+        if pd.isnull(data_object):
+            return None
+    except:
+        pass
+    try:
+        if pd.isnull(data_object).all():
+            return None
+    except:
+        pass
     if isinstance(data_object, str):
         try:
             data_object = json.loads(data_object)

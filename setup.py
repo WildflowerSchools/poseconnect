@@ -22,7 +22,8 @@ BASE_DEPENDENCIES = [
     'seaborn>=0.11.1',
     'tqdm>=4.57.0',
     'python-slugify>=4.0.1',
-    'python-dateutil>=2.8'
+    'python-dateutil>=2.8',
+    'click>=8.0.0'
 ]
 
 # TEST_DEPENDENCIES = [
@@ -41,6 +42,7 @@ setup(
     include_package_data=True,
     description='Tools for constructing 3D pose tracks from multi-camera 2D poses',
     long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
     url='https://github.com/WildflowerSchools/poseconnect',
     author='Theodore Quinn',
     author_email='ted.quinn@wildflowerschools.org',
@@ -50,11 +52,11 @@ setup(
     #     'test': TEST_DEPENDENCIES,
     #     'local': LOCAL_DEPENDENCIES
     # },
-    # entry_points={
-    #     "console_scripts": [
-    #          "COMMAND_NAME = MODULE_PATH:METHOD_NAME"
-    #     ]
-    # },
+    entry_points={
+        "console_scripts": [
+             "poseconnect = poseconnect.cli:cli"
+        ]
+    },
     keywords=['pose reconstruction', 'pose tracking'],
     classifiers=[
         'Intended Audience :: Developers',

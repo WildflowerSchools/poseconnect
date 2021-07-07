@@ -120,8 +120,8 @@ def interpolate_pose_tracks_3d(
         poses_3d_with_tracks,
         poses_3d_new
     ))
-    poses_3d_with_tracks.sort_values('timestamp', inplace=True)
-    return poses_3d_with_tracks
+    poses_3d_with_tracks_interpolated.sort_values('timestamp', inplace=True)
+    return poses_3d_with_tracks_interpolated
 
 def interpolate_pose_track(
     pose_track_3d,
