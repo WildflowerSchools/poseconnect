@@ -42,6 +42,7 @@ setup(
     include_package_data=True,
     description='Tools for constructing 3D pose tracks from multi-camera 2D poses',
     long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
     url='https://github.com/WildflowerSchools/poseconnect',
     author='Theodore Quinn',
     author_email='ted.quinn@wildflowerschools.org',
