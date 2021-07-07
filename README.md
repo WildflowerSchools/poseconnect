@@ -30,7 +30,7 @@ Overall help is available at `poseconnect --help` and help for each subcommand
 
 ### Data formats
 
-More information about input and output data formats is available here.
+More information about input and output data file formats is available here.
 
 ### Demo
 
