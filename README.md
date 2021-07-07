@@ -34,4 +34,8 @@ More information about input and output data file formats is available here.
 
 ### Demo
 
-To see the command line interface in action, download our sample 2D pose data and camera calibration info files to your current directory and run the demo shell script.
+To see the command line interface in action, download the following sample data files to your current directory and run the demo shell script:
+
+* [2D pose data](https://wildflower-tech-public.s3.us-east-2.amazonaws.com/poseconnect/sample_pose_2d_data.zip)
+* [Camera calibration info](https://wildflower-tech-public.s3.us-east-2.amazonaws.com/poseconnect/sample_camera_calibration_info.zip)
+* [Sensor data](https://wildflower-tech-public.s3.us-east-2.amazonaws.com/poseconnect/sample_sensor_data.zip)
