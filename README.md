@@ -30,11 +30,11 @@ Overall help is available at `poseconnect --help` and help for each subcommand
 
 ### Data formats
 
-More information about input and output data file formats is available here.
+More information about input and output data file formats is available [here](https://github.com/WildflowerSchools/poseconnect/blob/master/docs/data_formats.md).
 
 ### Demo
 
-To see the command line interface in action, download the following sample data files to your current directory and run the demo shell script:
+To see the command line interface in action, download the following sample data files to your current directory and run the [demo shell script](https://github.com/WildflowerSchools/poseconnect/blob/master/scripts/poseconnect_demo.sh):
 
 * [2D pose data](https://wildflower-tech-public.s3.us-east-2.amazonaws.com/poseconnect/sample_pose_2d_data.zip)
 * [Camera calibration info](https://wildflower-tech-public.s3.us-east-2.amazonaws.com/poseconnect/sample_camera_calibration_info.zip)
