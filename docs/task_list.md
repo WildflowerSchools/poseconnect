@@ -1,9 +1,5 @@
 # Task list
 
-* Add documentation for installation
-* Add documentation for help functionality
-* Add documentation for command line interface
-* Add documentation for sample/demo usage
 * Add documentation for library interface
 * Remove duplicates from sample sensor data
 * Add ability to set command line defaults using environment variables
