@@ -1,7 +1,6 @@
 # Task list
 
 * Add documentation for library interface
-* Remove duplicates from sample sensor data
 * Add ability to set command line defaults using environment variables
 * Add ability to set library defaults using environment variables
 * Add ability to specify environment variables using `dotenv`
