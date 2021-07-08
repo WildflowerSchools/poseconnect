@@ -1,3 +1,5 @@
+#!/bin/bash
+
 poseconnect reconstruct \
   sample_pose_2d_data.json \
   sample_camera_calibration_info.json \
@@ -6,7 +8,7 @@ poseconnect reconstruct \
   --room-x-limits -2.0 7.0 \
   --room-y-limits -2.0 14.0 \
   --progress-bar
-  
+
 poseconnect track \
   poses_3d.json \
   poses_3d_with_tracks.json \
