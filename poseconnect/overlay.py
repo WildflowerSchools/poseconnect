@@ -21,31 +21,106 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# def overlay_poses_2d_single_camera(
-#     poses_2d,
-#     video_input_path,
-#     video_start_time,
-#     video_output_path
-# ):
-#     video_input = cv_utils.VideoInput(
-#         input_path=video_input_path,
-#         start_time=video_start_time
-#     )
-#     frame_period_microseconds = 10**6/video_input.video_parameters.fps
-#     video_timestamps = pd.date_range(
-#         start=video_start_time,
-#         freq=pandas.tseries.offsets.DateOffset(microseconds=frame_period_microseconds),
-#         periods=video_input.video_parameters.frame_count
-#     )
-#     return video_timestamps
-
-
-def draw_pose_2d_opencv(
-    image,
-    keypoint_coordinates,
+def overlay_poses_3d_video(
+    input_video_path,
+    poses_3d,
+    camera_calibrations,
+    output_video_path=None,
+    output_video_path_suffix='poses_overlay',
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
+    pose_color='green',
+    keypoint_radius=3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.6,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1
+):
+    raise NotImplentedError('Function overlay_poses_3d_video() not implemented yet')
+
+def overlay_poses_2d_video(
+    input_video_path,
+    poses_2d,
+    output_video_path=None,
+    output_video_path_suffix='poses_overlay',
+    draw_keypoint_connectors=True,
+    keypoint_connectors=None,
+    pose_color='green',
+    keypoint_radius=3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.6,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1
+):
+    raise NotImplentedError('Function overlay_poses_2d_video() not implemented yet')
+
+def overlay_poses_3d_image(
+    image,
+    poses_3d,
+    camera_calibrations,
+    draw_keypoint_connectors=True,
+    keypoint_connectors=None,
+    pose_color='green',
+    keypoint_radius=3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.6,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1
+):
+    raise NotImplentedError('Function overlay_poses_3d_image() not implemented yet')
+
+def overlay_poses_2d_image(
+    image,
+    poses_2d,
+    draw_keypoint_connectors=True,
+    keypoint_connectors=None,
+    pose_color='green',
+    keypoint_radius=3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.6,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1
+):
+    raise NotImplentedError('Function overlay_poses_2d_image() not implemented yet')
+
+def overlay_pose_3d_image(
+    image,
+    keypoint_coordinates_3d,
     pose_label=None,
+    camera_calibration,
+    draw_keypoint_connectors=True,
+    keypoint_connectors=None,
+    pose_color='green',
+    keypoint_radius=3,
+    keypoint_alpha=0.6,
+    keypoint_connector_alpha=0.6,
+    keypoint_connector_linewidth=3,
+    pose_label_color='white',
+    pose_label_background_alpha=0.6,
+    pose_label_font_scale=1.5,
+    pose_label_line_width=1
+
+):
+    raise NotImplentedError('Function overlay_pose_3d_image() not implemented yet')
+
+def overlay_pose_2d_image(
+    image,
+    keypoint_coordinates_2d,
+    pose_label=None,
+    draw_keypoint_connectors=True,
+    keypoint_connectors=None,
     pose_color='green',
     keypoint_radius=3,
     keypoint_alpha=0.6,
@@ -58,11 +133,11 @@ def draw_pose_2d_opencv(
 ):
     pose_color = matplotlib.colors.to_hex(pose_color, keep_alpha=False)
     pose_label_color = matplotlib.colors.to_hex(pose_label_color, keep_alpha=False)
-    keypoint_coordinates = np.asarray(keypoint_coordinates).reshape((-1, 2))
-    if not np.any(np.all(np.isfinite(keypoint_coordinates), axis=1), axis=0):
+    keypoint_coordinates_2d = np.asarray(keypoint_coordinates_2d).reshape((-1, 2))
+    if not np.any(np.all(np.isfinite(keypoint_coordinates_2d), axis=1), axis=0):
         return image
-    valid_keypoints = np.all(np.isfinite(keypoint_coordinates), axis=1)
-    plottable_points = keypoint_coordinates[valid_keypoints]
+    valid_keypoints = np.all(np.isfinite(keypoint_coordinates_2d), axis=1)
+    plottable_points = keypoint_coordinates_2d[valid_keypoints]
     new_image = image
     for point_index in range(plottable_points.shape[0]):
         new_image = cv_utils.draw_circle(
@@ -82,15 +157,15 @@ def draw_pose_2d_opencv(
                 new_image=cv_utils.draw_line(
                     original_image=new_image,
                     coordinates=[
-                        keypoint_coordinates[keypoint_from_index],
-                        keypoint_coordinates[keypoint_to_index]
+                        keypoint_coordinates_2d[keypoint_from_index],
+                        keypoint_coordinates_2d[keypoint_to_index]
                     ],
                     line_width=keypoint_connector_linewidth,
                     color=pose_color,
                     alpha=keypoint_connector_alpha
                 )
     if pd.notna(pose_label):
-        pose_label_anchor = np.nanmean(keypoint_coordinates, axis=0)
+        pose_label_anchor = np.nanmean(keypoint_coordinates_2d, axis=0)
         text_box_size, baseline = cv.getTextSize(
             text=str(pose_label),
             fontFace=cv.FONT_HERSHEY_PLAIN,
