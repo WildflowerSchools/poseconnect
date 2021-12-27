@@ -21,6 +21,25 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# def overlay_poses_2d_single_camera(
+#     poses_2d,
+#     video_input_path,
+#     video_start_time,
+#     video_output_path
+# ):
+#     video_input = cv_utils.VideoInput(
+#         input_path=video_input_path,
+#         start_time=video_start_time
+#     )
+#     frame_period_microseconds = 10**6/video_input.video_parameters.fps
+#     video_timestamps = pd.date_range(
+#         start=video_start_time,
+#         freq=pandas.tseries.offsets.DateOffset(microseconds=frame_period_microseconds),
+#         periods=video_input.video_parameters.frame_count
+#     )
+#     return video_timestamps
+
+
 def draw_pose_2d_opencv(
     image,
     keypoint_coordinates,
