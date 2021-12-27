@@ -200,7 +200,7 @@ def overlay_poses_2d_image(
         image = overlay_pose_2d_image(
             image=image,
             keypoint_coordinates_2d=row['keypoint_coordinates_2d'],
-            pose_label=row['pose_label'],
+            pose_label=row.get('pose_label'),
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
             pose_color=pose_color,
