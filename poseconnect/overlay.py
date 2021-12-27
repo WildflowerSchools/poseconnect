@@ -151,6 +151,7 @@ def overlay_poses_2d_video(
                 image=frame,
                 draw_keypoint_connectors=draw_keypoint_connectors,
                 keypoint_connectors=keypoint_connectors,
+                pose_model_name=pose_model_name,
                 pose_color=pose_color,
                 keypoint_radius=keypoint_radius,
                 keypoint_alpha=keypoint_alpha,
@@ -215,6 +216,7 @@ def overlay_poses_2d_image(
             pose_label=row.get('pose_label'),
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
+            pose_model_name=pose_model_name,
             pose_color=pose_color,
             keypoint_radius=keypoint_radius,
             keypoint_alpha=keypoint_alpha,
@@ -268,7 +270,7 @@ def overlay_pose_2d_image(
     pose_color = matplotlib.colors.to_hex(pose_color, keep_alpha=False)
     pose_label_color = matplotlib.colors.to_hex(pose_label_color, keep_alpha=False)
     if draw_keypoint_connectors and keypoint_connectors is None and pose_model_name is not None:
-        keypoint_connectors = KEYPOINT_CONNECTORS_BY_POSE_MODEL[pose_model_name]            
+        keypoint_connectors = KEYPOINT_CONNECTORS_BY_POSE_MODEL[pose_model_name]
     keypoint_coordinates_2d = np.asarray(keypoint_coordinates_2d).reshape((-1, 2))
     if not np.any(np.all(np.isfinite(keypoint_coordinates_2d), axis=1), axis=0):
         return image
