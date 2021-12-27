@@ -76,7 +76,7 @@ def overlay_poses_2d_video(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
-    logger.info('Pose color in overlay_poses_2d_video(): {}'.format(pose_color))
+    logger.info('Keypoint connector alpha in overlay_poses_2d_video(): {}'.format(keypoint_connector_alpha))
     poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
     if poses_2d['camera_id'].nunique() > 1:
         raise ValueError('2D pose data contains multiple camera IDs for a single video')
@@ -206,7 +206,7 @@ def overlay_poses_2d_image(
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
 ):
-    logger.info('Pose color in overlay_poses_2d_image(): {}'.format(pose_color))
+    logger.info('Keypoint connector alpha in overlay_poses_2d_image(): {}'.format(keypoint_connector_alpha))
     poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
     if poses_2d['timestamp'].nunique() > 1:
         raise ValueError('2D pose data contains multiple timestamps for a single image')
@@ -269,7 +269,7 @@ def overlay_pose_2d_image(
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
 ):
-    logger.info('Pose color in overlay_pose_2d_image(): {}'.format(pose_color))
+    logger.info('Keypoint connector alpha in overlay_pose_2d_image(): {}'.format(keypoint_connector_alpha))
     pose_color = matplotlib.colors.to_hex(pose_color, keep_alpha=False)
     logger.info('Pose color in overlay_pose_2d_image() after hex conversion: {}'.format(pose_color))
     pose_label_color = matplotlib.colors.to_hex(pose_label_color, keep_alpha=False)
