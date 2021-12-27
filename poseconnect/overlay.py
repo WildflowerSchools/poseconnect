@@ -192,7 +192,7 @@ def overlay_poses_2d_image(
     pose_label_line_width=1
 ):
     poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
-    if poses_2d['timestamps'].nunique() > 1:
+    if poses_2d['timestamp'].nunique() > 1:
         raise ValueError('2D pose data contains multiple timestamps for a single image')
     if poses_2d['camera_id'].nunique() > 1:
         raise ValueError('2D pose data contains multiple camera IDs for a single image')
