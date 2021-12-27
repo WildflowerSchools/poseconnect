@@ -271,7 +271,6 @@ def overlay_pose_2d_image(
 ):
     logger.info('Keypoint connector alpha in overlay_pose_2d_image(): {}'.format(keypoint_connector_alpha))
     pose_color = matplotlib.colors.to_hex(pose_color, keep_alpha=False)
-    logger.info('Pose color in overlay_pose_2d_image() after hex conversion: {}'.format(pose_color))
     pose_label_color = matplotlib.colors.to_hex(pose_label_color, keep_alpha=False)
     if draw_keypoint_connectors and keypoint_connectors is None and pose_model_name is not None:
         keypoint_connectors = KEYPOINT_CONNECTORS_BY_POSE_MODEL[pose_model_name]
