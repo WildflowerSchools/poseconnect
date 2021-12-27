@@ -98,8 +98,8 @@ def overlay_poses_2d_image(
 def overlay_pose_3d_image(
     image,
     keypoint_coordinates_3d,
-    pose_label=None,
     camera_calibration,
+    pose_label=None,
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
     pose_color='green',
