@@ -1,4 +1,5 @@
 import poseconnect.utils
+import poseconnect.defaults
 # import process_pose_data.local_io
 # import poseconnect.visualize
 # import honeycomb_io
