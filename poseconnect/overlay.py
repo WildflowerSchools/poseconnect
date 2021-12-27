@@ -45,7 +45,7 @@ def overlay_poses_3d_video(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
     pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
@@ -69,7 +69,7 @@ def overlay_poses_2d_video(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
     pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
@@ -183,7 +183,7 @@ def overlay_poses_3d_image(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
     pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
@@ -201,7 +201,7 @@ def overlay_poses_2d_image(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
     pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
@@ -245,7 +245,7 @@ def overlay_pose_3d_image(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
     pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
@@ -264,7 +264,7 @@ def overlay_pose_2d_image(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
     pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
