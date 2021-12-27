@@ -22,6 +22,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+KEYPOINT_CONNECTORS_BY_POSE_MODEL = {
+    'COCO-17': [[5, 6], [5, 11], [6, 12], [11, 12], [0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [5, 6], [5, 7], [7, 9], [6, 8], [8, 10], [11, 13], [13, 15], [12, 14], [14, 16]],
+    'COCO-18': [[2, 5], [2, 8], [5, 11], [8, 11], [1, 2], [1, 5], [1, 0], [0, 14], [0, 15], [0, 16], [0, 17], [1, 16], [1, 17], [2, 3], [3, 4], [5, 6], [6, 7], [8, 9], [9, 10], [11, 12], [12, 13]],
+    'MPII-15': [[0, 1], [1, 14], [14, 2], [2, 3], [3, 4], [14, 5], [5, 6], [6, 7], [14, 8], [8, 9], [9, 10], [14, 11], [11, 12], [12, 13]],
+    'MPII-16': [[6, 7], [7, 8], [8, 9], [6, 2], [2, 1], [1, 0], [6, 3], [3, 4], [4, 5], [8, 12], [12, 11], [11, 10], [8, 13], [13, 14], [14, 15]],
+    'BODY_25': [[2, 3], [3, 4], [5, 2], [5, 6], [6, 7], [0, 1], [0, 15], [0, 16], [1, 2], [1, 5], [15, 17], [16, 18], [1, 8], [8, 9], [9, 10], [10, 11], [11, 24], [24, 22], [24, 23], [8, 12], [12, 13], [13, 14], [14, 21], [21, 19], [21, 20]]
+}
+
 def overlay_poses_3d_video(
     input_video_path,
     poses_3d,
@@ -30,6 +38,7 @@ def overlay_poses_3d_video(
     output_video_path_suffix='poses_overlay',
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
+    pose_model_name=None,
     pose_color='green',
     keypoint_radius=3,
     keypoint_alpha=0.6,
@@ -53,6 +62,7 @@ def overlay_poses_2d_video(
     video_output_fourcc_string=None,
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
+    pose_model_name=None,
     pose_color='green',
     keypoint_radius=3,
     keypoint_alpha=0.6,
@@ -164,6 +174,7 @@ def overlay_poses_3d_image(
     image,
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
+    pose_model_name=None,
     pose_color='green',
     keypoint_radius=3,
     keypoint_alpha=0.6,
@@ -181,6 +192,7 @@ def overlay_poses_2d_image(
     image,
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
+    pose_model_name=None,
     pose_color='green',
     keypoint_radius=3,
     keypoint_alpha=0.6,
@@ -222,6 +234,7 @@ def overlay_pose_3d_image(
     pose_label=None,
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
+    pose_model_name=None,
     pose_color='green',
     keypoint_radius=3,
     keypoint_alpha=0.6,
@@ -241,6 +254,7 @@ def overlay_pose_2d_image(
     pose_label=None,
     draw_keypoint_connectors=True,
     keypoint_connectors=None,
+    pose_model_name=None,
     pose_color='green',
     keypoint_radius=3,
     keypoint_alpha=0.6,
@@ -253,6 +267,8 @@ def overlay_pose_2d_image(
 ):
     pose_color = matplotlib.colors.to_hex(pose_color, keep_alpha=False)
     pose_label_color = matplotlib.colors.to_hex(pose_label_color, keep_alpha=False)
+    if draw_keypoint_connectors and keypoint_connectors is None and pose_model_name is not None:
+        keypoint_connectors = KEYPOINT_CONNECTORS_BY_POSE_MODEL[pose_model_name]            
     keypoint_coordinates_2d = np.asarray(keypoint_coordinates_2d).reshape((-1, 2))
     if not np.any(np.all(np.isfinite(keypoint_coordinates_2d), axis=1), axis=0):
         return image
