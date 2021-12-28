@@ -59,7 +59,9 @@ def overlay_poses_2d_video(
     video_fps=None,
     video_frame_count=None,
     video_output_path=None,
-    video_output_path_suffix=None,
+    video_output_directory=None,
+    video_output_filename_suffix=None,
+    video_output_filename_extension=None,
     video_output_fourcc_string=None,
     draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
     keypoint_connectors=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTORS,
@@ -113,16 +115,31 @@ def overlay_poses_2d_video(
         video_frame_count
     ))
     if video_output_path is None:
+        video_input_directory, video_input_filename = os.path.split(video_input_path)
+        video_input_filename_stem, video_input_filename_extension = os.path.splitext(video_input_filename)
+        logger.info('Video input directory: {}'.format(video_output_directory))
+        logger.info('Video input filename stem'.format(video_input_filename_stem))
+        logger.info('Video input filename extension'.format(video_input_filename_extension))
+        video_output_directory = video_input_directory
+        if video_output_directory is None:
+            video_output_directory = video_input_directory
+        if video_output_filename_suffix is None:
+            video_output_filename_stem = video_input_filename_stem
+        else:
+            video_output_filename_stem = '_'.join([
+                video_input_filename_stem,
+                video_output_filename_suffix
+            ])
+        if video_output_filename_extension is None:
+            video_output_filename_extension = video_input_filename_extension
+        video_output_path = os.path.join(
+            video_output_directory,
+            '.'.join([
+                video_output_filename_stem,
+                video_output_filename_extension
+            ])
+        )
         raise NotImplementedError('Auto-generation of video output path not yet implemented')
-    # video_output_path = os.path.join(
-    #     output_directory,
-    #     '{}_{}_{}.{}'.format(
-    #         output_filename_prefix,
-    #         video_timestamp.strftime(output_filename_datetime_format),
-    #         slugify.slugify(camera_name),
-    #         output_filename_extension
-    #     )
-    # )
     logger.info('Video output path: {}'.format(video_output_path))
     video_output_parameters = video_input.video_parameters
     if video_output_fourcc_string is not None:
