@@ -76,14 +76,6 @@ def overlay_poses_2d_video(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
-    logger.info('overlay_poses_2d_video(): pose_color {}, keypoint_radius {}, keypoint_alpha {}, keypoint_connector_alpha {}, keypoint_connector_linewidth {}'.format(
-        pose_color,
-        keypoint_radius,
-        keypoint_alpha,
-        keypoint_connector_alpha,
-        keypoint_connector_linewidth
-    ))
-    logger.info('Keypoint connector alpha in overlay_poses_2d_video(): {}'.format(keypoint_connector_alpha))
     poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
     if poses_2d['camera_id'].nunique() > 1:
         raise ValueError('2D pose data contains multiple camera IDs for a single video')
@@ -154,23 +146,22 @@ def overlay_poses_2d_video(
         frame = video_input.get_frame()
         if frame is None:
             raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
-        for pose_id, row in poses_2d.loc[poses_2d['timestamp'] == pose_timestamp].iterrows():
-            frame=overlay_poses_2d_image(
-                poses_2d=poses_2d.loc[poses_2d['timestamp'] == pose_timestamp],
-                image=frame,
-                draw_keypoint_connectors=draw_keypoint_connectors,
-                keypoint_connectors=keypoint_connectors,
-                pose_model_name=pose_model_name,
-                pose_color=pose_color,
-                keypoint_radius=keypoint_radius,
-                keypoint_alpha=keypoint_alpha,
-                keypoint_connector_alpha=keypoint_connector_alpha,
-                keypoint_connector_linewidth=keypoint_connector_linewidth,
-                pose_label_color=pose_label_color,
-                pose_label_background_alpha=pose_label_background_alpha,
-                pose_label_font_scale=pose_label_font_scale,
-                pose_label_line_width=pose_label_line_width
-            )
+        frame=overlay_poses_2d_image(
+            poses_2d=poses_2d.loc[poses_2d['timestamp'] == pose_timestamp],
+            image=frame,
+            draw_keypoint_connectors=draw_keypoint_connectors,
+            keypoint_connectors=keypoint_connectors,
+            pose_model_name=pose_model_name,
+            pose_color=pose_color,
+            keypoint_radius=keypoint_radius,
+            keypoint_alpha=keypoint_alpha,
+            keypoint_connector_alpha=keypoint_connector_alpha,
+            keypoint_connector_linewidth=keypoint_connector_linewidth,
+            pose_label_color=pose_label_color,
+            pose_label_background_alpha=pose_label_background_alpha,
+            pose_label_font_scale=pose_label_font_scale,
+            pose_label_line_width=pose_label_line_width
+        )
         video_output.write_frame(frame)
         if progress_bar:
             t.update()
@@ -213,13 +204,6 @@ def overlay_poses_2d_image(
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
 ):
-    logger.info('overlay_poses_2d_image(): pose_color {}, keypoint_radius {}, keypoint_alpha {}, keypoint_connector_alpha {}, keypoint_connector_linewidth {}'.format(
-        pose_color,
-        keypoint_radius,
-        keypoint_alpha,
-        keypoint_connector_alpha,
-        keypoint_connector_linewidth
-    ))
     poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
     if poses_2d['timestamp'].nunique() > 1:
         raise ValueError('2D pose data contains multiple timestamps for a single image')
@@ -282,13 +266,6 @@ def overlay_pose_2d_image(
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
 ):
-    logger.info('overlay_pose_2d_image(): pose_color {}, keypoint_radius {}, keypoint_alpha {}, keypoint_connector_alpha {}, keypoint_connector_linewidth {}'.format(
-        pose_color,
-        keypoint_radius,
-        keypoint_alpha,
-        keypoint_connector_alpha,
-        keypoint_connector_linewidth
-    ))
     pose_color = matplotlib.colors.to_hex(pose_color, keep_alpha=False)
     pose_label_color = matplotlib.colors.to_hex(pose_label_color, keep_alpha=False)
     if draw_keypoint_connectors and keypoint_connectors is None and pose_model_name is not None:
