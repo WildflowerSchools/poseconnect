@@ -4,6 +4,36 @@ import json
 import pickle
 import os
 
+def ingest_poses(data_object):
+    df = convert_to_df(data_object)
+    all_column_names = df.reset_index().columns
+    if 'pose_2d_id' in all_column_names:
+        df = set_index_columns(
+            df=df,
+            index_columns='pose_2d_id'
+        )
+    elif 'pose_3d_id' in all_column_names:
+        df = set_index_columns(
+            df=df,
+            index_columns='pose_3d_id'
+        )
+    else:
+        raise ValueError('Poses must contain either a \'pose_2d_id\' field or a \'pose_3d_id\' field')
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    if 'camera_id' in all_column_names:
+        df['camera_id'] = df['camera_id'].astype('object')
+    if 'keypoint_coordinates_2d' in all_column_names:
+        df['keypoint_coordinates_2d'] = df['keypoint_coordinates_2d'].apply(convert_to_array)
+    if 'keypoint_quality_2d' in all_column_names:
+        df['keypoint_quality_2d'] = df['keypoint_quality_2d'].apply(convert_to_array)
+    if 'pose_quality_2d' in all_column_names:
+        df['pose_quality_2d'] = pd.to_numeric(df['pose_quality_2d']).astype('float')
+    if 'keypoint_coordinates_3d' in all_column_names:
+        df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(convert_to_array)
+    if 'pose_2d_ids' in all_column_names:
+        df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
+    return df
+
 def ingest_poses_2d(data_object):
     df = convert_to_df(data_object)
     df = set_index_columns(

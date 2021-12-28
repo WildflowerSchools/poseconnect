@@ -60,14 +60,13 @@ def overlay_poses_video(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
+    poses = poseconnect.utils.ingest_poses(poses)
     if pose_type == '2d':
-        poses = poseconnect.utils.ingest_poses_2d(poses)
         if poses['camera_id'].nunique() > 1:
             raise ValueError('Pose data contains multiple camera IDs for a single video')
     elif pose_type == '3d':
         if camera_calibration is None:
             raise ValueError('Camera calibration parameters must be specified to overlay 3D poses')
-        poses = poseconnect.utils.ingest_poses_3d(poses)
     else:
         raise ValueError('Pose type must be either \'2d\' or \'3d\'')
     logger.info('Ingested {} poses spanning time period {} to {}'.format(
@@ -194,15 +193,14 @@ def overlay_poses_image(
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
 ):
+    poses = poseconnect.utils.ingest_poses(poses)
     if pose_type == '2d':
-        poses = poseconnect.utils.ingest_poses_2d(poses)
         if poses['camera_id'].nunique() > 1:
             raise ValueError('Pose data contains multiple camera IDs for a single image')
         keypoint_coordinate_column_name='keypoint_coordinates_2d'
     elif pose_type == '3d':
         if camera_calibration is None:
             raise ValueError('Camera calibration parameters must be specified to overlay 3D poses')
-        poses = poseconnect.utils.ingest_poses_3d(poses)
         keypoint_coordinate_column_name='keypoint_coordinates_3d'
     else:
         raise ValueError('Pose type must be either \'2d\' or \'3d\'')
