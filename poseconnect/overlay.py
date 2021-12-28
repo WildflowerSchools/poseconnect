@@ -120,7 +120,6 @@ def overlay_poses_2d_video(
         logger.info('Video input directory: {}'.format(video_input_directory))
         logger.info('Video input filename stem: {}'.format(video_input_filename_stem))
         logger.info('Video input filename extension: {}'.format(video_input_filename_extension))
-        video_output_directory = video_input_directory
         if video_output_directory is None:
             video_output_directory = video_input_directory
         if video_output_filename_suffix is None:
