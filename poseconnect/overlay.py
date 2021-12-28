@@ -246,6 +246,7 @@ def overlay_pose_image(
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
 ):
+    logger.info('Pose label: {}'.format(pose_label))
     keypoint_coordinates = np.asarray(keypoint_coordinates)
     if pose_type == '2d':
         if keypoint_coordinates.shape[-1] != 2:
