@@ -60,7 +60,6 @@ def overlay_poses_video(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
-    poses = poseconnect.utils.ingest_poses(poses)
     if pose_type == '2d':
         if poses['camera_id'].nunique() > 1:
             raise ValueError('Pose data contains multiple camera IDs for a single video')
@@ -150,7 +149,7 @@ def overlay_poses_video(
         if frame is None:
             raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
         frame=overlay_poses_image(
-            poses=poses.loc[poses['timestamp'] == pose_timestamp],
+            poses=poses.loc[poses['timestamp'] == pose_timestamp].copy(),
             image=frame,
             pose_type=pose_type,
             camera_calibration=camera_calibration,
@@ -193,7 +192,6 @@ def overlay_poses_image(
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
 ):
-    poses = poseconnect.utils.ingest_poses(poses)
     if pose_type == '2d':
         if poses['camera_id'].nunique() > 1:
             raise ValueError('Pose data contains multiple camera IDs for a single image')
@@ -247,7 +245,6 @@ def overlay_pose_image(
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
 ):
-    logger.info('Pose label: {}'.format(pose_label))
     keypoint_coordinates = np.asarray(keypoint_coordinates)
     if pose_type == '2d':
         if keypoint_coordinates.shape[-1] != 2:
