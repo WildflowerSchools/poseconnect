@@ -31,31 +31,12 @@ KEYPOINT_CONNECTORS_BY_POSE_MODEL = {
     'BODY_25': [[2, 3], [3, 4], [5, 2], [5, 6], [6, 7], [0, 1], [0, 15], [0, 16], [1, 2], [1, 5], [15, 17], [16, 18], [1, 8], [8, 9], [9, 10], [10, 11], [11, 24], [24, 22], [24, 23], [8, 12], [12, 13], [13, 14], [14, 21], [21, 19], [21, 20]]
 }
 
-def overlay_poses_3d_video(
-    input_video_path,
-    poses_3d,
-    camera_calibrations,
-    output_video_path=None,
-    output_video_path_suffix='poses_overlay',
-    draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
-    keypoint_connectors=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTORS,
-    pose_model_name=poseconnect.defaults.OVERLAY_POSE_MODEL_NAME,
-    pose_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
-    keypoint_radius=poseconnect.defaults.OVERLAY_KEYPOINT_RADIUS,
-    keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
-    keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
-    keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
-    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
-    pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
-):
-    raise NotImplementedError('Function overlay_poses_3d_video() not implemented yet')
-
-def overlay_poses_2d_video(
-    poses_2d,
+def overlay_poses_video(
+    poses,
     video_input_path,
     video_start_time,
+    pose_type='2d',
+    camera_calibration=None,
     video_fps=None,
     video_frame_count=None,
     video_output_path=None,
@@ -78,13 +59,20 @@ def overlay_poses_2d_video(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
-    poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
-    if poses_2d['camera_id'].nunique() > 1:
-        raise ValueError('2D pose data contains multiple camera IDs for a single video')
-    logger.info('Ingested {} 2D poses spanning time period {} to {}'.format(
-        len(poses_2d),
-        poses_2d['timestamp'].min().isoformat(),
-        poses_2d['timestamp'].max().isoformat()
+    if pose_type == '2d':
+        poses = poseconnect.utils.ingest_poses_2d(poses)
+        if poses['camera_id'].nunique() > 1:
+            raise ValueError('Pose data contains multiple camera IDs for a single video')
+    elif pose_type == '3d':
+        if camera_calibration is None:
+            raise ValueError('Camera calibration parameters must be specified to overlay 3D poses')
+        poses = poseconnect.utils.ingest_poses_3d(poses)
+    else:
+        raise ValueError('Pose type must be either \'2d\' or \'3d\'')
+    logger.info('Ingested {} poses spanning time period {} to {}'.format(
+        len(poses),
+        poses['timestamp'].min().isoformat(),
+        poses['timestamp'].max().isoformat()
     ))
     logger.info('Video input path: {}'.format(video_input_path))
     if video_start_time.tzinfo is None:
@@ -147,7 +135,7 @@ def overlay_poses_2d_video(
         video_parameters=video_output_parameters
     )
     video_timestamps, aligned_pose_timestamps = align_timestamps(
-        pose_timestamps=poses_2d['timestamp'],
+        pose_timestamps=poses['timestamp'],
         video_start_time=video_start_time,
         video_fps=video_fps,
         video_frame_count=video_frame_count
@@ -161,9 +149,11 @@ def overlay_poses_2d_video(
         frame = video_input.get_frame()
         if frame is None:
             raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
-        frame=overlay_poses_2d_image(
-            poses_2d=poses_2d.loc[poses_2d['timestamp'] == pose_timestamp],
+        frame=overlay_poses_image(
+            poses=poses.loc[poses['timestamp'] == pose_timestamp],
             image=frame,
+            pose_type=pose_type,
+            camera_calibration=camera_calibration,
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
             pose_model_name=pose_model_name,
@@ -182,12 +172,12 @@ def overlay_poses_2d_video(
             t.update()
     video_input.close()
     video_output.close()
-    return video_timestamps, aligned_pose_timestamps
 
-def overlay_poses_3d_image(
-    poses_3d,
-    camera_calibrations,
+def overlay_poses_image(
+    poses,
     image,
+    pose_type='2d',
+    camera_calibration=None,
     draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
     keypoint_connectors=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTORS,
     pose_model_name=poseconnect.defaults.OVERLAY_POSE_MODEL_NAME,
@@ -201,33 +191,26 @@ def overlay_poses_3d_image(
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
 ):
-    raise NotImplementedError('Function overlay_poses_3d_image() not implemented yet')
-
-def overlay_poses_2d_image(
-    poses_2d,
-    image,
-    draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
-    keypoint_connectors=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTORS,
-    pose_model_name=poseconnect.defaults.OVERLAY_POSE_MODEL_NAME,
-    pose_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
-    keypoint_radius=poseconnect.defaults.OVERLAY_KEYPOINT_RADIUS,
-    keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
-    keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
-    keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
-    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
-    pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
-):
-    poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
-    if poses_2d['timestamp'].nunique() > 1:
-        raise ValueError('2D pose data contains multiple timestamps for a single image')
-    if poses_2d['camera_id'].nunique() > 1:
-        raise ValueError('2D pose data contains multiple camera IDs for a single image')
-    for pose_2d_id, row in poses_2d.iterrows():
-        image = overlay_pose_2d_image(
+    if pose_type == '2d':
+        poses = poseconnect.utils.ingest_poses_2d(poses)
+        if poses['camera_id'].nunique() > 1:
+            raise ValueError('Pose data contains multiple camera IDs for a single image')
+        keypoint_coordinate_column_name='keypoint_coordinates_2d'
+    elif pose_type == '3d':
+        if camera_calibration is None:
+            raise ValueError('Camera calibration parameters must be specified to overlay 3D poses')
+        poses = poseconnect.utils.ingest_poses_3d(poses)
+        keypoint_coordinate_column_name='keypoint_coordinates_3d'
+    else:
+        raise ValueError('Pose type must be either \'2d\' or \'3d\'')
+    if poses['timestamp'].nunique() > 1:
+        raise ValueError('Pose data contains multiple timestamps for a single image')
+    for pose_id, row in poses.iterrows():
+        image = overlay_pose_image(
+            keypoint_coordinates=row.get(keypoint_coordinate_column_name),
             image=image,
-            keypoint_coordinates_2d=row['keypoint_coordinates_2d'],
+            pose_type=pose_type,
+            camera_calibration=camera_calibration,
             pose_label=row.get('pose_label'),
             draw_keypoint_connectors=draw_keypoint_connectors,
             keypoint_connectors=keypoint_connectors,
@@ -244,10 +227,11 @@ def overlay_poses_2d_image(
         )
     return image
 
-def overlay_pose_3d_image(
-    keypoint_coordinates_3d,
-    camera_calibration,
+def overlay_pose_image(
+    keypoint_coordinates,
     image,
+    pose_type='2d',
+    camera_calibration=None,
     pose_label=None,
     draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
     keypoint_connectors=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTORS,
@@ -262,34 +246,42 @@ def overlay_pose_3d_image(
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
 ):
-    raise NotImplementedError('Function overlay_pose_3d_image() not implemented yet')
-
-def overlay_pose_2d_image(
-    keypoint_coordinates_2d,
-    image,
-    pose_label=None,
-    draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
-    keypoint_connectors=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTORS,
-    pose_model_name=poseconnect.defaults.OVERLAY_POSE_MODEL_NAME,
-    pose_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
-    keypoint_radius=poseconnect.defaults.OVERLAY_KEYPOINT_RADIUS,
-    keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
-    keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
-    keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
-    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
-    pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
-):
+    keypoint_coordinates = np.asarray(keypoint_coordinates)
+    if pose_type == '2d':
+        if keypoint_coordinates.shape[-1] != 2:
+            raise ValueError('Expected 2D pose but keypoint coordinates have shape {}'.format(
+                keypoint_coordinates.shape
+            ))
+    elif pose_type == '3d':
+        if keypoint_coordinates.shape[-1] != 3:
+            raise ValueError('Expected 3D pose but keypoint coordinates have shape {}'.format(
+                keypoint_coordinates.shape
+            ))
+        if camera_calibration is None:
+            raise ValueError('Camera calibration parameters must be specified to overlay 3D poses')
+        keypoint_coordinates = cv_utils.project_points(
+            keypoint_coordinates,
+            rotation_vector=camera_calibration['rotation_vector'],
+            translation_vector=camera_calibration['translation_vector'],
+            camera_matrix=camera_calibration['camera_matrix'],
+            distortion_coefficients=camera_calibration['distortion_coefficients'],
+            remove_behind_camera=True,
+            remove_outside_frame=True,
+            image_corners=[
+                [0,0],
+                [camera_calibration['image_width'], camera_calibration['image_height']]
+            ]
+        )
+    else:
+        raise ValueError('Pose type must be either \'2d\' or \'3d\'')
     pose_color = matplotlib.colors.to_hex(pose_color, keep_alpha=False)
     pose_label_color = matplotlib.colors.to_hex(pose_label_color, keep_alpha=False)
     if draw_keypoint_connectors and keypoint_connectors is None and pose_model_name is not None:
         keypoint_connectors = KEYPOINT_CONNECTORS_BY_POSE_MODEL[pose_model_name]
-    keypoint_coordinates_2d = np.asarray(keypoint_coordinates_2d).reshape((-1, 2))
-    if not np.any(np.all(np.isfinite(keypoint_coordinates_2d), axis=1), axis=0):
+    if not np.any(np.all(np.isfinite(keypoint_coordinates), axis=1), axis=0):
         return image
-    valid_keypoints = np.all(np.isfinite(keypoint_coordinates_2d), axis=1)
-    plottable_points = keypoint_coordinates_2d[valid_keypoints]
+    valid_keypoints = np.all(np.isfinite(keypoint_coordinates), axis=1)
+    plottable_points = keypoint_coordinates[valid_keypoints]
     new_image = image
     for point_index in range(plottable_points.shape[0]):
         new_image = cv_utils.draw_circle(
@@ -309,15 +301,15 @@ def overlay_pose_2d_image(
                 new_image=cv_utils.draw_line(
                     original_image=new_image,
                     coordinates=[
-                        keypoint_coordinates_2d[keypoint_from_index],
-                        keypoint_coordinates_2d[keypoint_to_index]
+                        keypoint_coordinates[keypoint_from_index],
+                        keypoint_coordinates[keypoint_to_index]
                     ],
                     line_width=keypoint_connector_linewidth,
                     color=pose_color,
                     alpha=keypoint_connector_alpha
                 )
     if pd.notna(pose_label):
-        pose_label_anchor = np.nanmean(keypoint_coordinates_2d, axis=0)
+        pose_label_anchor = np.nanmean(keypoint_coordinates, axis=0)
         text_box_size, baseline = cv.getTextSize(
             text=str(pose_label),
             fontFace=cv.FONT_HERSHEY_PLAIN,
