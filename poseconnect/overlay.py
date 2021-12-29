@@ -208,7 +208,7 @@ def overlay_poses_3d_tracked(
                 pose_track_3d_ids,
                 index=pose_track_3d_ids
             )
-    poses_3d['track_label'] = (
+    poses_3d = (
         poses_3d
         .join(
             track_labels,
