@@ -209,7 +209,7 @@ def overlay_poses_3d_tracked(
                 pose_track_3d_ids,
                 index=pose_track_3d_ids
             )
-    logger.info(track_labels)
+    logger.info(track_labels.info())
     poses_3d = (
         poses_3d
         .join(
@@ -218,6 +218,7 @@ def overlay_poses_3d_tracked(
             on='pose_track_3d_id'
         )
     )
+    logger.info(poses_3d.info())
     overlay_poses_video(
         poses=poses_3d,
         video_input_path=video_input_path,
