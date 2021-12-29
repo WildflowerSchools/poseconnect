@@ -411,6 +411,8 @@ def overlay_poses_video(
     if video_output_path is None:
         video_input_directory, video_input_filename = os.path.split(video_input_path)
         video_input_filename_stem, video_input_filename_extension = os.path.splitext(video_input_filename)
+        if video_input_filename_extension is not None:
+            video_input_filename_extension = video_input_filename_extension[1:]
         logger.info('Video input directory: {}'.format(video_input_directory))
         logger.info('Video input filename stem: {}'.format(video_input_filename_stem))
         logger.info('Video input filename extension: {}'.format(video_input_filename_extension))
