@@ -423,11 +423,11 @@ def overlay_poses_video(
     video_output_parameters = video_input_parameters
     if video_output_fourcc_string is not None:
         video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(video_output_fourcc_string)
-    logger.info('Video ouput FOURCC integer: {}'.format(
+    logger.info('Video output FOURCC integer: {}'.format(
         video_output_parameters.fourcc_int
     ))
-    logger.info('Video input FOURCC string: {}'.format(
-        cv_utils.fourcc_int_to_string((video_output_parameters.fourcc_int)
+    logger.info('Video output FOURCC string: {}'.format(
+        cv_utils.fourcc_int_to_string(video_output_parameters.fourcc_int)
     ))
     video_output = cv_utils.VideoOutput(
         video_output_path,
