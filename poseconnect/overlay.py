@@ -58,16 +58,17 @@ def overlay_poses_2d(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
-    poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
-    poses_2d = poses_2d.loc[poses_2d['camera_id'] == camera_id].copy()
-    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
     overlay_poses_video(
         poses=poses_2d,
         video_input_path=video_input_path,
         video_start_time=video_start_time,
         pose_type='2d',
+        camera_id=camera_id,
         camera_calibration=None,
+        camera_calibrations=None,
         pose_label_column=None,
+        pose_label_map=None,
+        generate_pose_label_map=False,
         video_fps=video_fps,
         video_frame_count=video_frame_count,
         video_output_path=video_output_path,
@@ -119,17 +120,17 @@ def overlay_poses_3d(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
-    poses_3d = poseconnect.utils.ingest_poses_3d(poses_3d)
-    camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
-    camera_calibration = camera_calibrations.to_dict(orient='index')[camera_id]
-    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
     overlay_poses_video(
         poses=poses_3d,
         video_input_path=video_input_path,
         video_start_time=video_start_time,
         pose_type='3d',
-        camera_calibration=camera_calibration,
+        camera_id=camera_id,
+        camera_calibration=None,
+        camera_calibrations=camera_calibrations,
         pose_label_column=None,
+        pose_label_map=None,
+        generate_pose_label_map=False,
         video_fps=video_fps,
         video_frame_count=video_frame_count,
         video_output_path=video_output_path,
@@ -159,8 +160,6 @@ def overlay_poses_3d_tracked(
     camera_id,
     video_input_path,
     video_start_time,
-    track_labels=None,
-    generate_track_labels=True,
     video_fps=None,
     video_frame_count=None,
     video_output_path=None,
@@ -183,47 +182,17 @@ def overlay_poses_3d_tracked(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
-    poses_3d = poseconnect.utils.ingest_poses_3d_with_tracks(poses_3d)
-    camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
-    camera_calibration = camera_calibrations.to_dict(orient='index')[camera_id]
-    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
-    if track_labels is not None:
-        track_labels = poseconnect.utils.ingest_pose_track_3d_labels(track_labels)
-    else:
-        pose_track_3d_ids = (
-            poses_3d
-            .sort_values('timestamp')
-            .loc[:, 'pose_track_3d_id']
-            .dropna()
-            .drop_duplicates()
-            .tolist()
-        )
-        if generate_track_labels:
-            track_labels_list = list(range(len(pose_track_3d_ids)))
-        else:
-            track_labels_list = pose_track_3d_ids
-        track_labels = (
-            pd.DataFrame({
-                'pose_track_3d_id': pose_track_3d_ids,
-                'track_label': track_labels_list
-            })
-            .set_index('pose_track_3d_id')
-        )
-    poses_3d = (
-        poses_3d
-        .join(
-            track_labels,
-            how='left',
-            on='pose_track_3d_id'
-        )
-    )
     overlay_poses_video(
         poses=poses_3d,
         video_input_path=video_input_path,
         video_start_time=video_start_time,
         pose_type='3d',
-        camera_calibration=camera_calibration,
-        pose_label_column='track_label',
+        camera_id=camera_id,
+        camera_calibration=None,
+        camera_calibrations=camera_calibrations,
+        pose_label_column='pose_track_3d_id',
+        pose_label_map=None,
+        generate_pose_label_map=True,
         video_fps=video_fps,
         video_frame_count=video_frame_count,
         video_output_path=video_output_path,
@@ -253,8 +222,7 @@ def overlay_poses_3d_identified(
     camera_id,
     video_input_path,
     video_start_time,
-    person_labels=None,
-    generate_person_labels=True,
+    person_lookup=None,
     video_fps=None,
     video_frame_count=None,
     video_output_path=None,
@@ -277,47 +245,17 @@ def overlay_poses_3d_identified(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
-    poses_3d = poseconnect.utils.ingest_poses_3d_with_person_ids(poses_3d)
-    camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
-    camera_calibration = camera_calibrations.to_dict(orient='index')[camera_id]
-    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
-    if person_labels is not None:
-        person_labels = poseconnect.utils.ingest_person_labels(person_labels)
-    else:
-        person_ids = (
-            poses_3d
-            .sort_values('timestamp')
-            .loc[:, 'person_id']
-            .dropna()
-            .drop_duplicates()
-            .tolist()
-        )
-        if generate_person_labels:
-            person_labels_list = list(range(len(person_ids)))
-        else:
-            person_labels_list = person_ids
-        person_labels = (
-            pd.DataFrame({
-                'person_id': person_ids,
-                'track_label': person_labels_list
-            })
-            .set_index('person_id')
-        )
-    poses_3d = (
-        poses_3d
-        .join(
-            person_labels,
-            how='left',
-            on='person_id'
-        )
-    )
     overlay_poses_video(
         poses=poses_3d,
         video_input_path=video_input_path,
         video_start_time=video_start_time,
         pose_type='3d',
-        camera_calibration=camera_calibration,
-        pose_label_column='person_label',
+        camera_id=camera_id,
+        camera_calibration=None,
+        camera_calibrations=camera_calibrations,
+        pose_label_column='person_id',
+        pose_label_map=person_lookup,
+        generate_pose_label_map=True,
         video_fps=video_fps,
         video_frame_count=video_frame_count,
         video_output_path=video_output_path,
@@ -346,8 +284,12 @@ def overlay_poses_video(
     video_input_path,
     video_start_time,
     pose_type='2d',
+    camera_id=None,
     camera_calibration=None,
+    camera_calibrations=None,
     pose_label_column=None,
+    pose_label_map=None,
+    generate_pose_label_map=False,
     video_fps=None,
     video_frame_count=None,
     video_output_path=None,
@@ -370,7 +312,42 @@ def overlay_poses_video(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
-    if pose_type == '2d':
+    poses = poseconnect.utils.ingest_poses_generic(poses)
+    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
+    if camera_calibration is None:
+        if camera_calibrations is not None and camera_id is not None:
+            camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
+            camera_calibrations = camera_calibrations.to_dict(orient='index')
+            if camera_id not in camera_calibrations.keys():
+                raise ValueError('Camera ID \'{}\' not found in camera calibration data'.format(
+                    camera_id
+                ))
+            camera_calibration = camera_calibrations.get(camera_id)
+    if pose_label_column is not None:
+        if pose_label_column not in poses.columns:
+            raise ValueError('Specified pose label column \'{}\' not found in pose data'.format(
+                pose_label_column
+            ))
+        if pose_label_map is not None:
+            pose_label_map = poseconnect.utils.ingest_lookup_dict(pose_label_map)
+        elif generate_pose_label_map:
+            source_labels = (
+                poses
+                .sort_values('timestamp')
+                .loc[:, pose_label_column]
+                .dropna()
+                .drop_duplicates()
+                .tolist()
+            )
+            target_labels = list(range(len(source_labels)))
+            pose_label_map = dict(zip(source_labels, target_labels))
+        if pose_label_map is not None:
+            poses[pose_label_column] = poses[pose_label_column].apply(
+                lambda x: pose_label_map.get(x)
+            )
+    if pose_type == '2d' and 'camera_id' in poses.columns:
+        if camera_id is not None:
+            poses = poses.loc[poses['camera_id'] == camera_id].copy()
         if poses['camera_id'].nunique() > 1:
             raise ValueError('Pose data contains multiple camera IDs for a single video')
     elif pose_type == '3d':
@@ -384,8 +361,7 @@ def overlay_poses_video(
         poses['timestamp'].max().isoformat()
     ))
     logger.info('Video input path: {}'.format(video_input_path))
-    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
-    logger.info('Video start time is specified as {}'.format(
+    logger.info('Video start time: {}'.format(
         video_start_time.isoformat()
     ))
     video_input = cv_utils.VideoInput(
@@ -393,21 +369,20 @@ def overlay_poses_video(
         start_time=video_start_time
     )
     if video_fps is None:
-        logger.info('Video frame rate not specified. Attempting to read from video file.')
         video_fps = video_input.video_parameters.fps
         if video_fps is None:
             raise ValueError('Failed to rate video frame rate from video file.')
-    logger.info('Video frame rate is {} frames per second'.format(
+    logger.info('Video frame rate: {} frames per second'.format(
         video_fps
     ))
     if video_frame_count is None:
-        logger.info('Video frame count not specified. Attempting to read from video file.')
         video_frame_count = video_input.video_parameters.frame_count
         if video_frame_count is None:
             raise ValueError('Failed to rate video frame count from video file.')
-    logger.info('Video frame count is {}'.format(
+    logger.info('Video frame count: {}'.format(
         video_frame_count
     ))
+    logger.info('Video input path: {}'.format(video_input_path))
     if video_output_path is None:
         video_input_directory, video_input_filename = os.path.split(video_input_path)
         video_input_filename_stem, video_input_filename_extension = os.path.splitext(video_input_filename)
@@ -427,6 +402,9 @@ def overlay_poses_video(
             ])
         if video_output_filename_extension is None:
             video_output_filename_extension = video_input_filename_extension
+        logger.info('Video output directory: {}'.format(video_output_directory))
+        logger.info('Video output filename stem: {}'.format(video_output_filename_stem))
+        logger.info('Video output filename extension: {}'.format(video_output_filename_extension))
         video_output_path = os.path.join(
             video_output_directory,
             '.'.join([
@@ -435,9 +413,22 @@ def overlay_poses_video(
             ])
         )
     logger.info('Video output path: {}'.format(video_output_path))
-    video_output_parameters = video_input.video_parameters
+    video_input_parameters = video_input.video_parameters
+    logger.info('Video input FOURCC integer: {}'.format(
+        video_input_parameters.fourcc_int
+    ))
+    logger.info('Video input FOURCC string: {}'.format(
+        cv_utils.fourcc_int_to_string(video_input_parameters.fourcc_int)
+    ))
+    video_output_parameters = video_input_parameters
     if video_output_fourcc_string is not None:
         video_output_parameters.fourcc_int = cv_utils.fourcc_string_to_int(video_output_fourcc_string)
+    logger.info('Video ouput FOURCC integer: {}'.format(
+        video_output_parameters.fourcc_int
+    ))
+    logger.info('Video input FOURCC string: {}'.format(
+        cv_utils.fourcc_int_to_string((video_output_parameters.fourcc_int)
+    ))
     video_output = cv_utils.VideoOutput(
         video_output_path,
         video_parameters=video_output_parameters
@@ -448,6 +439,10 @@ def overlay_poses_video(
         video_fps=video_fps,
         video_frame_count=video_frame_count
     )
+    logger.info('{}/{} video timestamps have aligned pose data'.format(
+        video_timestamps.isna().sum(),
+        aligned_pose_timestamps.isna().sum()
+    ))
     if progress_bar:
         if notebook:
             t = tqdm.tqdm_notebook(total=video_frame_count)
