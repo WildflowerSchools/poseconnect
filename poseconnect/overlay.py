@@ -680,7 +680,7 @@ def align_timestamps(
             (pose_timestamps < video_timestamp + datetime.timedelta(microseconds=frame_period_microseconds)/2)
         ]
         if len(nearby_pose_timestamps) == 0:
-            logger.info('There are no pose timestamps nearby video timestamp {}.'.format(
+            logger.debug('There are no pose timestamps nearby video timestamp {}.'.format(
                 video_timestamp.isoformat()
             ))
             aligned_pose_timestamp = None
@@ -693,7 +693,7 @@ def align_timestamps(
                 for nearby_pose_timestamp in nearby_pose_timestamps
             ]
             aligned_pose_timestamp = nearby_pose_timestamps[np.argmin(time_distances)]
-            logger.info('There are {} pose timestamps nearby video timestamp {}: {}. Chose pose timestamp {}'.format(
+            logger.debug('There are {} pose timestamps nearby video timestamp {}: {}. Chose pose timestamp {}'.format(
                 len(nearby_pose_timestamps),
                 video_timestamp.isoformat(),
                 [nearby_pose_timestamp.isoformat() for nearby_pose_timestamp in nearby_pose_timestamps],
