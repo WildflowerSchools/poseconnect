@@ -74,10 +74,7 @@ def overlay_poses_video(
         poses['timestamp'].max().isoformat()
     ))
     logger.info('Video input path: {}'.format(video_input_path))
-    if video_start_time.tzinfo is None:
-        logger.info('Specified video start time is timezone-naive. Assuming UTC')
-        video_start_time=video_start_time.replace(tzinfo=datetime.timezone.utc)
-    video_start_time = video_start_time.astimezone(datetime.timezone.utc)
+    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
     logger.info('Video start time is specified as {}'.format(
         video_start_time.isoformat()
     ))

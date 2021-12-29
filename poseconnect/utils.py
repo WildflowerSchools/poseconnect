@@ -395,3 +395,6 @@ def nearly_equal(df_1, df_2):
     equality_df = pd.DataFrame.from_dict(equality_dict, orient='index')
     is_equal = np.all(equality_df)
     return is_equal, equality_df
+
+def convert_to_datetime_utc(datetime_object):
+    return pd.to_datetime(datetime_object, utc=True).to_pydatetime()
