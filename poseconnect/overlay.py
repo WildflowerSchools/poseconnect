@@ -301,7 +301,7 @@ def overlay_poses_3d_identified(
                 person_ids,
                 index=person_ids
             )
-    poses_3d['person_label'] = (
+    poses_3d = (
         poses_3d
         .join(
             person_labels,
