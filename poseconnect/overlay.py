@@ -441,8 +441,8 @@ def overlay_poses_video(
         video_frame_count=video_frame_count
     )
     logger.info('{}/{} video timestamps have aligned pose data'.format(
-        video_timestamps.notna().sum(),
-        aligned_pose_timestamps.notna().sum()
+        aligned_pose_timestamps.notna().sum(),
+        video_timestamps.notna().sum()
     ))
     if progress_bar:
         if notebook:
