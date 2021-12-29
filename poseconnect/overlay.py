@@ -313,6 +313,7 @@ def overlay_poses_video(
     notebook=poseconnect.defaults.NOTEBOOK
 ):
     poses = poseconnect.utils.ingest_poses_generic(poses)
+    poses=poses.copy()
     video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
     if camera_calibration is None:
         if camera_calibrations is not None and camera_id is not None:
@@ -440,8 +441,8 @@ def overlay_poses_video(
         video_frame_count=video_frame_count
     )
     logger.info('{}/{} video timestamps have aligned pose data'.format(
-        video_timestamps.isna().sum(),
-        aligned_pose_timestamps.isna().sum()
+        video_timestamps.notna().sum(),
+        aligned_pose_timestamps.notna().sum()
     ))
     if progress_bar:
         if notebook:
