@@ -329,7 +329,7 @@ def overlay_poses_video(
                 pose_label_column
             ))
         if pose_label_map is not None:
-            pose_label_map = poseconnect.utils.ingest_lookup_dict(pose_label_map)
+            pose_label_map = poseconnect.utils.convert_to_lookup_dict(pose_label_map)
         elif generate_pose_label_map:
             source_labels = (
                 poses
