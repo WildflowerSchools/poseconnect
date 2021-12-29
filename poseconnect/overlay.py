@@ -31,6 +31,314 @@ KEYPOINT_CONNECTORS_BY_POSE_MODEL = {
     'BODY_25': [[2, 3], [3, 4], [5, 2], [5, 6], [6, 7], [0, 1], [0, 15], [0, 16], [1, 2], [1, 5], [15, 17], [16, 18], [1, 8], [8, 9], [9, 10], [10, 11], [11, 24], [24, 22], [24, 23], [8, 12], [12, 13], [13, 14], [14, 21], [21, 19], [21, 20]]
 }
 
+def overlay_poses_2d(
+    poses_2d,
+    camera_id,
+    video_input_path,
+    video_start_time,
+    video_fps=None,
+    video_frame_count=None,
+    video_output_path=None,
+    video_output_directory=None,
+    video_output_filename_suffix=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_FILENAME_SUFFIX_POSES_2D,
+    video_output_filename_extension=None,
+    video_output_fourcc_string=None,
+    draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
+    keypoint_connectors=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTORS,
+    pose_model_name=poseconnect.defaults.OVERLAY_POSE_MODEL_NAME,
+    pose_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    keypoint_radius=poseconnect.defaults.OVERLAY_KEYPOINT_RADIUS,
+    keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
+    keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
+    keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
+    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
+    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
+    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    progress_bar=poseconnect.defaults.PROGRESS_BAR,
+    notebook=poseconnect.defaults.NOTEBOOK
+):
+    poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
+    poses_2d = poses_2d.loc[poses_2d['camera_id'] == camera_id].copy()
+    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
+    overlay_poses_video(
+        poses=poses_2d,
+        video_input_path=video_input_path,
+        video_start_time=video_start_time,
+        pose_type='2d',
+        camera_calibration=None,
+        pose_label_column=None,
+        video_fps=video_fps,
+        video_frame_count=video_frame_count,
+        video_output_path=video_output_path,
+        video_output_directory=video_output_directory,
+        video_output_filename_suffix=video_output_filename_suffix,
+        video_output_filename_extension=video_output_filename_extension,
+        video_output_fourcc_string=video_output_fourcc_string,
+        draw_keypoint_connectors=draw_keypoint_connectors,
+        keypoint_connectors=keypoint_connectors,
+        pose_model_name=pose_model_name,
+        pose_color=pose_color,
+        keypoint_radius=keypoint_radius,
+        keypoint_alpha=keypoint_alpha,
+        keypoint_connector_alpha=keypoint_connector_alpha,
+        keypoint_connector_linewidth=keypoint_connector_linewidth,
+        pose_label_color=pose_label_color,
+        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_font_scale=pose_label_font_scale,
+        pose_label_line_width=pose_label_line_width,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
+
+def overlay_poses_3d(
+    poses_3d,
+    camera_calibrations,
+    camera_id,
+    video_input_path,
+    video_start_time,
+    video_fps=None,
+    video_frame_count=None,
+    video_output_path=None,
+    video_output_directory=None,
+    video_output_filename_suffix=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_FILENAME_SUFFIX_POSES_3D,
+    video_output_filename_extension=None,
+    video_output_fourcc_string=None,
+    draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
+    keypoint_connectors=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTORS,
+    pose_model_name=poseconnect.defaults.OVERLAY_POSE_MODEL_NAME,
+    pose_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    keypoint_radius=poseconnect.defaults.OVERLAY_KEYPOINT_RADIUS,
+    keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
+    keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
+    keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
+    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
+    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
+    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    progress_bar=poseconnect.defaults.PROGRESS_BAR,
+    notebook=poseconnect.defaults.NOTEBOOK
+):
+    poses_3d = poseconnect.utils.ingest_poses_3d(poses_3d)
+    camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
+    camera_calibration = camera_calibrations.to_dict(orient=index)[camera_id]
+    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
+    overlay_poses_video(
+        poses=poses_3d,
+        video_input_path=video_input_path,
+        video_start_time=video_start_time,
+        pose_type='3d',
+        camera_calibration=camera_calibration,
+        pose_label_column=None,
+        video_fps=video_fps,
+        video_frame_count=video_frame_count,
+        video_output_path=video_output_path,
+        video_output_directory=video_output_directory,
+        video_output_filename_suffix=video_output_filename_suffix,
+        video_output_filename_extension=video_output_filename_extension,
+        video_output_fourcc_string=video_output_fourcc_string,
+        draw_keypoint_connectors=draw_keypoint_connectors,
+        keypoint_connectors=keypoint_connectors,
+        pose_model_name=pose_model_name,
+        pose_color=pose_color,
+        keypoint_radius=keypoint_radius,
+        keypoint_alpha=keypoint_alpha,
+        keypoint_connector_alpha=keypoint_connector_alpha,
+        keypoint_connector_linewidth=keypoint_connector_linewidth,
+        pose_label_color=pose_label_color,
+        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_font_scale=pose_label_font_scale,
+        pose_label_line_width=pose_label_line_width,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
+
+def overlay_poses_3d_tracked(
+    poses_3d,
+    camera_calibrations,
+    camera_id,
+    video_input_path,
+    video_start_time,
+    track_labels=None,
+    generate_track_labels=True,
+    video_fps=None,
+    video_frame_count=None,
+    video_output_path=None,
+    video_output_directory=None,
+    video_output_filename_suffix=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_FILENAME_SUFFIX_POSES_3D,
+    video_output_filename_extension=None,
+    video_output_fourcc_string=None,
+    draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
+    keypoint_connectors=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTORS,
+    pose_model_name=poseconnect.defaults.OVERLAY_POSE_MODEL_NAME,
+    pose_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    keypoint_radius=poseconnect.defaults.OVERLAY_KEYPOINT_RADIUS,
+    keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
+    keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
+    keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
+    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
+    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
+    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    progress_bar=poseconnect.defaults.PROGRESS_BAR,
+    notebook=poseconnect.defaults.NOTEBOOK
+):
+    poses_3d = poseconnect.utils.ingest_poses_3d_with_tracks(poses_3d)
+    camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
+    camera_calibration = camera_calibrations.to_dict(orient=index)[camera_id]
+    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
+    if track_labels is not None:
+        track_labels = poseconnect.utils.ingest_pose_track_3d_labels(track_labels)
+    else:
+        pose_track_3d_ids = (
+            poses_3d
+            .sort_values('timestamp')
+            .loc[:, 'pose_track_3d_id']
+            .dropna()
+            .drop_duplicates()
+            .tolist()
+        )
+        if generate_track_labels:
+            track_labels = pd.DataFrame(
+                range(len(pose_track_3d_ids)),
+                index=pose_track_3d_ids
+            )
+        else:
+            track_labels = pd.DataFrame(
+                pose_track_3d_ids,
+                index=pose_track_3d_ids
+            )
+    poses_3d['track_label'] = (
+        poses_3d
+        .join(
+            track_labels,
+            how='left',
+            on='pose_track_3d_id'
+        )
+    )
+    overlay_poses_video(
+        poses=poses_3d,
+        video_input_path=video_input_path,
+        video_start_time=video_start_time,
+        pose_type='3d',
+        camera_calibration=camera_calibration,
+        pose_label_column='track_label',
+        video_fps=video_fps,
+        video_frame_count=video_frame_count,
+        video_output_path=video_output_path,
+        video_output_directory=video_output_directory,
+        video_output_filename_suffix=video_output_filename_suffix,
+        video_output_filename_extension=video_output_filename_extension,
+        video_output_fourcc_string=video_output_fourcc_string,
+        draw_keypoint_connectors=draw_keypoint_connectors,
+        keypoint_connectors=keypoint_connectors,
+        pose_model_name=pose_model_name,
+        pose_color=pose_color,
+        keypoint_radius=keypoint_radius,
+        keypoint_alpha=keypoint_alpha,
+        keypoint_connector_alpha=keypoint_connector_alpha,
+        keypoint_connector_linewidth=keypoint_connector_linewidth,
+        pose_label_color=pose_label_color,
+        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_font_scale=pose_label_font_scale,
+        pose_label_line_width=pose_label_line_width,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
+
+def overlay_poses_3d_identified(
+    poses_3d,
+    camera_calibrations,
+    camera_id,
+    video_input_path,
+    video_start_time,
+    person_labels=None,
+    generate_person_labels=True,
+    video_fps=None,
+    video_frame_count=None,
+    video_output_path=None,
+    video_output_directory=None,
+    video_output_filename_suffix=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_FILENAME_SUFFIX_POSES_3D,
+    video_output_filename_extension=None,
+    video_output_fourcc_string=None,
+    draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
+    keypoint_connectors=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTORS,
+    pose_model_name=poseconnect.defaults.OVERLAY_POSE_MODEL_NAME,
+    pose_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    keypoint_radius=poseconnect.defaults.OVERLAY_KEYPOINT_RADIUS,
+    keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
+    keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
+    keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
+    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
+    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
+    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    progress_bar=poseconnect.defaults.PROGRESS_BAR,
+    notebook=poseconnect.defaults.NOTEBOOK
+):
+    poses_3d = poseconnect.utils.ingest_poses_3d_with_person_ids(poses_3d)
+    camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
+    camera_calibration = camera_calibrations.to_dict(orient=index)[camera_id]
+    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
+    if person_labels is not None:
+        person_labels = poseconnect.utils.ingest_person_labels(person_labels)
+    else:
+        person_ids = (
+            poses_3d
+            .sort_values('timestamp')
+            .loc[:, 'person_id']
+            .dropna()
+            .drop_duplicates()
+            .tolist()
+        )
+        if generate_person_labels:
+            person_labels = pd.DataFrame(
+                range(len(person_ids)),
+                index=person_ids
+            )
+        else:
+            person_labels = pd.DataFrame(
+                person_ids,
+                index=person_ids
+            )
+    poses_3d['person_label'] = (
+        poses_3d
+        .join(
+            person_labels,
+            how='left',
+            on='person_id'
+        )
+    )
+    overlay_poses_video(
+        poses=poses_3d,
+        video_input_path=video_input_path,
+        video_start_time=video_start_time,
+        pose_type='3d',
+        camera_calibration=camera_calibration,
+        pose_label_column='person_label',
+        video_fps=video_fps,
+        video_frame_count=video_frame_count,
+        video_output_path=video_output_path,
+        video_output_directory=video_output_directory,
+        video_output_filename_suffix=video_output_filename_suffix,
+        video_output_filename_extension=video_output_filename_extension,
+        video_output_fourcc_string=video_output_fourcc_string,
+        draw_keypoint_connectors=draw_keypoint_connectors,
+        keypoint_connectors=keypoint_connectors,
+        pose_model_name=pose_model_name,
+        pose_color=pose_color,
+        keypoint_radius=keypoint_radius,
+        keypoint_alpha=keypoint_alpha,
+        keypoint_connector_alpha=keypoint_connector_alpha,
+        keypoint_connector_linewidth=keypoint_connector_linewidth,
+        pose_label_color=pose_label_color,
+        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_font_scale=pose_label_font_scale,
+        pose_label_line_width=pose_label_line_width,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
+
 def overlay_poses_video(
     poses,
     video_input_path,
