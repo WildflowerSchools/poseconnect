@@ -121,7 +121,7 @@ def overlay_poses_3d(
 ):
     poses_3d = poseconnect.utils.ingest_poses_3d(poses_3d)
     camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
-    camera_calibration = camera_calibrations.to_dict(orient=index)[camera_id]
+    camera_calibration = camera_calibrations.to_dict(orient='index')[camera_id]
     video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
     overlay_poses_video(
         poses=poses_3d,
@@ -185,7 +185,7 @@ def overlay_poses_3d_tracked(
 ):
     poses_3d = poseconnect.utils.ingest_poses_3d_with_tracks(poses_3d)
     camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
-    camera_calibration = camera_calibrations.to_dict(orient=index)[camera_id]
+    camera_calibration = camera_calibrations.to_dict(orient='index')[camera_id]
     video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
     if track_labels is not None:
         track_labels = poseconnect.utils.ingest_pose_track_3d_labels(track_labels)
@@ -278,7 +278,7 @@ def overlay_poses_3d_identified(
 ):
     poses_3d = poseconnect.utils.ingest_poses_3d_with_person_ids(poses_3d)
     camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
-    camera_calibration = camera_calibrations.to_dict(orient=index)[camera_id]
+    camera_calibration = camera_calibrations.to_dict(orient='index')[camera_id]
     video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
     if person_labels is not None:
         person_labels = poseconnect.utils.ingest_person_labels(person_labels)
