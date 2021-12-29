@@ -198,6 +198,7 @@ def overlay_poses_3d_tracked(
             .drop_duplicates()
             .tolist()
         )
+        logger.info(pose_track_3d_ids)
         if generate_track_labels:
             track_labels = pd.DataFrame(
                 range(len(pose_track_3d_ids)),
@@ -208,6 +209,7 @@ def overlay_poses_3d_tracked(
                 pose_track_3d_ids,
                 index=pose_track_3d_ids
             )
+    logger.info(track_labels)
     poses_3d = (
         poses_3d
         .join(
