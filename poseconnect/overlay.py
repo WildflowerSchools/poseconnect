@@ -198,18 +198,17 @@ def overlay_poses_3d_tracked(
             .drop_duplicates()
             .tolist()
         )
-        logger.info(pose_track_3d_ids)
         if generate_track_labels:
-            track_labels = pd.DataFrame(
-                range(len(pose_track_3d_ids)),
-                index=pose_track_3d_ids
-            )
+            track_labels_list = list(range(len(pose_track_3d_ids)))
         else:
-            track_labels = pd.DataFrame(
-                pose_track_3d_ids,
-                index=pose_track_3d_ids
-            )
-    logger.info(track_labels.info())
+            track_labels_list = pose_track_3d_ids
+        track_labels = (
+            pd.DataFrame({
+                'pose_track_3d_id': pose_track_3d_ids,
+                'track_label': track_labels_list
+            })
+            .set_index('pose_track_3d_id')
+        )
     poses_3d = (
         poses_3d
         .join(
@@ -218,7 +217,6 @@ def overlay_poses_3d_tracked(
             on='pose_track_3d_id'
         )
     )
-    logger.info(poses_3d.info())
     overlay_poses_video(
         poses=poses_3d,
         video_input_path=video_input_path,
@@ -295,15 +293,16 @@ def overlay_poses_3d_identified(
             .tolist()
         )
         if generate_person_labels:
-            person_labels = pd.DataFrame(
-                range(len(person_ids)),
-                index=person_ids
-            )
+            person_labels_list = list(range(len(person_ids)))
         else:
-            person_labels = pd.DataFrame(
-                person_ids,
-                index=person_ids
-            )
+            person_labels_list = person_ids
+        person_labels = (
+            pd.DataFrame({
+                'person_id': person_ids,
+                'track_label': person_labels_list
+            })
+            .set_index('person_id')
+        )
     poses_3d = (
         poses_3d
         .join(
