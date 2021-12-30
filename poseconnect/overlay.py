@@ -310,6 +310,15 @@ def overlay_poses_video(
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
     draw_timestamp=poseconnect.defaults.OVERLAY_DRAW_TIMESTAMP,
+    timestamp_padding=poseconnect.defaults.OVERLAY_TIMESTAMP_PADDING,
+    timestamp_font_scale=poseconnect.defaults.OVERLAY_TIMESTAMP_FONT_SCALE,
+    timestamp_text_line_width=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_LINE_WIDTH,
+    timestamp_text_color=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_COLOR,
+    timestamp_text_alpha=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_ALPHA,
+    timestamp_box_line_width=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_LINE_WIDTH,
+    timestamp_box_color=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_COLOR,
+    timestamp_box_fill=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_FILL,
+    timestamp_box_alpha=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_ALPHA,
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
@@ -347,6 +356,8 @@ def overlay_poses_video(
             poses[pose_label_column] = poses[pose_label_column].apply(
                 lambda x: pose_label_map.get(x)
             )
+    timestamp_text_color = matplotlib.colors.to_hex(timestamp_text_color, keep_alpha=False)
+    timestamp_box_color = matplotlib.colors.to_hex(timestamp_box_color, keep_alpha=False)
     if pose_type == '2d' and 'camera_id' in poses.columns:
         if camera_id is not None:
             poses = poses.loc[poses['camera_id'] == camera_id].copy()
@@ -477,7 +488,16 @@ def overlay_poses_video(
         if draw_timestamp:
             frame = cv_utils.draw_timestamp(
                 original_image=frame,
-                timestamp=video_timestamp
+                timestamp=video_timestamp,
+                padding=timestamp_padding,
+                font_scale=timestamp_font_scale,
+                text_line_width=timestamp_text_line_width,
+                text_color=timestamp_text_color,
+                text_alpha=timestamp_text_alpha,
+                box_line_width=timestamp_box_line_width,
+                box_color=timestamp_box_color,
+                box_fill=timestamp_box_fill,
+                box_alpha=timestamp_box_alpha
             )
         video_output.write_frame(frame)
         if progress_bar:
