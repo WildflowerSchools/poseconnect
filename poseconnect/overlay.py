@@ -451,7 +451,7 @@ def overlay_poses_video(
         else:
             t = tqdm.tqdm(total=video_frame_count)
     for frame_index, video_timestamp in enumerate(video_timestamps):
-        aligned_pose_timestamp = aligned_pose_timestamps[frame_index]
+        pose_timestamp = aligned_pose_timestamps[frame_index]
         frame = video_input.get_frame()
         if frame is None:
             raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
