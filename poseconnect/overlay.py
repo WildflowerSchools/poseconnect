@@ -309,7 +309,7 @@ def overlay_poses_video(
     pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
-    draw_timestamp=pose_connect.defaults.OVERLAY_DRAW_TIMESTAMP,
+    draw_timestamp=poseconnect.defaults.OVERLAY_DRAW_TIMESTAMP,
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
