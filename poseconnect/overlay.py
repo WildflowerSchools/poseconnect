@@ -616,7 +616,7 @@ def overlay_pose_image(
         pose_label_anchor = np.nanmean(keypoint_coordinates, axis=0)
         new_image = cv_utils.draw_text_box(
             original_image=new_image,
-            coordinates=pose_label_anchor,
+            anchor_coordinates=pose_label_anchor,
             text=str(pose_label),
             horizontal_alignment='center',
             vertical_alignment='middle',
@@ -629,40 +629,6 @@ def overlay_pose_image(
             box_fill=True,
             box_alpha=pose_label_background_alpha
         )
-        # text_box_size, baseline = cv.getTextSize(
-        #     text=str(pose_label),
-        #     fontFace=cv.FONT_HERSHEY_PLAIN,
-        #     fontScale=pose_label_font_scale,
-        #     thickness=pose_label_line_width
-        # )
-        # new_image=cv_utils.draw_rectangle(
-        #     original_image=new_image,
-        #     coordinates=[
-        #         [
-        #             pose_label_anchor[0] - text_box_size[0]/2,
-        #             pose_label_anchor[1] - (text_box_size[1] + baseline)/2
-        #         ],
-        #         [
-        #             pose_label_anchor[0] + text_box_size[0]/2,
-        #             pose_label_anchor[1] + (text_box_size[1] + baseline)/2
-        #         ]
-        #     ],
-        #     line_width=1.5,
-        #     color=pose_color,
-        #     fill=True,
-        #     alpha=pose_label_background_alpha
-        # )
-        # new_image=cv_utils.draw_text(
-        #     original_image=new_image,
-        #     coordinates=pose_label_anchor,
-        #     text=str(pose_label),
-        #     horizontal_alignment='center',
-        #     vertical_alignment='middle',
-        #     font_face=cv.FONT_HERSHEY_PLAIN,
-        #     font_scale=pose_label_font_scale,
-        #     line_width=pose_label_line_width,
-        #     color=pose_label_color
-        # )
     return new_image
 
 def align_timestamps(
