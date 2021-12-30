@@ -309,6 +309,7 @@ def overlay_poses_video(
     pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
     pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    draw_timestamp=pose_connect.defaults.OVERLAY_DRAW_TIMESTAMP,
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
@@ -449,7 +450,8 @@ def overlay_poses_video(
             t = tqdm.tqdm_notebook(total=video_frame_count)
         else:
             t = tqdm.tqdm(total=video_frame_count)
-    for frame_index, pose_timestamp in enumerate(aligned_pose_timestamps):
+    for frame_index, video_timestamp in enumerate(video_timestamps):
+        aligned_pose_timestamp = aligned_pose_timestamps[frame_index]
         frame = video_input.get_frame()
         if frame is None:
             raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
@@ -472,6 +474,11 @@ def overlay_poses_video(
             pose_label_font_scale=pose_label_font_scale,
             pose_label_line_width=pose_label_line_width
         )
+        if draw_timestamp:
+            frame = cv_utils.draw_timestamp(
+                original_image=frame,
+                timestamp=video_timestamp
+            )
         video_output.write_frame(frame)
         if progress_bar:
             t.update()
@@ -495,7 +502,7 @@ def overlay_poses_image(
     pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
     pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
+    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
 ):
     if pose_type == '2d':
         if poses['camera_id'].nunique() > 1:
