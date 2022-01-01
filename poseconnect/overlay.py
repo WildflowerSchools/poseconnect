@@ -505,6 +505,196 @@ def overlay_poses_video(
     video_input.close()
     video_output.close()
 
+def overlay_poses_video_frame(
+    poses,
+    video_input_path,
+    video_start_time,
+    timestamp,
+    timestamp_offset_max_milliseconds=poseconnect.defaults.OVERLAY_TIMESTAMP_OFFSET_MAX_MILLISECONDS,
+    pose_type='2d',
+    camera_id=None,
+    camera_calibration=None,
+    camera_calibrations=None,
+    pose_label_column=None,
+    pose_label_map=None,
+    generate_pose_label_map=False,
+    video_fps=None,
+    video_frame_count=None,
+    image_output_path=None,
+    image_output_directory=None,
+    image_output_filename_suffix=poseconnect.defaults.OVERLAY_IMAGE_OUTPUT_FILENAME_SUFFIX,
+    image_output_filename_extension=poseconnect.defaults.OVERLAY_IMAGE_OUTPUT_FILENAME_EXTENSION,
+    draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
+    keypoint_connectors=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTORS,
+    pose_model_name=poseconnect.defaults.OVERLAY_POSE_MODEL_NAME,
+    pose_color=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    keypoint_radius=poseconnect.defaults.OVERLAY_KEYPOINT_RADIUS,
+    keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
+    keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
+    keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
+    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
+    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
+    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    draw_timestamp=poseconnect.defaults.OVERLAY_DRAW_TIMESTAMP,
+    timestamp_padding=poseconnect.defaults.OVERLAY_TIMESTAMP_PADDING,
+    timestamp_font_scale=poseconnect.defaults.OVERLAY_TIMESTAMP_FONT_SCALE,
+    timestamp_text_line_width=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_LINE_WIDTH,
+    timestamp_text_color=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_COLOR,
+    timestamp_text_alpha=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_ALPHA,
+    timestamp_box_line_width=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_LINE_WIDTH,
+    timestamp_box_color=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_COLOR,
+    timestamp_box_fill=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_FILL,
+    timestamp_box_alpha=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_ALPHA
+):
+    poses = poseconnect.utils.ingest_poses_generic(poses)
+    poses=poses.copy()
+    video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
+    timestamp = poseconnect.utils.convert_to_datetime_utc(timestamp)
+    if camera_calibration is None:
+        if camera_calibrations is not None and camera_id is not None:
+            camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
+            camera_calibrations = camera_calibrations.to_dict(orient='index')
+            if camera_id not in camera_calibrations.keys():
+                raise ValueError('Camera ID \'{}\' not found in camera calibration data'.format(
+                    camera_id
+                ))
+            camera_calibration = camera_calibrations.get(camera_id)
+    if pose_label_column is not None:
+        if pose_label_column not in poses.columns:
+            raise ValueError('Specified pose label column \'{}\' not found in pose data'.format(
+                pose_label_column
+            ))
+        if pose_label_map is not None:
+            pose_label_map = poseconnect.utils.convert_to_lookup_dict(pose_label_map)
+        elif generate_pose_label_map:
+            source_labels = (
+                poses
+                .sort_values('timestamp')
+                .loc[:, pose_label_column]
+                .dropna()
+                .drop_duplicates()
+                .tolist()
+            )
+            target_labels = list(range(len(source_labels)))
+            pose_label_map = dict(zip(source_labels, target_labels))
+        if pose_label_map is not None:
+            poses[pose_label_column] = poses[pose_label_column].apply(
+                lambda x: pose_label_map.get(x)
+            )
+    timestamp_text_color = matplotlib.colors.to_hex(timestamp_text_color, keep_alpha=False)
+    timestamp_box_color = matplotlib.colors.to_hex(timestamp_box_color, keep_alpha=False)
+    if pose_type == '2d' and 'camera_id' in poses.columns:
+        if camera_id is not None:
+            poses = poses.loc[poses['camera_id'] == camera_id].copy()
+        if poses['camera_id'].nunique() > 1:
+            raise ValueError('Pose data contains multiple camera IDs for a single video')
+    elif pose_type == '3d':
+        if camera_calibration is None:
+            raise ValueError('Camera calibration parameters must be specified to overlay 3D poses')
+    else:
+        raise ValueError('Pose type must be either \'2d\' or \'3d\'')
+    logger.info('Ingested {} poses spanning time period {} to {}'.format(
+        len(poses),
+        poses['timestamp'].min().isoformat(),
+        poses['timestamp'].max().isoformat()
+    ))
+    logger.info('Video input path: {}'.format(video_input_path))
+    logger.info('Video start time: {}'.format(
+        video_start_time.isoformat()
+    ))
+    video_input = cv_utils.VideoInput(
+        input_path=video_input_path,
+        start_time=video_start_time
+    )
+    if video_fps is None:
+        video_fps = video_input.video_parameters.fps
+        if video_fps is None:
+            raise ValueError('Failed to rate video frame rate from video file.')
+    logger.info('Video frame rate: {} frames per second'.format(
+        video_fps
+    ))
+    if video_frame_count is None:
+        video_frame_count = video_input.video_parameters.frame_count
+        if video_frame_count is None:
+            raise ValueError('Failed to rate video frame count from video file.')
+    logger.info('Video frame count: {}'.format(
+        video_frame_count
+    ))
+    logger.info('Video input path: {}'.format(video_input_path))
+    if image_output_path is None:
+        video_input_directory, video_input_filename = os.path.split(video_input_path)
+        video_input_filename_stem, video_input_filename_extension = os.path.splitext(video_input_filename)
+        logger.info('Video input directory: {}'.format(video_input_directory))
+        logger.info('Video input filename stem: {}'.format(video_input_filename_stem))
+        if image_output_directory is None:
+            image_output_directory = video_input_directory
+        image_output_filename_stem = '_'.join([
+            video_input_filename_stem,
+            image_output_filename_suffix,
+            timestamp.strftime('%Y%m%D_%H%M%S_%f')
+        ])
+        logger.info('Image output directory: {}'.format(video_output_directory))
+        logger.info('Video output filename stem: {}'.format(video_output_filename_stem))
+        logger.info('Video output filename extension: {}'.format(video_output_filename_extension))
+        image_output_path = os.path.join(
+            image_output_directory,
+            '.'.join([
+                image_output_filename_stem,
+                image_output_filename_extension
+            ])
+        )
+    logger.info('Image output path: {}'.format(image_output_path))
+    nearest_pose_timestamp = find_nearest_pose_timestamp(
+        pose_timestamps=poses['timestamp'],
+        target_timestamp=timestamp,
+        timestamp_offset_max_milliseconds=timestamp_offset_max_milliseconds
+    )
+    if nearest_pose_timestamp is None:
+        logger.info('No pose timestamp near target timestamp')
+        return
+    frame = video_input.get_frame_by_timestamp(timestamp)
+    video_input.close()
+    if frame is None:
+        raise ValueError('No video frame at target timestamp {}'.format(timestamp.isoformat()))
+    frame=overlay_poses_image(
+        poses=poses.loc[poses['timestamp'] == nearest_pose_timestamp].copy(),
+        image=frame,
+        pose_type=pose_type,
+        camera_calibration=camera_calibration,
+        pose_label_column=pose_label_column,
+        draw_keypoint_connectors=draw_keypoint_connectors,
+        keypoint_connectors=keypoint_connectors,
+        pose_model_name=pose_model_name,
+        pose_color=pose_color,
+        keypoint_radius=keypoint_radius,
+        keypoint_alpha=keypoint_alpha,
+        keypoint_connector_alpha=keypoint_connector_alpha,
+        keypoint_connector_linewidth=keypoint_connector_linewidth,
+        pose_label_color=pose_label_color,
+        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_font_scale=pose_label_font_scale,
+        pose_label_line_width=pose_label_line_width
+    )
+    if draw_timestamp:
+        frame = cv_utils.draw_timestamp(
+            original_image=frame,
+            timestamp=timestamp,
+            padding=timestamp_padding,
+            font_scale=timestamp_font_scale,
+            text_line_width=timestamp_text_line_width,
+            text_color=timestamp_text_color,
+            text_alpha=timestamp_text_alpha,
+            box_line_width=timestamp_box_line_width,
+            box_color=timestamp_box_color,
+            box_fill=timestamp_box_fill,
+            box_alpha=timestamp_box_alpha
+        )
+    cv_utils.write_image(
+        image=frame,
+        path=image_output_path
+    )
+
 def overlay_poses_image(
     poses,
     image,
@@ -708,3 +898,40 @@ def align_timestamps(
         aligned_pose_timestamps.append(aligned_pose_timestamp)
     aligned_pose_timestamps = pd.DatetimeIndex(aligned_pose_timestamps)
     return video_timestamps, aligned_pose_timestamps
+
+def find_nearest_pose_timestamp(
+    pose_timestamps,
+    target_timestamp,
+    timestamp_offset_max_milliseconds=poseconnect.defaults.OVERLAY_TIMESTAMP_OFFSET_MAX_MILLISECONDS
+):
+    pose_timestamps = pd.DatetimeIndex(
+        pd.to_datetime(pose_timestamps, utc=True)
+        .drop_duplicates()
+        .sort_values()
+    )
+    target_timestamp = poseconnect.utils.convert_to_datetime_utc(target_timestamp)
+    nearby_pose_timestamps = pose_timestamps[
+        (pose_timestamps >= target_timestamp - datetime.timedelta(milliseconds=timestamp_offset_max_milliseconds)) &
+        (pose_timestamps < target_timestamp + datetime.timedelta(milliseconds=timestamp_offset_max_milliseconds))
+    ]
+    if len(nearby_pose_timestamps) == 0:
+        logger.debug('There are no pose timestamps nearby target timestamp {}.'.format(
+            target_timestamp.isoformat()
+        ))
+        nearest_pose_timestamp = None
+    elif len(nearby_pose_timestamps) == 1:
+        nearest_pose_timestamp = nearby_pose_timestamps[0]
+    else:
+        time_distances = [
+            max(nearby_pose_timestamp.to_pydatetime(), target_timestamp.to_pydatetime()) -
+            min(nearby_pose_timestamp.to_pydatetime(), target_timestamp.to_pydatetime())
+            for nearby_pose_timestamp in nearby_pose_timestamps
+        ]
+        nearest_pose_timestamp = nearby_pose_timestamps[np.argmin(time_distances)]
+        logger.debug('There are {} pose timestamps nearby video timestamp {}: {}. Chose pose timestamp {}'.format(
+            len(nearby_pose_timestamps),
+            target_timestamp.isoformat(),
+            [nearby_pose_timestamp.isoformat() for nearby_pose_timestamp in nearby_pose_timestamps],
+            nearest_pose_timestamp.isoformat()
+        ))
+    return nearest_pose_timestamp
