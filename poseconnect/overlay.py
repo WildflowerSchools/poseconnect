@@ -657,8 +657,12 @@ def overlay_poses_video_frame(
     video_input.close()
     if frame is None:
         raise ValueError('No video frame at target timestamp {}'.format(timestamp.isoformat()))
+    poses_frame = poses.loc[poses['timestamp'] == nearest_pose_timestamp].copy()
+    logger.info('Found {} poses for chosen frame'.format(
+        len(poses_frame)
+    ))
     frame=overlay_poses_image(
-        poses=poses.loc[poses['timestamp'] == nearest_pose_timestamp].copy(),
+        poses=poses_frame,
         image=frame,
         pose_type=pose_type,
         camera_calibration=camera_calibration,
