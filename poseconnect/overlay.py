@@ -923,8 +923,8 @@ def find_nearest_pose_timestamp(
         nearest_pose_timestamp = nearby_pose_timestamps[0]
     else:
         time_distances = [
-            max(nearby_pose_timestamp.to_pydatetime(), target_timestamp.to_pydatetime()) -
-            min(nearby_pose_timestamp.to_pydatetime(), target_timestamp.to_pydatetime())
+            max(nearby_pose_timestamp.to_pydatetime(), target_timestamp) -
+            min(nearby_pose_timestamp.to_pydatetime(), target_timestamp)
             for nearby_pose_timestamp in nearby_pose_timestamps
         ]
         nearest_pose_timestamp = nearby_pose_timestamps[np.argmin(time_distances)]
