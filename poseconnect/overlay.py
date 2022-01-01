@@ -635,8 +635,8 @@ def overlay_poses_video_frame(
             timestamp.strftime('%Y%m%d_%H%M%S_%f')
         ])
         logger.info('Image output directory: {}'.format(image_output_directory))
-        logger.info('Video output filename stem: {}'.format(image_output_filename_stem))
-        logger.info('Video output filename extension: {}'.format(image_output_filename_extension))
+        logger.info('Image output filename stem: {}'.format(image_output_filename_stem))
+        logger.info('Image output filename extension: {}'.format(image_output_filename_extension))
         image_output_path = os.path.join(
             image_output_directory,
             '.'.join([
