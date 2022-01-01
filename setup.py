@@ -13,7 +13,7 @@ def get_version():
 # Dependencies (format is 'PYPI_PACKAGE_NAME[>]=VERSION_NUMBER')
 BASE_DEPENDENCIES = [
     'wf-smc-kalman>=0.1.0',
-    'wf-cv-utils>=3.0.0',
+    'wf-cv-utils>=3.2.0',
     'pandas>=1.2.2',
     'numpy>=1.20.1',
     'networkx>=2.5',
