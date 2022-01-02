@@ -1,7 +1,19 @@
 import poseconnect.reconstruct
 import poseconnect.track
 import poseconnect.utils
+import dateutil
 import click
+import logging
+
+logger = logging.getLogger(__name__)
+
+class TimezoneType(click.ParamType):
+    name = "timezone"
+    def convert(self, value, param, ctx):
+        tzinfo = dateutil.tz.gettz(value)
+        if tzinfo is None:
+            self.fail('Timezone \'value\' not recognized', param, ctx)
+        return tzinfo
 
 @click.group(
     help='Tools for constructing 3D pose tracks from multi-camera 2D poses'
@@ -468,7 +480,397 @@ def cli_identify_pose_tracks_3d(
     )
     poseconnect.utils.output_poses_3d_with_tracks(poses_3d_with_person_ids, output_path)
 
+@click.command(
+    name='overlay',
+    help='Overlay poses onto video'
+)
+@click.argument(
+    'poses-path',
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        allow_dash=False,
+        path_type=None
+    )
+)
+@click.argument(
+    'video-input-path',
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        allow_dash=False,
+        path_type=None
+    )
+)
+@click.argument(
+    'video-start-time',
+    type=click.DateTime(formats=None)
+)
+@click.option(
+    '--video-start-timezone',
+    type=TimezoneType(),
+    default=poseconnect.defaults.OVERLAY_VIDEO_START_TIMEZONE,
+    help='Timezone of video start time',
+    show_default=True
+)
+@click.option(
+    '--pose-type',
+    type=click.Choice(
+        ['2d', '3d'],
+        case_sensitive=False
+    ),
+    default=poseconnect.defaults.OVERLAY_POSE_TYPE,
+    help='Dimensionality of pose data',
+    show_default=True
+)
+@click.option(
+    '--camera-id',
+    type=click.STRING,
+    default=poseconnect.defaults.OVERLAY_CAMERA_ID,
+    help='Camera ID associated with video',
+    show_default=True
+)
+@click.option(
+    '--camera-calibrations-path',
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        allow_dash=False,
+        path_type=None
+    ),
+    default=None,
+    help='Path to file containing camera calibration data',
+    show_default=True
+)
+@click.option(
+    '--pose-label-column',
+    type=click.STRING,
+    default=poseconnect.defaults.OVERLAY_POSE_LABEL_COLUMN,
+    help='Name of field containing pose labels',
+    show_default=True
+)
+@click.option(
+    '--pose-label-map-path',
+    type=click.Path(
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        allow_dash=False,
+        path_type=None
+    ),
+    default=None,
+    help='Path to file containing pose label mapping',
+    show_default=True
+)
+@click.option(
+    '--generate-pose-label-map/--preserve-pose-labels',
+    default=poseconnect.defaults.OVERLAY_GENERATE_POSE_LABEL_MAP,
+    help='Generate pose label map to shorten labels',
+    show_default=False
+)
+@click.option(
+    '--video-fps',
+    type=click.FLOAT,
+    default=poseconnect.defaults.OVERLAY_VIDEO_FPS,
+    help='Video frame rate in frames per second',
+    show_default=True
+)
+@click.option(
+    '--video-frame-count',
+    type=click.INT,
+    default=poseconnect.defaults.OVERLAY_VIDEO_FRAME_COUNT,
+    help='Number of frames in video',
+    show_default=True
+)
+@click.option(
+    '--video-output-path',
+    type=click.Path(
+        exists=False
+    ),
+    default=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_PATH,
+    help='Path to video output file',
+    show_default=True
+)
+@click.option(
+    '--video-output-directory',
+    type=click.Path(
+        exists=False
+    ),
+    default=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_DIRECTORY,
+    help='Path to directory containing video output files',
+    show_default=True
+)
+@click.option(
+    '--video-output-filename-suffix',
+    type=click.STRING,
+    default=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_FILENAME_SUFFIX,
+    help='String to append to video input filename to generate video output filename',
+    show_default=True
+)
+@click.option(
+    '--video-output-filename-extension',
+    type=click.STRING,
+    default=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_FILENAME_EXTENSION,
+    help='Filename extension for video output file (determines file type)',
+    show_default=True
+)
+@click.option(
+    '--video-output-fourcc-string',
+    type=click.STRING,
+    default=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_FOURCC_STRING,
+    help='Video output codec specification (see fourcc.org)',
+    show_default=True
+)
+@click.option(
+    '--draw-keypoint-connectors/--omit-keypoint-connectors',
+    default=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
+    help='Generate pose label map to shorten labels',
+    show_default=False
+)
+@click.option(
+    '--pose-model-name',
+    type=click.Choice(
+        list(poseconnect.reconstruct.KEYPOINT_CATEGORIES_BY_POSE_MODEL.keys()),
+        case_sensitive=False
+    ),
+    help='Name of pose model',
+    show_default=True
+)
+@click.option(
+    '--pose-color',
+    type=click.STRING,
+    default=poseconnect.defaults.OVERLAY_POSE_COLOR,
+    help='Color for keypoints and keypoint connectors',
+    show_default=True
+)
+@click.option(
+    '--keypoint-radius',
+    type=click.FLOAT,
+    default=poseconnect.defaults.OVERLAY_KEYPOINT_RADIUS,
+    help='Radius of each keypoint in pixels',
+    show_default=True
+)
+@click.option(
+    '--keypoint-alpha',
+    type=click.FLOAT,
+    default=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
+    help='Transparency of keypoints',
+    show_default=True
+)
+@click.option(
+    '--keypoint-connector-alpha',
+    type=click.FLOAT,
+    default=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
+    help='Transparency of keypoint connectors',
+    show_default=True
+)
+@click.option(
+    '--keypoint-connector-linewidth',
+    type=click.FLOAT,
+    default=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
+    help='Width of keypoint connectors in pixels',
+    show_default=True
+)
+@click.option(
+    '--pose-label-text-color',
+    type=click.STRING,
+    default=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_COLOR,
+    help='Color for pose label text',
+    show_default=True
+)
+@click.option(
+    '--pose-label-box-alpha',
+    type=click.FLOAT,
+    default=poseconnect.defaults.OVERLAY_POSE_LABEL_BOX_ALPHA,
+    help='Transparency of pose label text box',
+    show_default=True
+)
+@click.option(
+    '--pose-label-font-scale',
+    type=click.FLOAT,
+    default=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
+    help='Font scale for pose labels',
+    show_default=True
+)
+@click.option(
+    '--pose-label-text-line-width',
+    type=click.FLOAT,
+    default=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_LINE_WIDTH,
+    help='Width of lines for pose label text',
+    show_default=True
+)
+@click.option(
+    '--draw-timestamp/--no-timestamp',
+    default=poseconnect.defaults.OVERLAY_DRAW_TIMESTAMP,
+    help='Add a timestamp to each video frame',
+    show_default=False
+)
+@click.option(
+    '--timestamp-padding',
+    type=click.INT,
+    default=poseconnect.defaults.OVERLAY_TIMESTAMP_PADDING,
+    help='Separation between timestamp box and upper-right-hand corner of frame in pixels',
+    show_default=True
+)
+@click.option(
+    '--timestamp-font-scale',
+    type=click.FLOAT,
+    default=poseconnect.defaults.OVERLAY_TIMESTAMP_FONT_SCALE,
+    help='Font scale for timestamps',
+    show_default=True
+)
+@click.option(
+    '--timestamp-text-line-width',
+    type=click.FLOAT,
+    default=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_LINE_WIDTH,
+    help='Width of lines for timestamp text',
+    show_default=True
+)
+@click.option(
+    '--timestamp-text-color',
+    type=click.STRING,
+    default=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_COLOR,
+    help='Color for timestamp text',
+    show_default=True
+)
+@click.option(
+    '--timestamp-box-color',
+    type=click.STRING,
+    default=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_COLOR,
+    help='Color for timestamp text box',
+    show_default=True
+)
+@click.option(
+    '--timestamp-box-alpha',
+    type=click.FLOAT,
+    default=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_ALPHA,
+    help='Transparency of timestamp text box',
+    show_default=True
+)
+@click.option(
+    '--progress-bar/--no-progress-bar',
+    default=poseconnect.defaults.PROGRESS_BAR,
+    required=False,
+    help='Display progress bar',
+    show_default=False
+)
+@click.option(
+    '--log-level',
+    type=click.Choice(
+        poseconnect.defaults.LOG_LEVEL_OPTIONS,
+        case_sensitive=False
+    ),
+    default=poseconnect.defaults.LOG_LEVEL,
+    help='Log level',
+    show_default=True
+)
+def cli_overlay_poses_video(
+    poses_path,
+    video_input_path,
+    video_start_time,
+    video_start_timezone,
+    pose_type,
+    camera_id,
+    camera_calibrations_path,
+    pose_label_column,
+    pose_label_map_path,
+    generate_pose_label_map,
+    video_fps,
+    video_frame_count,
+    video_output_path,
+    video_output_directory,
+    video_output_filename_suffix,
+    video_output_filename_extension,
+    video_output_fourcc_string,
+    draw_keypoint_connectors,
+    pose_model_name,
+    pose_color,
+    keypoint_radius,
+    keypoint_alpha,
+    keypoint_connector_alpha,
+    keypoint_connector_linewidth,
+    pose_label_text_color,
+    pose_label_box_alpha,
+    pose_label_font_scale,
+    pose_label_text_line_width,
+    draw_timestamp,
+    timestamp_padding,
+    timestamp_font_scale,
+    timestamp_text_line_width,
+    timestamp_text_color,
+    timestamp_box_color,
+    timestamp_box_alpha,
+    progress_bar,
+    log_level
+):
+    if log_level is not None:
+        numeric_log_level = getattr(logging, log_level.upper(), None)
+        if not isinstance(numeric_log_level, int):
+            raise ValueError('Invalid log level: %s'.format(log_level))
+        logging.basicConfig(level=numeric_log_level)
+    video_start_time = video_start_time.replace(tzinfo=video_start_timezone)
+    poseconnect.overlay.overlay_poses_video(
+        poses=poses_path,
+        video_input_path=video_input_path,
+        video_start_time=video_start_time,
+        pose_type=pose_type,
+        camera_id=camera_id,
+        camera_calibration=None,
+        camera_calibrations=camera_calibrations_path,
+        pose_label_column=pose_label_column,
+        pose_label_map=pose_label_map_path,
+        generate_pose_label_map=generate_pose_label_map,
+        video_fps=video_fps,
+        video_frame_count=video_frame_count,
+        video_output_path=video_output_path,
+        video_output_directory=video_output_directory,
+        video_output_filename_suffix=video_output_filename_suffix,
+        video_output_filename_extension=video_output_filename_extension,
+        video_output_fourcc_string=video_output_fourcc_string,
+        draw_keypoint_connectors=draw_keypoint_connectors,
+        keypoint_connectors=None,
+        pose_model_name=pose_model_name,
+        pose_color=pose_color,
+        keypoint_radius=keypoint_radius,
+        keypoint_alpha=keypoint_alpha,
+        keypoint_connector_alpha=keypoint_connector_alpha,
+        keypoint_connector_linewidth=keypoint_connector_linewidth,
+        pose_label_text_color=pose_label_text_color,
+        pose_label_box_alpha=pose_label_box_alpha,
+        pose_label_font_scale=pose_label_font_scale,
+        pose_label_text_line_width=pose_label_text_line_width,
+        draw_timestamp=draw_timestamp,
+        timestamp_padding=timestamp_padding,
+        timestamp_font_scale=timestamp_font_scale,
+        timestamp_text_line_width=timestamp_text_line_width,
+        timestamp_text_color=timestamp_text_color,
+        timestamp_box_color=timestamp_box_color,
+        timestamp_box_alpha=timestamp_box_alpha,
+        progress_bar=progress_bar,
+        notebook=False
+    )
+
 cli.add_command(cli_reconstruct_poses_3d)
 cli.add_command(cli_track_poses_3d)
 cli.add_command(cli_interpolate_pose_tracks_3d)
 cli.add_command(cli_identify_pose_tracks_3d)
+cli.add_command(cli_overlay_poses_video)
+
+class TimezoneType(click.ParamType):
+    name = "timezone"
+    def convert(self, value, param, ctx):
+        tzinfo = dateutil.tz.gettz(value)
+        if tzinfo is None:
+            self.fail('Timezone \'value\' not recognized', param, ctx)
+        return tzinfo

@@ -13,11 +13,11 @@ def get_version():
 # Dependencies (format is 'PYPI_PACKAGE_NAME[>]=VERSION_NUMBER')
 BASE_DEPENDENCIES = [
     'wf-smc-kalman>=0.1.0',
-    'wf-cv-utils>=3.0.0',
+    'wf-cv-utils>=3.3.0',
     'pandas>=1.2.2',
     'numpy>=1.20.1',
     'networkx>=2.5',
-    'opencv-python>=4.5.1',
+    # 'opencv-python>=4.5.1',
     'matplotlib>=3.3.4',
     'seaborn>=0.11.1',
     'tqdm>=4.57.0',
