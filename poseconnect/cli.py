@@ -781,7 +781,6 @@ def cli_overlay_poses_video(
     video_output_filename_extension,
     video_output_fourcc_string,
     draw_keypoint_connectors,
-    keypoint_connectors,
     pose_model_name,
     pose_color,
     keypoint_radius,
