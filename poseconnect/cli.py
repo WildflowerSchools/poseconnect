@@ -3,6 +3,9 @@ import poseconnect.track
 import poseconnect.utils
 import dateutil
 import click
+import logging
+
+logger = logging.getLogger(__name__)
 
 class TimezoneType(click.ParamType):
     name = "timezone"
@@ -762,6 +765,16 @@ def cli_identify_pose_tracks_3d(
     help='Display progress bar',
     show_default=False
 )
+@click.option(
+    '--log-level',
+    type=click.Choice(
+        posconnect.defaults.LOG_LEVEL_OPTIONS,
+        case_sensitive=False
+    ),
+    default=poseconnect.defaults.LOG_LEVEL,
+    help='Log level',
+    show_default=True
+)
 def cli_overlay_poses_video(
     poses_path,
     video_input_path,
@@ -798,8 +811,14 @@ def cli_overlay_poses_video(
     timestamp_text_color,
     timestamp_box_color,
     timestamp_box_alpha,
-    progress_bar
+    progress_bar,
+    log_level
 ):
+    if log_level is not None:
+        numeric_log_level = getattr(logging, log_level.upper(), None)
+        if not isinstance(numeric_log_level, int):
+            raise ValueError('Invalid log level: %s'.format(log_level))
+        logging.basicConfig(level=numeric_log_level)
     video_start_time = video_start_time.astimezone(video_start_timezone)
     poseconnect.overlay.overlay_poses_video(
         poses=poses_path,
