@@ -21,6 +21,7 @@ four subcommands:
 * `track` takes a file of 3D pose data as input and outputs a file of 3D pose data with track IDs
 * `interpolate` takes a file of 3D pose data with track IDs as input and fills time gaps in each track with linearly interpolated poses
 * `identify` takes a file of 3D pose data with track IDs and a file of location sensor data with person IDs and outputs a file of 3D pose data with track and person IDs
+* `overlay` takes a file of 2D or 3D pose data and a source video for the data and outputs a video with the poses overlaid
 
 ### Help
 
