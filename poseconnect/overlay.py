@@ -1,4 +1,4 @@
-camera_calibrations=poseconnect.defaults.OVERLAY_CAMERA_CALIBRATIONSimport poseconnect.utils
+import poseconnect.utils
 import poseconnect.defaults
 # import process_pose_data.local_io
 # import poseconnect.visualize
