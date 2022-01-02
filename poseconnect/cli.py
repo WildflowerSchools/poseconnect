@@ -501,7 +501,7 @@ def cli_identify_pose_tracks_3d(
     'video-start-time',
     type=click.DateTime(formats=None)
 )
-@click-option(
+@click.option(
     '--video-start-timezone',
     type=TimezoneType(),
     default=poseconnect.defaults.OVERLAY_VIDEO_START_TIMEZONE,
