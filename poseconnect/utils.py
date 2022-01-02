@@ -4,21 +4,26 @@ import json
 import pickle
 import os
 
-def ingest_poses_generic(data_object):
+def ingest_poses_generic(
+    data_object,
+    pose_type
+):
     df = convert_to_df(data_object)
     all_column_names = df.reset_index().columns
-    if 'pose_2d_id' in all_column_names:
+    if pose_type=='2d':
         df = set_index_columns(
             df=df,
             index_columns='pose_2d_id'
         )
-    elif 'pose_3d_id' in all_column_names:
+    elif pose_type=='3d':
         df = set_index_columns(
             df=df,
             index_columns='pose_3d_id'
         )
     else:
-        raise ValueError('Poses must contain either a \'pose_2d_id\' field or a \'pose_3d_id\' field')
+        raise ValueError('Pose type \'{}\' not recognized'.format(
+            pose_type
+        ))
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     if 'camera_id' in all_column_names:
         df['camera_id'] = df['camera_id'].astype('object')

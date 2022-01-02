@@ -319,7 +319,10 @@ def overlay_poses_video(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
-    poses = poseconnect.utils.ingest_poses_generic(poses)
+    poses = poseconnect.utils.ingest_poses_generic(
+        data_object=poses,
+        pose_type=pose_type
+    )
     poses=poses.copy()
     video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
     if camera_calibration is None:
@@ -541,7 +544,10 @@ def overlay_poses_video_frame(
     timestamp_box_color=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_COLOR,
     timestamp_box_alpha=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_ALPHA
 ):
-    poses = poseconnect.utils.ingest_poses_generic(poses)
+    poses = poseconnect.utils.ingest_poses_generic(
+        data_object=poses,
+        pose_type=pose_type
+    )
     poses=poses.copy()
     video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
     timestamp = poseconnect.utils.convert_to_datetime_utc(timestamp)
