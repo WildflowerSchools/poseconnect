@@ -10,9 +10,15 @@ logger = logging.getLogger(__name__)
 class TimezoneType(click.ParamType):
     name = "timezone"
     def convert(self, value, param, ctx):
+        logger.info('Timezone text: {}'.format(
+            value
+        ))
         tzinfo = dateutil.tz.gettz(value)
         if tzinfo is None:
             self.fail('Timezone \'value\' not recognized', param, ctx)
+        logger.info('Timezone: {}'.format(
+            tzinfo
+        ))
         return tzinfo
 
 @click.group(
