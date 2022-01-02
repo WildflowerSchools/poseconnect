@@ -825,7 +825,7 @@ def cli_overlay_poses_video(
         if not isinstance(numeric_log_level, int):
             raise ValueError('Invalid log level: %s'.format(log_level))
         logging.basicConfig(level=numeric_log_level)
-    video_start_time = video_start_time.astimezone(video_start_timezone)
+    video_start_time = video_start_time.replace(tzinfo=video_start_timezone)
     poseconnect.overlay.overlay_poses_video(
         poses=poses_path,
         video_input_path=video_input_path,
