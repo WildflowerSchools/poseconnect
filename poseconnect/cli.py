@@ -4,6 +4,14 @@ import poseconnect.utils
 import dateutil
 import click
 
+class TimezoneType(click.ParamType):
+    name = "timezone"
+    def convert(self, value, param, ctx):
+        tzinfo = dateutil.tz.gettz(value)
+        if tzinfo is None:
+            self.fail('Timezone \'value\' not recognized', param, ctx)
+        return tzinfo
+
 @click.group(
     help='Tools for constructing 3D pose tracks from multi-camera 2D poses'
 )
@@ -843,7 +851,6 @@ cli.add_command(cli_overlay_poses_video)
 
 class TimezoneType(click.ParamType):
     name = "timezone"
-
     def convert(self, value, param, ctx):
         tzinfo = dateutil.tz.gettz(value)
         if tzinfo is None:
