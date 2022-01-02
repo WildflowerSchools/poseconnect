@@ -4,6 +4,7 @@
 * Add `pose_3d_id` name to index when producing 3D poses
 * Add parallelization option for 3D pose reconstruction
 * Add parallelization option for pose overlays
+* Enable pose tracking to handle arbitrary frame rates
 * Add command line interface for extracting single video frames
 * Flesh out documentation for command line interface
 * Add documentation for library interface
