@@ -323,7 +323,7 @@ def overlay_poses_video(
     poses=poses.copy()
     video_start_time = poseconnect.utils.convert_to_datetime_utc(video_start_time)
     if camera_calibration is None:
-        if camera_calibrations=poseconnect.defaults.OVERLAY_CAMERA_CALIBRATIONS is not None and camera_id is not None:
+        if camera_calibrations is not None and camera_id is not None:
             camera_calibrations = poseconnect.utils.ingest_camera_calibrations(camera_calibrations)
             camera_calibrations = camera_calibrations.to_dict(orient='index')
             if camera_id not in camera_calibrations.keys():
@@ -511,14 +511,14 @@ def overlay_poses_video_frame(
     pose_type=poseconnect.defaults.OVERLAY_POSE_TYPE,
     camera_id=poseconnect.defaults.OVERLAY_CAMERA_ID,
     camera_calibration=poseconnect.defaults.OVERLAY_CAMERA_CALIBRATION,
-    camera_calibrations=None,
+    camera_calibrations=poseconnect.defaults.OVERLAY_CAMERA_CALIBRATIONS,
     pose_label_column=poseconnect.defaults.OVERLAY_POSE_LABEL_COLUMN,
     pose_label_map=poseconnect.defaults.OVERLAY_POSE_LABEL_MAP,
     generate_pose_label_map=poseconnect.defaults.OVERLAY_GENERATE_POSE_LABEL_MAP,
     video_fps=poseconnect.defaults.OVERLAY_VIDEO_FPS,
     video_frame_count=poseconnect.defaults.OVERLAY_VIDEO_FRAME_COUNT,
-    image_output_path=None,
-    image_output_directory=None,
+    image_output_path=poseconnect.defaults.OVERLAY_IMAGE_OUTPUT_PATH,
+    image_output_directory=poseconnect.defaults.OVERLAY_IMAGE_OUTPUT_DIRECTORY,
     image_output_filename_suffix=poseconnect.defaults.OVERLAY_IMAGE_OUTPUT_FILENAME_SUFFIX,
     image_output_filename_extension=poseconnect.defaults.OVERLAY_IMAGE_OUTPUT_FILENAME_EXTENSION,
     draw_keypoint_connectors=poseconnect.defaults.OVERLAY_DRAW_KEYPOINT_CONNECTORS,
