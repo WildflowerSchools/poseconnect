@@ -51,10 +51,10 @@ def overlay_poses_2d(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
-    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_text_color=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_COLOR,
+    pose_label_box_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BOX_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    pose_label_text_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_LINE_WIDTH,
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
@@ -84,10 +84,10 @@ def overlay_poses_2d(
         keypoint_alpha=keypoint_alpha,
         keypoint_connector_alpha=keypoint_connector_alpha,
         keypoint_connector_linewidth=keypoint_connector_linewidth,
-        pose_label_color=pose_label_color,
-        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_text_color=pose_label_text_color,
+        pose_label_box_alpha=pose_label_box_alpha,
         pose_label_font_scale=pose_label_font_scale,
-        pose_label_line_width=pose_label_line_width,
+        pose_label_text_line_width=pose_label_text_line_width,
         progress_bar=progress_bar,
         notebook=notebook
     )
@@ -113,10 +113,10 @@ def overlay_poses_3d(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
-    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_text_color=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_COLOR,
+    pose_label_box_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BOX_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    pose_label_text_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_LINE_WIDTH,
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
@@ -146,10 +146,10 @@ def overlay_poses_3d(
         keypoint_alpha=keypoint_alpha,
         keypoint_connector_alpha=keypoint_connector_alpha,
         keypoint_connector_linewidth=keypoint_connector_linewidth,
-        pose_label_color=pose_label_color,
-        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_text_color=pose_label_text_color,
+        pose_label_box_alpha=pose_label_box_alpha,
         pose_label_font_scale=pose_label_font_scale,
-        pose_label_line_width=pose_label_line_width,
+        pose_label_text_line_width=pose_label_text_line_width,
         progress_bar=progress_bar,
         notebook=notebook
     )
@@ -175,10 +175,10 @@ def overlay_poses_3d_tracked(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
-    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_text_color=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_COLOR,
+    pose_label_box_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BOX_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    pose_label_text_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_LINE_WIDTH,
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
@@ -208,10 +208,10 @@ def overlay_poses_3d_tracked(
         keypoint_alpha=keypoint_alpha,
         keypoint_connector_alpha=keypoint_connector_alpha,
         keypoint_connector_linewidth=keypoint_connector_linewidth,
-        pose_label_color=pose_label_color,
-        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_text_color=pose_label_text_color,
+        pose_label_box_alpha=pose_label_box_alpha,
         pose_label_font_scale=pose_label_font_scale,
-        pose_label_line_width=pose_label_line_width,
+        pose_label_text_line_width=pose_label_text_line_width,
         progress_bar=progress_bar,
         notebook=notebook
     )
@@ -238,10 +238,10 @@ def overlay_poses_3d_identified(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
-    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_text_color=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_COLOR,
+    pose_label_box_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BOX_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    pose_label_text_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_LINE_WIDTH,
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
@@ -271,10 +271,10 @@ def overlay_poses_3d_identified(
         keypoint_alpha=keypoint_alpha,
         keypoint_connector_alpha=keypoint_connector_alpha,
         keypoint_connector_linewidth=keypoint_connector_linewidth,
-        pose_label_color=pose_label_color,
-        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_text_color=pose_label_text_color,
+        pose_label_box_alpha=pose_label_box_alpha,
         pose_label_font_scale=pose_label_font_scale,
-        pose_label_line_width=pose_label_line_width,
+        pose_label_text_line_width=pose_label_text_line_width,
         progress_bar=progress_bar,
         notebook=notebook
     )
@@ -305,19 +305,16 @@ def overlay_poses_video(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
-    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_text_color=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_COLOR,
+    pose_label_box_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BOX_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    pose_label_text_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_LINE_WIDTH,
     draw_timestamp=poseconnect.defaults.OVERLAY_DRAW_TIMESTAMP,
     timestamp_padding=poseconnect.defaults.OVERLAY_TIMESTAMP_PADDING,
     timestamp_font_scale=poseconnect.defaults.OVERLAY_TIMESTAMP_FONT_SCALE,
     timestamp_text_line_width=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_LINE_WIDTH,
     timestamp_text_color=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_COLOR,
-    timestamp_text_alpha=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_ALPHA,
-    timestamp_box_line_width=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_LINE_WIDTH,
     timestamp_box_color=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_COLOR,
-    timestamp_box_fill=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_FILL,
     timestamp_box_alpha=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_ALPHA,
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
@@ -480,10 +477,10 @@ def overlay_poses_video(
             keypoint_alpha=keypoint_alpha,
             keypoint_connector_alpha=keypoint_connector_alpha,
             keypoint_connector_linewidth=keypoint_connector_linewidth,
-            pose_label_color=pose_label_color,
-            pose_label_background_alpha=pose_label_background_alpha,
+            pose_label_text_color=pose_label_text_color,
+            pose_label_box_alpha=pose_label_box_alpha,
             pose_label_font_scale=pose_label_font_scale,
-            pose_label_line_width=pose_label_line_width
+            pose_label_text_line_width=pose_label_text_line_width
         )
         if draw_timestamp:
             frame = cv_utils.draw_timestamp(
@@ -493,10 +490,10 @@ def overlay_poses_video(
                 font_scale=timestamp_font_scale,
                 text_line_width=timestamp_text_line_width,
                 text_color=timestamp_text_color,
-                text_alpha=timestamp_text_alpha,
-                box_line_width=timestamp_box_line_width,
+                text_alpha=1.0,
+                box_line_width=0,
                 box_color=timestamp_box_color,
-                box_fill=timestamp_box_fill,
+                box_fill=True,
                 box_alpha=timestamp_box_alpha
             )
         video_output.write_frame(frame)
@@ -532,19 +529,16 @@ def overlay_poses_video_frame(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
-    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_text_color=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_COLOR,
+    pose_label_box_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BOX_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    pose_label_text_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_LINE_WIDTH,
     draw_timestamp=poseconnect.defaults.OVERLAY_DRAW_TIMESTAMP,
     timestamp_padding=poseconnect.defaults.OVERLAY_TIMESTAMP_PADDING,
     timestamp_font_scale=poseconnect.defaults.OVERLAY_TIMESTAMP_FONT_SCALE,
     timestamp_text_line_width=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_LINE_WIDTH,
     timestamp_text_color=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_COLOR,
-    timestamp_text_alpha=poseconnect.defaults.OVERLAY_TIMESTAMP_TEXT_ALPHA,
-    timestamp_box_line_width=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_LINE_WIDTH,
     timestamp_box_color=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_COLOR,
-    timestamp_box_fill=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_FILL,
     timestamp_box_alpha=poseconnect.defaults.OVERLAY_TIMESTAMP_BOX_ALPHA
 ):
     poses = poseconnect.utils.ingest_poses_generic(poses)
@@ -675,10 +669,10 @@ def overlay_poses_video_frame(
         keypoint_alpha=keypoint_alpha,
         keypoint_connector_alpha=keypoint_connector_alpha,
         keypoint_connector_linewidth=keypoint_connector_linewidth,
-        pose_label_color=pose_label_color,
-        pose_label_background_alpha=pose_label_background_alpha,
+        pose_label_text_color=pose_label_text_color,
+        pose_label_box_alpha=pose_label_box_alpha,
         pose_label_font_scale=pose_label_font_scale,
-        pose_label_line_width=pose_label_line_width
+        pose_label_text_line_width=pose_label_text_line_width
     )
     if draw_timestamp:
         frame = cv_utils.draw_timestamp(
@@ -688,10 +682,10 @@ def overlay_poses_video_frame(
             font_scale=timestamp_font_scale,
             text_line_width=timestamp_text_line_width,
             text_color=timestamp_text_color,
-            text_alpha=timestamp_text_alpha,
-            box_line_width=timestamp_box_line_width,
+            text_alpha=1.0,
+            box_line_width=0,
             box_color=timestamp_box_color,
-            box_fill=timestamp_box_fill,
+            box_fill=True,
             box_alpha=timestamp_box_alpha
         )
     cv_utils.write_image(
@@ -713,10 +707,10 @@ def overlay_poses_image(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
-    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_text_color=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_COLOR,
+    pose_label_box_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BOX_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH,
+    pose_label_text_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_LINE_WIDTH,
 ):
     if pose_type == '2d':
         if poses['camera_id'].nunique() > 1:
@@ -745,10 +739,10 @@ def overlay_poses_image(
             keypoint_alpha=keypoint_alpha,
             keypoint_connector_alpha=keypoint_connector_alpha,
             keypoint_connector_linewidth=keypoint_connector_linewidth,
-            pose_label_color=pose_label_color,
-            pose_label_background_alpha=pose_label_background_alpha,
+            pose_label_text_color=pose_label_text_color,
+            pose_label_box_alpha=pose_label_box_alpha,
             pose_label_font_scale=pose_label_font_scale,
-            pose_label_line_width=pose_label_line_width
+            pose_label_text_line_width=pose_label_text_line_width
         )
     return image
 
@@ -766,10 +760,10 @@ def overlay_pose_image(
     keypoint_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_ALPHA,
     keypoint_connector_alpha=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_ALPHA,
     keypoint_connector_linewidth=poseconnect.defaults.OVERLAY_KEYPOINT_CONNECTOR_LINEWIDTH,
-    pose_label_color=poseconnect.defaults.OVERLAY_POSE_LABEL_COLOR,
-    pose_label_background_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BACKGROUND_ALPHA,
+    pose_label_text_color=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_COLOR,
+    pose_label_box_alpha=poseconnect.defaults.OVERLAY_POSE_LABEL_BOX_ALPHA,
     pose_label_font_scale=poseconnect.defaults.OVERLAY_POSE_LABEL_FONT_SCALE,
-    pose_label_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_LINE_WIDTH
+    pose_label_text_line_width=poseconnect.defaults.OVERLAY_POSE_LABEL_TEXT_LINE_WIDTH
 ):
     keypoint_coordinates = np.asarray(keypoint_coordinates)
     if pose_type == '2d':
@@ -800,9 +794,16 @@ def overlay_pose_image(
     else:
         raise ValueError('Pose type must be either \'2d\' or \'3d\'')
     pose_color = matplotlib.colors.to_hex(pose_color, keep_alpha=False)
-    pose_label_color = matplotlib.colors.to_hex(pose_label_color, keep_alpha=False)
-    if draw_keypoint_connectors and keypoint_connectors is None and pose_model_name is not None:
-        keypoint_connectors = KEYPOINT_CONNECTORS_BY_POSE_MODEL[pose_model_name]
+    pose_label_text_color = matplotlib.colors.to_hex(pose_label_text_color, keep_alpha=False)
+    if draw_keypoint_connectors:
+        if keypoint_connectors is None:
+            if pose_model_name is None:
+                raise ValueError('Must specify pose model name or explicitly specify keypoint connectors to draw keypoint connectors')
+            if pose_model_name not in KEYPOINT_CONNECTORS_BY_POSE_MODEL.keys():
+                raise ValueError('Pose model \'{}\' not recognized'.format(
+                    pose_model_name
+                ))
+            keypoint_connectors = KEYPOINT_CONNECTORS_BY_POSE_MODEL[pose_model_name]
     if not np.any(np.all(np.isfinite(keypoint_coordinates), axis=1), axis=0):
         return image
     valid_keypoints = np.all(np.isfinite(keypoint_coordinates), axis=1)
@@ -842,13 +843,13 @@ def overlay_pose_image(
             horizontal_alignment='center',
             vertical_alignment='middle',
             font_scale=pose_label_font_scale,
-            text_line_width=pose_label_line_width,
-            text_color=pose_label_color,
+            text_line_width=pose_label_text_line_width,
+            text_color=pose_label_text_color,
             text_alpha=1.0,
             box_line_width=1.5,
             box_color=pose_color,
             box_fill=True,
-            box_alpha=pose_label_background_alpha
+            box_alpha=pose_label_box_alpha
         )
     return new_image
 
