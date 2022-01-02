@@ -794,7 +794,7 @@ def cli_overlay_poses_video(
     progress_bar
 ):
     video_start_time = video_start_time.astimezone(timezone)
-    poseconnect.overlay.def overlay_poses_video(
+    poseconnect.overlay.overlay_poses_video(
         poses=poses_path,
         video_input_path=video_input_path,
         video_start_time=video_start_time,
