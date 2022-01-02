@@ -768,7 +768,7 @@ def cli_identify_pose_tracks_3d(
 @click.option(
     '--log-level',
     type=click.Choice(
-        posconnect.defaults.LOG_LEVEL_OPTIONS,
+        poseconnect.defaults.LOG_LEVEL_OPTIONS,
         case_sensitive=False
     ),
     default=poseconnect.defaults.LOG_LEVEL,
