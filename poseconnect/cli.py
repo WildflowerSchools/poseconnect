@@ -504,7 +504,7 @@ def cli_identify_pose_tracks_3d(
 @click-option(
     '--video-start-timezone',
     type=TimezoneType(),
-    default='UTC',
+    default=poseconnect.defaults.OVERLAY_VIDEO_START_TIMEZONE,
     help='Timezone of video start time',
     show_default=True
 )
@@ -514,14 +514,14 @@ def cli_identify_pose_tracks_3d(
         ['2d', '3d'],
         case_sensitive=False
     ),
-    default='2d',
+    default=poseconnect.defaults.OVERLAY_POSE_TYPE,
     help='Dimensionality of pose data',
     show_default=True
 )
 @click.option(
     '--camera-id',
     type=click.STRING,
-    default=None,
+    default=poseconnect.defaults.OVERLAY_CAMERA_ID,
     help='Camera ID associated with video',
     show_default=True
 )
@@ -543,14 +543,7 @@ def cli_identify_pose_tracks_3d(
 @click.option(
     '--pose-label-column',
     type=click.STRING,
-    default=None,
-    help='Name of field containing pose labels',
-    show_default=True
-)
-@click.option(
-    '--pose-label-column',
-    type=click.STRING,
-    default=None,
+    default=poseconnect.defaults.OVERLAY_POSE_LABEL_COLUMN,
     help='Name of field containing pose labels',
     show_default=True
 )
@@ -571,21 +564,21 @@ def cli_identify_pose_tracks_3d(
 )
 @click.option(
     '--generate-pose-label-map/--preserve-pose-labels',
-    default=False,
+    default=poseconnect.defaults.OVERLAY_GENERATE_POSE_LABEL_MAP,
     help='Generate pose label map to shorten labels',
     show_default=False
 )
 @click.option(
     '--video-fps',
     type=click.FLOAT,
-    default=None,
+    default=poseconnect.defaults.OVERLAY_VIDEO_FPS,
     help='Video frame rate in frames per second',
     show_default=True
 )
 @click.option(
     '--video-frame-count',
     type=click.INT,
-    default=None,
+    default=poseconnect.defaults.OVERLAY_VIDEO_FRAME_COUNT,
     help='Number of frames in video',
     show_default=True
 )
@@ -594,7 +587,7 @@ def cli_identify_pose_tracks_3d(
     type=click.Path(
         exists=False
     ),
-    default=None,
+    default=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_PATH,
     help='Path to video output file',
     show_default=True
 )
@@ -603,28 +596,28 @@ def cli_identify_pose_tracks_3d(
     type=click.Path(
         exists=False
     ),
-    default=None,
+    default=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_DIRECTORY,
     help='Path to directory containing video output files',
     show_default=True
 )
 @click.option(
     '--video-output-filename-suffix',
     type=click.STRING,
-    default=None,
+    default=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_FILENAME_SUFFIX,
     help='String to append to video input filename to generate video output filename',
     show_default=True
 )
 @click.option(
     '--video-output-filename-extension',
     type=click.STRING,
-    default=None,
+    default=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_FILENAME_EXTENSION,
     help='Filename extension for video output file (determines file type)',
     show_default=True
 )
 @click.option(
     '--video-output-fourcc-string',
     type=click.STRING,
-    default=None,
+    default=poseconnect.defaults.OVERLAY_VIDEO_OUTPUT_FOURCC_STRING,
     help='Video output codec specification (see fourcc.org)',
     show_default=True
 )
