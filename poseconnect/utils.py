@@ -24,7 +24,7 @@ def ingest_poses_generic(
         raise ValueError('Pose type \'{}\' not recognized'.format(
             pose_type
         ))
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     if 'camera_id' in all_column_names:
         df['camera_id'] = df['camera_id'].astype('object')
     if 'keypoint_coordinates_2d' in all_column_names:
@@ -57,7 +57,7 @@ def ingest_poses_2d(data_object):
             set(target_columns) - set(df.columns)
         ))
     df = df.reindex(columns=target_columns)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     df['camera_id'] = df['camera_id'].astype('object')
     df['keypoint_coordinates_2d'] = df['keypoint_coordinates_2d'].apply(convert_to_array)
     df['keypoint_quality_2d'] = df['keypoint_quality_2d'].apply(convert_to_array)
@@ -105,7 +105,7 @@ def ingest_poses_3d(data_object):
             set(target_columns) - set(df.columns)
         ))
     df = df.reindex(columns=target_columns)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(convert_to_array)
     df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
     return df
@@ -160,12 +160,13 @@ def ingest_poses_3d_with_tracks(data_object):
             set(target_columns) - set(df.columns)
         ))
     df = df.reindex(columns=target_columns)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(convert_to_array)
     df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
     return df
 
 def output_poses_3d_with_tracks(df, path):
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     file_extension = os.path.splitext(path)[1]
     if len(file_extension) == 0:
         raise ValueError('Output path has no extension')
@@ -188,6 +189,7 @@ def output_poses_3d_with_tracks(df, path):
         try:
             df['timestamp'] = df['timestamp'].apply(lambda x: x.isoformat())
             df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].tolist()
+            df['pose_2d_ids'] = df['pose_2d_ids'].apply(lambda x: json.dumps(x))
             df.to_csv(path)
         except:
             raise ValueError('Output path has extension \'csv\', but conversion to CSV failed')
@@ -214,7 +216,7 @@ def ingest_poses_3d_with_person_ids(data_object):
             set(target_columns) - set(df.columns)
         ))
     df = df.reindex(columns=target_columns)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(convert_to_array)
     df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
     return df
@@ -242,7 +244,7 @@ def ingest_sensor_data(
             set(target_columns) - set(df.columns)
         ))
     df = df.reindex(columns=target_columns)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     df['x_position'] = pd.to_numeric(df['x_position']).astype('float')
     df['y_position'] = pd.to_numeric(df['y_position']).astype('float')
     df['z_position'] = pd.to_numeric(df['z_position']).astype('float')
