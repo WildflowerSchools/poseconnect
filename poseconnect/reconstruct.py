@@ -116,7 +116,15 @@ def reconstruct_poses_3d(
         elapsed_time,
         1000*elapsed_time/num_frames
     ))
+    print('Index: \'{}\', columns: {}'.format(
+        poses_3d.index.name,
+        poses_3d.columns
+    ))
     poses_3d.reset_index('timestamp', drop=True, inplace=True)
+    print('Index: \'{}\', columns: {}'.format(
+        poses_3d.index.name,
+        poses_3d.columns
+    ))
     return poses_3d
 
 def pose_3d_limits_by_pose_model(
@@ -316,6 +324,10 @@ def reconstruct_poses_3d_timestamp(
     if len(poses_3d_timestamp) == 0:
         return poses_3d_timestamp
     poses_3d_timestamp.set_index('pose_3d_id', inplace=True)
+    print('Index: \'{}\', columns: {}'.format(
+        poses_3d_timestamp.index.name,
+        poses_3d_timestamp.columns
+    ))
     if return_diagnostics:
         return poses_3d_timestamp, diagnostics
     else:
