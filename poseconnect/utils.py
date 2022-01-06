@@ -285,7 +285,9 @@ def convert_to_array(data_object):
         try:
             data_object = json.loads(data_object)
         except:
-            raise ValueError('Array object appears to be string but JSON deserialization fails')
+            raise ValueError('Array object \'{}\' appears to be string but JSON deserialization fails'.format(
+                data_object
+            ))
     return np.asarray(data_object)
 
 def convert_to_list(data_object):
