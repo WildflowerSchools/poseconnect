@@ -307,7 +307,9 @@ def convert_to_list(data_object):
         try:
             data_object = json.loads(data_object)
         except:
-            raise ValueError('List object appears to be string but JSON deserialization fails')
+            raise ValueError('List object \'{}\' appears to be string but JSON deserialization fails'.format(
+                data_object
+            ))
     return list(data_object)
 
 def convert_to_df(data_object):
