@@ -132,7 +132,7 @@ def output_poses_3d(df, path):
     elif file_extension.lower() == '.csv':
         try:
             df['timestamp'] = df['timestamp'].apply(lambda x: x.isoformat())
-            df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].tolist()
+            df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(lambda x: x.tolist())
             df.to_csv(path)
         except:
             raise ValueError('Output path has extension \'csv\', but conversion to CSV failed')
