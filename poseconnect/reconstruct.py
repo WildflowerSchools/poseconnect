@@ -102,21 +102,24 @@ def reconstruct_poses_3d(
         poses_2d['timestamp'].max().isoformat()
     ))
     start_time = time.time()
+    poses_3d_list = list()
     if progress_bar:
         if notebook:
-            tqdm.notebook.tqdm.pandas()
+            for timestamp, group_df in tqdm.notebook.tqdm(poses_2d.groupby('timestamp')):
+                poses_3d_list.append(reconstruct_poses_3d_timestamp_partial(group_df))
         else:
-            tqdm.tqdm.pandas()
-        poses_3d = poses_2d.groupby('timestamp').progress_apply(reconstruct_poses_3d_timestamp_partial)
+            for timestamp, group_df in tqdm.tqdm(poses_2d.groupby('timestamp')):
+                poses_3d_list.append(reconstruct_poses_3d_timestamp_partial(group_df))
     else:
-        poses_3d = poses_2d.groupby('timestamp').apply(reconstruct_poses_3d_timestamp_partial)
+        for timestamp, group_df in poses_2d.groupby('timestamp'):
+            poses_3d_list.append(reconstruct_poses_3d_timestamp_partial(group_df))
+    poses_3d = pd.concat(poses_3d_list)
     elapsed_time = time.time() - start_time
     logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
         len(poses_3d),
         elapsed_time,
         1000*elapsed_time/num_frames
     ))
-    poses_3d.reset_index('timestamp', drop=True, inplace=True)
     return poses_3d
 
 def pose_3d_limits_by_pose_model(
