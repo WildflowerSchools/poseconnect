@@ -111,6 +111,7 @@ def ingest_poses_3d(data_object):
     return df
 
 def output_poses_3d(df, path):
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     file_extension = os.path.splitext(path)[1]
     if len(file_extension) == 0:
         raise ValueError('Output path has no extension')
