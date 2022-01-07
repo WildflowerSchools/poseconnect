@@ -143,8 +143,8 @@ def reconstruct_poses_3d(
                 chunk_index,
                 len(poses_2d_chunk),
                 poses_2d_chunk['timestamp'].nunique(),
-                timestamp_min.isoformat(),
-                timestamp_max.isoformat()
+                poses_2d_chunk['timestamp'].min().isoformat(),
+                poses_2d_chunk['timestamp'].max().isoformat()
             ))
             poses_2d_chunk_list.append(poses_2d_chunk)
         reconstruct_poses_3d_chunk_partial = partial(
