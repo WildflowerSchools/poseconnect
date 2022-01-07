@@ -181,7 +181,7 @@ def reconstruct_poses_3d(
                             reconstruct_poses_3d_chunk_partial,
                             poses_2d_chunk_list
                         ),
-                        total=num_chunks
+                        total=len(poses_2d_chunk_list)
                     ))
                 else:
                     poses_3d_chunk_list = list(tqdm.tqdm(
@@ -189,7 +189,7 @@ def reconstruct_poses_3d(
                             reconstruct_poses_3d_chunk_partial,
                             poses_2d_chunk_list
                         ),
-                        total=num_chunks
+                        total=len(poses_2d_chunk_list)
                     ))
             else:
                 poses_3d_chunk_list = list(p.imap_unordered(
