@@ -139,6 +139,8 @@ def reconstruct_poses_3d(
         ))
         poses_2d_chunk_list = list()
         for chunk_index in range(num_chunks):
+            if chunk_index*chunk_size >= num_timestamps:
+                break
             timestamp_min = timestamps[chunk_index*chunk_size]
             timestamp_max = timestamps[min((chunk_index + 1)*chunk_size, num_timestamps) - 1]
             poses_2d_chunk = poses_2d.loc[
