@@ -112,7 +112,7 @@ def reconstruct_poses_3d(
         )
     else:
         poses_2d = poses_2d.sort_values('timestamp')
-        timestamps = poses_2d['timestamp'].unique().tolist()
+        timestamps = poses_2d['timestamp'].unique()
         num_timestamps = len(timestamps)
         if num_parallel_processes is None:
             num_cpus=multiprocessing.cpu_count()
