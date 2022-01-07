@@ -49,7 +49,6 @@ def reconstruct_poses_3d(
     num_parallel_processes=poseconnect.defaults.RECONSTRUCTION_NUM_PARALLEL_PROCESSES,
     num_chunks=poseconnect.defaults.RECONSTRUCTION_NUM_CHUNKS,
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
-    chunk_progress_bar=poseconnect.defaults.RECONSTRUCTION_CHUNK_PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
     poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
@@ -162,7 +161,7 @@ def reconstruct_poses_3d(
             pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
             include_track_labels=include_track_labels,
-            progress_bar=chunk_progress_bar,
+            progress_bar=False,
             notebook=notebook
         )
         with multiprocessing.Pool(num_processes) as p:
