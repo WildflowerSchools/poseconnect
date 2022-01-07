@@ -78,6 +78,59 @@ def reconstruct_poses_3d(
             room_y_limits=room_y_limits,
             pose_model_name=pose_model_name
         )
+    num_frames = len(poses_2d['timestamp'].unique())
+    logger.info('Reconstructing 3D poses from {} 2D poses across {} frames ({} to {})'.format(
+        len(poses_2d),
+        num_frames,
+        poses_2d['timestamp'].min().isoformat(),
+        poses_2d['timestamp'].max().isoformat()
+    ))
+    start_time = time.time()
+    reconstruct_poses_3d_chunk_partial = partial(
+        reconstruct_poses_3d_chunk,
+        camera_calibrations=camera_calibrations,
+        pose_3d_limits=pose_3d_limits,
+        min_keypoint_quality=min_keypoint_quality,
+        min_num_keypoints=min_num_keypoints,
+        min_pose_quality=min_pose_quality,
+        min_pose_pair_score=min_pose_pair_score,
+        max_pose_pair_score=max_pose_pair_score,
+        pose_pair_score_distance_method=pose_pair_score_distance_method,
+        pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
+        pose_pair_score_summary_method=pose_pair_score_summary_method,
+        pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+        pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
+        include_track_labels=include_track_labels,
+        progress_bar=progress_bar,
+        notebook=notebook
+    )
+    poses_2d = reconstruct_poses_3d_chunk_partial(poses_2d)
+    elapsed_time = time.time() - start_time
+    logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
+        len(poses_3d),
+        elapsed_time,
+        1000*elapsed_time/num_frames
+    ))
+    return poses_3d
+
+def reconstruct_poses_3d_chunk(
+    poses_2d,
+    camera_calibrations,
+    pose_3d_limits,
+    min_keypoint_quality=poseconnect.defaults.RECONSTRUCTION_MIN_KEYPOINT_QUALITY,
+    min_num_keypoints=poseconnect.defaults.RECONSTRUCTION_MIN_NUM_KEYPOINTS,
+    min_pose_quality=poseconnect.defaults.RECONSTRUCTION_MIN_POSE_QUALITY,
+    min_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MIN_POSE_PAIR_SCORE,
+    max_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MAX_POSE_PAIR_SCORE,
+    pose_pair_score_distance_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
+    pose_pair_score_pixel_distance_scale=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE,
+    pose_pair_score_summary_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
+    pose_3d_graph_initial_edge_threshold=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
+    pose_3d_graph_max_dispersion=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
+    include_track_labels=poseconnect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
+    progress_bar=poseconnect.defaults.PROGRESS_BAR,
+    notebook=poseconnect.defaults.NOTEBOOK
+):
     reconstruct_poses_3d_timestamp_partial = partial(
         reconstruct_poses_3d_timestamp,
         camera_calibrations=camera_calibrations,
@@ -94,14 +147,6 @@ def reconstruct_poses_3d(
         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
         include_track_labels=include_track_labels
     )
-    num_frames = len(poses_2d['timestamp'].unique())
-    logger.info('Reconstructing 3D poses from {} 2D poses across {} frames ({} to {})'.format(
-        len(poses_2d),
-        num_frames,
-        poses_2d['timestamp'].min().isoformat(),
-        poses_2d['timestamp'].max().isoformat()
-    ))
-    start_time = time.time()
     poses_3d_list = list()
     if progress_bar:
         if notebook:
@@ -114,12 +159,6 @@ def reconstruct_poses_3d(
         for timestamp, group_df in poses_2d.groupby('timestamp'):
             poses_3d_list.append(reconstruct_poses_3d_timestamp_partial(group_df))
     poses_3d = pd.concat(poses_3d_list)
-    elapsed_time = time.time() - start_time
-    logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
-        len(poses_3d),
-        elapsed_time,
-        1000*elapsed_time/num_frames
-    ))
     return poses_3d
 
 def pose_3d_limits_by_pose_model(
