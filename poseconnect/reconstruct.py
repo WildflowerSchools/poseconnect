@@ -127,8 +127,7 @@ def reconstruct_poses_3d(
             logger.info('Number of chunks not specified. Data spans {} frames and {} processes will be used. Breaking the data into {} chunks'.format(
                 num_timestamps,
                 num_processes,
-                num_chunks,
-                chunk_size
+                num_chunks
             ))
         chunk_size = math.ceil(num_timestamps/num_chunks)
         logger.info('Using {} processes to process {} frames broken into {} chunks of {} frames each'.format(
