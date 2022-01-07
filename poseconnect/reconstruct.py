@@ -130,23 +130,15 @@ def reconstruct_poses_3d(
                 num_processes,
                 num_chunks
             ))
-        chunk_size = math.ceil(num_timestamps/num_chunks)
-        logger.info('Using {} processes to process {} frames broken into {} chunks of {} frames each'.format(
+        logger.info('Using {} processes to process {} frames broken into {} chunks'.format(
             num_processes,
             num_timestamps,
-            num_chunks,
-            chunk_size
+            num_chunks
         ))
+        timestamp_chunks = np.array_split(timestamps, num_chunks)
         poses_2d_chunk_list = list()
-        for chunk_index in range(num_chunks):
-            if chunk_index*chunk_size >= num_timestamps:
-                break
-            timestamp_min = timestamps[chunk_index*chunk_size]
-            timestamp_max = timestamps[min((chunk_index + 1)*chunk_size, num_timestamps) - 1]
-            poses_2d_chunk = poses_2d.loc[
-                (poses_2d['timestamp'] >= timestamp_min) &
-                (poses_2d['timestamp'] <= timestamp_max)
-            ]
+        for chunk_index, timestamp_chunk in enumerate(timestamp_chunks):
+            poses_2d_chunk = poses_2d.loc[poses_2d['timestamp'].isin(timestamp_chunk)]
             logger.debug('Chunk {}: {} poses spanning {} timestamps from {} to {}'.format(
                 chunk_index,
                 len(poses_2d_chunk),
