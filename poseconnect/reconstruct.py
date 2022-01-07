@@ -152,7 +152,7 @@ def reconstruct_poses_3d(
                 timestamp_min.isoformat(),
                 timestamp_max.isoformat()
             ))
-            poses_2d_chunk_list.append(poses_2d_chunk]
+            poses_2d_chunk_list.append(poses_2d_chunk)
         reconstruct_poses_3d_chunk_partial = partial(
             reconstruct_poses_3d_chunk,
             camera_calibrations=camera_calibrations,
