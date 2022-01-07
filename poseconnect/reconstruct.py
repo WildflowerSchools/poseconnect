@@ -93,7 +93,7 @@ def reconstruct_poses_3d(
     start_time = time.time()
     if not parallel:
         poses_3d = reconstruct_poses_3d_chunk(
-            poses_2d=poses_2d
+            poses_2d=poses_2d,
             camera_calibrations=camera_calibrations,
             pose_3d_limits=pose_3d_limits,
             min_keypoint_quality=min_keypoint_quality,
