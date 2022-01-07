@@ -48,7 +48,7 @@ def reconstruct_poses_3d(
     num_parallel_processes=poseconnect.defaults.RECONSTRUCTION_NUM_PARALLEL_PROCESSES,
     num_chunks=poseconnect.defaults.RECONSTRUCTION_NUM_CHUNKS,
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
-    chunk_progress_bar=poseconnect.defaults.RECONSTRUCTION_CHUNK_PROGRESS_BAR
+    chunk_progress_bar=poseconnect.defaults.RECONSTRUCTION_CHUNK_PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
     poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
