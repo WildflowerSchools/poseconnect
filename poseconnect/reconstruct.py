@@ -104,7 +104,7 @@ def reconstruct_poses_3d(
         progress_bar=progress_bar,
         notebook=notebook
     )
-    poses_2d = reconstruct_poses_3d_chunk_partial(poses_2d)
+    poses_3d = reconstruct_poses_3d_chunk_partial(poses_2d)
     elapsed_time = time.time() - start_time
     logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
         len(poses_3d),
