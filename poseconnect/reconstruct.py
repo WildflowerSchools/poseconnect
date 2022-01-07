@@ -14,6 +14,7 @@ import time
 import itertools
 import copy
 from functools import partial
+import multiprocessing
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,11 @@ def reconstruct_poses_3d(
     pose_3d_graph_initial_edge_threshold=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
     pose_3d_graph_max_dispersion=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
     include_track_labels=poseconnect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
+    parallel=poseconnect.defaults.RECONSTRUCTION_PARALLEL,
+    num_parallel_processes=poseconnect.defaults.RECONSTRUCTION_NUM_PARALLEL_PROCESSES,
+    num_chunks=poseconnect.defaults.RECONSTRUCTION_NUM_CHUNKS,
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
+    chunk_progress_bar=poseconnect.defaults.RECONSTRUCTION_CHUNK_PROGRESS_BAR
     notebook=poseconnect.defaults.NOTEBOOK
 ):
     poses_2d = poseconnect.utils.ingest_poses_2d(poses_2d)
@@ -86,25 +91,110 @@ def reconstruct_poses_3d(
         poses_2d['timestamp'].max().isoformat()
     ))
     start_time = time.time()
-    reconstruct_poses_3d_chunk_partial = partial(
-        reconstruct_poses_3d_chunk,
-        camera_calibrations=camera_calibrations,
-        pose_3d_limits=pose_3d_limits,
-        min_keypoint_quality=min_keypoint_quality,
-        min_num_keypoints=min_num_keypoints,
-        min_pose_quality=min_pose_quality,
-        min_pose_pair_score=min_pose_pair_score,
-        max_pose_pair_score=max_pose_pair_score,
-        pose_pair_score_distance_method=pose_pair_score_distance_method,
-        pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
-        pose_pair_score_summary_method=pose_pair_score_summary_method,
-        pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
-        pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
-        include_track_labels=include_track_labels,
-        progress_bar=progress_bar,
-        notebook=notebook
-    )
-    poses_3d = reconstruct_poses_3d_chunk_partial(poses_2d)
+    if not parallel:
+        poses_3d = reconstruct_poses_3d_chunk(
+            poses_2d=poses_2d
+            camera_calibrations=camera_calibrations,
+            pose_3d_limits=pose_3d_limits,
+            min_keypoint_quality=min_keypoint_quality,
+            min_num_keypoints=min_num_keypoints,
+            min_pose_quality=min_pose_quality,
+            min_pose_pair_score=min_pose_pair_score,
+            max_pose_pair_score=max_pose_pair_score,
+            pose_pair_score_distance_method=pose_pair_score_distance_method,
+            pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
+            pose_pair_score_summary_method=pose_pair_score_summary_method,
+            pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+            pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
+            include_track_labels=include_track_labels,
+            progress_bar=progress_bar,
+            notebook=notebook
+        )
+    else:
+        poses_2d = poses_2d.sort_values('timestamp')
+        timestamps = poses_2d['timestamp'].unique().tolist()
+        num_timestamps = len(timestamps)
+        if num_parallel_processes is None:
+            num_cpus=multiprocessing.cpu_count()
+            num_processes = min(num_cpus - 1, num_timestamps)
+            logger.info('Number of parallel processes not specified. Data spans {} frames and {} CPUs detected. Launching {} processes'.format(
+                num_timestamps,
+                num_cpus,
+                num_processes
+            ))
+        if num_chunks is None:
+            num_chunks = min(num_processes, num_timestamps)
+            logger.info('Number of chunks not specified. Data spans {} frames and {} processes will be used. Breaking the data into {} chunks'.format(
+                num_timestamps,
+                num_processes,
+                num_chunks,
+                chunk_size
+            ))
+        chunk_size = math.ceil(num_timestamps/num_chunks)
+        logger.info('Using {} processes to process {} frames broken into {} chunks of {} frames each'.format(
+            num_processes,
+            num_timestamps,
+            num_chunks,
+            chunk_size
+        ))
+        poses_2d_chunk_list = list()
+        for chunk_index in range(num_chunks):
+            timestamp_min = timestamps[chunk_index*chunk_size]
+            timestamp_max = timestamps[min((chunk_index + 1)*chunk_size, num_timestamps) - 1]
+            poses_2d_chunk = poses_2d.loc[
+                (poses_2d['timestamp'] >= timestamp_min) &
+                (poses_2d['timestamp'] <= timestamp_max)
+            ]
+            logger.debug('Chunk {}: {} poses spanning {} timestamps from {} to {}'.format(
+                chunk_index,
+                len(poses_2d_chunk),
+                poses_2d_chunk['timestamp'].nunique(),
+                timestamp_min.isoformat(),
+                timestamp_max.isoformat()
+            ))
+            poses_2d_chunk_list.append(poses_2d_chunk]
+        reconstruct_poses_3d_chunk_partial = partial(
+            reconstruct_poses_3d_chunk,
+            camera_calibrations=camera_calibrations,
+            pose_3d_limits=pose_3d_limits,
+            min_keypoint_quality=min_keypoint_quality,
+            min_num_keypoints=min_num_keypoints,
+            min_pose_quality=min_pose_quality,
+            min_pose_pair_score=min_pose_pair_score,
+            max_pose_pair_score=max_pose_pair_score,
+            pose_pair_score_distance_method=pose_pair_score_distance_method,
+            pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
+            pose_pair_score_summary_method=pose_pair_score_summary_method,
+            pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
+            pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
+            include_track_labels=include_track_labels,
+            progress_bar=chunk_progress_bar,
+            notebook=notebook
+        )
+        with multiprocessing.Pool(num_processes) as p:
+            if progress_bar:
+                if notebook:
+                    poses_3d_chunk_list = tqdm.notebook.tqdm(
+                        p.imap_unordered(
+                            reconstruct_poses_3d_chunk_partial,
+                            poses_2d_chunk_list
+                        ),
+                        total=num_chunks
+                    )
+                else:
+                    poses_3d_chunk_list = tqdm.tqdm(
+                        p.imap_unordered(
+                            reconstruct_poses_3d_chunk_partial,
+                            poses_2d_chunk_list
+                        ),
+                        total=num_chunks
+                    )
+            else:
+                poses_3d_chunk_list = p.imap_unordered(
+                        reconstruct_poses_3d_chunk_partial,
+                        poses_2d_chunk_list
+                )
+        poses_3d = pd.concat(poses_3d_chunk_list).sort_values('timestamp')
     elapsed_time = time.time() - start_time
     logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
         len(poses_3d),
