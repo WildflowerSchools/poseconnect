@@ -168,7 +168,7 @@ def reconstruct_poses_3d(
         with multiprocessing.Pool(num_processes) as p:
             if progress_bar:
                 if notebook:
-                    poses_3d_chunk_list = list(tqdm.notebook.tqdm(
+                    poses_3d = pd.concat(tqdm.notebook.tqdm(
                         p.imap_unordered(
                             reconstruct_poses_3d_chunk_partial,
                             poses_2d_chunk_list
@@ -176,7 +176,7 @@ def reconstruct_poses_3d(
                         total=len(poses_2d_chunk_list)
                     ))
                 else:
-                    poses_3d_chunk_list = list(tqdm.tqdm(
+                    poses_3d = pd.concat(tqdm.tqdm(
                         p.imap_unordered(
                             reconstruct_poses_3d_chunk_partial,
                             poses_2d_chunk_list
@@ -184,11 +184,11 @@ def reconstruct_poses_3d(
                         total=len(poses_2d_chunk_list)
                     ))
             else:
-                poses_3d_chunk_list = list(p.imap_unordered(
+                poses_3d = pd.concat(p.imap_unordered(
                         reconstruct_poses_3d_chunk_partial,
                         poses_2d_chunk_list
                 ))
-        poses_3d = pd.concat(poses_3d_chunk_list).sort_values('timestamp')
+        poses_3d.sort_values('timestamp', inplace=True)
     elapsed_time = time.time() - start_time
     logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
         len(poses_3d),
