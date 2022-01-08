@@ -253,7 +253,7 @@ def cli_reconstruct_poses_3d(
         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
         include_track_labels=include_track_labels,
         parallel=parallel,
-        num_parallel_processes,
+        num_parallel_processes=num_parallel_processes,
         num_chunks=num_chunks,
         progress_bar=progress_bar,
         notebook=False
