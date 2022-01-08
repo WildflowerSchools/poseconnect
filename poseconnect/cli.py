@@ -168,10 +168,40 @@ def cli():
     show_default=True
 )
 @click.option(
+    '--parallel/--no-parallel',
+    default=poseconnect.defaults.RECONSTRUCTION_PARALLEL,
+    help='Distribute reconstruction across cores',
+    show_default=True
+)
+@click.option(
+    '--num-parallel-processes',
+    type=click.INT,
+    default=poseconnect.defaults.RECONSTRUCTION_NUM_PARALLEL_PROCESSES,
+    help='Number of parallel processes to use',
+    show_default=True
+)
+@click.option(
+    '--num-chunks',
+    type=click.INT,
+    default=poseconnect.defaults.RECONSTRUCTION_NUM_CHUNKS,
+    help='Number of chunks to separate 2D poses into',
+    show_default=True
+)
+@click.option(
     '--progress-bar/--no-progress-bar',
     default=poseconnect.defaults.PROGRESS_BAR,
     required=False,
     help='Display progress bar',
+    show_default=True
+)
+@click.option(
+    '--log-level',
+    type=click.Choice(
+        poseconnect.defaults.LOG_LEVEL_OPTIONS,
+        case_sensitive=False
+    ),
+    default=poseconnect.defaults.LOG_LEVEL,
+    help='Log level',
     show_default=True
 )
 def cli_reconstruct_poses_3d(
@@ -193,8 +223,17 @@ def cli_reconstruct_poses_3d(
     pose_3d_graph_initial_edge_threshold,
     pose_3d_graph_max_dispersion,
     include_track_labels,
-    progress_bar
+    parallel,
+    num_parallel_processes,
+    num_chunks,
+    progress_bar,
+    log_level
 ):
+    if log_level is not None:
+        numeric_log_level = getattr(logging, log_level.upper(), None)
+        if not isinstance(numeric_log_level, int):
+            raise ValueError('Invalid log level: %s'.format(log_level))
+        logging.basicConfig(level=numeric_log_level)
     poses_3d = poseconnect.reconstruct.reconstruct_poses_3d(
         poses_2d=poses_2d_path,
         camera_calibrations=camera_calibrations_path,
@@ -213,6 +252,9 @@ def cli_reconstruct_poses_3d(
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
         include_track_labels=include_track_labels,
+        parallel=parallel,
+        num_parallel_processes=num_parallel_processes,
+        num_chunks=num_chunks,
         progress_bar=progress_bar,
         notebook=False
     )
@@ -307,6 +349,16 @@ def cli_reconstruct_poses_3d(
     help='Display progress bar',
     show_default=True
 )
+@click.option(
+    '--log-level',
+    type=click.Choice(
+        poseconnect.defaults.LOG_LEVEL_OPTIONS,
+        case_sensitive=False
+    ),
+    default=poseconnect.defaults.LOG_LEVEL,
+    help='Log level',
+    show_default=True
+)
 def cli_track_poses_3d(
     poses_3d_path,
     output_path,
@@ -318,8 +370,14 @@ def cli_track_poses_3d(
     reference_velocity_drift,
     position_observation_sd,
     num_poses_per_track_min,
-    progress_bar
+    progress_bar,
+    log_level
 ):
+    if log_level is not None:
+        numeric_log_level = getattr(logging, log_level.upper(), None)
+        if not isinstance(numeric_log_level, int):
+            raise ValueError('Invalid log level: %s'.format(log_level))
+        logging.basicConfig(level=numeric_log_level)
     poses_3d_with_tracks = poseconnect.track.track_poses_3d(
         poses_3d=poses_3d_path,
         max_match_distance=max_match_distance,
@@ -366,11 +424,27 @@ def cli_track_poses_3d(
     help='Frames per second in 2D pose data',
     show_default=True
 )
+@click.option(
+    '--log-level',
+    type=click.Choice(
+        poseconnect.defaults.LOG_LEVEL_OPTIONS,
+        case_sensitive=False
+    ),
+    default=poseconnect.defaults.LOG_LEVEL,
+    help='Log level',
+    show_default=True
+)
 def cli_interpolate_pose_tracks_3d(
     poses_3d_with_tracks_path,
     frames_per_second,
-    output_path
+    output_path,
+    log_level
 ):
+    if log_level is not None:
+        numeric_log_level = getattr(logging, log_level.upper(), None)
+        if not isinstance(numeric_log_level, int):
+            raise ValueError('Invalid log level: %s'.format(log_level))
+        logging.basicConfig(level=numeric_log_level)
     poses_3d_with_tracks_interpolated = poseconnect.track.interpolate_pose_tracks_3d(
         poses_3d_with_tracks=poses_3d_with_tracks_path,
         frames_per_second=frames_per_second
@@ -453,6 +527,16 @@ def cli_interpolate_pose_tracks_3d(
     help='Minimum fraction of pose track which must be matched to match track',
     show_default=True
 )
+@click.option(
+    '--log-level',
+    type=click.Choice(
+        poseconnect.defaults.LOG_LEVEL_OPTIONS,
+        case_sensitive=False
+    ),
+    default=poseconnect.defaults.LOG_LEVEL,
+    help='Log level',
+    show_default=True
+)
 def cli_identify_pose_tracks_3d(
     poses_3d_with_tracks_path,
     sensor_data_path,
@@ -462,8 +546,14 @@ def cli_identify_pose_tracks_3d(
     active_person_id,
     ignore_z,
     max_distance,
-    min_fraction_matched
+    min_fraction_matched,
+    log_level
 ):
+    if log_level is not None:
+        numeric_log_level = getattr(logging, log_level.upper(), None)
+        if not isinstance(numeric_log_level, int):
+            raise ValueError('Invalid log level: %s'.format(log_level))
+        logging.basicConfig(level=numeric_log_level)
     sensor_position_keypoint_index = dict(sensor_position_keypoint_index)
     poses_3d_with_person_ids = poseconnect.identify.identify_pose_tracks_3d(
         poses_3d_with_tracks=poses_3d_with_tracks_path,
