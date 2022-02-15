@@ -465,7 +465,8 @@ def overlay_poses_video(
         pose_timestamp = aligned_pose_timestamps[frame_index]
         frame = video_input.get_frame()
         if frame is None:
-            raise ValueError('Input video ended unexpectedly at frame number {}'.format(frame_index))
+            logger.warning('Input video ended unexpectedly at frame number {}'.format(frame_index))
+            break
         frame=overlay_poses_image(
             poses=poses.loc[poses['timestamp'] == pose_timestamp].copy(),
             image=frame,
