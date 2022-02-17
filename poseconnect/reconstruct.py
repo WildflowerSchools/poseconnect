@@ -34,6 +34,17 @@ def reconstruct_poses_3d(
     pose_model_name=None,
     room_x_limits=None,
     room_y_limits=None,
+    floor_z=poseconnect.defaults.POSE_3D_FLOOR_Z,
+    foot_z_limits=poseconnect.defaults.POSE_3D_FOOT_Z_LIMITS,
+    knee_z_limits=poseconnect.defaults.POSE_3D_KNEE_Z_LIMITS,
+    hip_z_limits=poseconnect.defaults.POSE_3D_HIP_Z_LIMITS,
+    thorax_z_limits=poseconnect.defaults.POSE_3D_THORAX_Z_LIMITS,
+    shoulder_z_limits=poseconnect.defaults.POSE_3D_SHOULDER_Z_LIMITS,
+    elbow_z_limits=poseconnect.defaults.POSE_3D_ELBOW_Z_LIMITS,
+    hand_z_limits=poseconnect.defaults.POSE_3D_HAND_Z_LIMITS,
+    neck_z_limits=poseconnect.defaults.POSE_3D_NECK_Z_LIMITS,
+    head_z_limits=poseconnect.defaults.POSE_3D_HEAD_Z_LIMITS,
+    tolerance=poseconnect.defaults.POSE_3D_LIMITS_TOLERANCE,
     min_keypoint_quality=poseconnect.defaults.RECONSTRUCTION_MIN_KEYPOINT_QUALITY,
     min_num_keypoints=poseconnect.defaults.RECONSTRUCTION_MIN_NUM_KEYPOINTS,
     min_pose_quality=poseconnect.defaults.RECONSTRUCTION_MIN_POSE_QUALITY,
@@ -81,7 +92,18 @@ def reconstruct_poses_3d(
         pose_3d_limits = pose_3d_limits_by_pose_model(
             room_x_limits=room_x_limits,
             room_y_limits=room_y_limits,
-            pose_model_name=pose_model_name
+            pose_model_name=pose_model_name,
+            floor_z=floor_z,
+            foot_z_limits=foot_z_limits,
+            knee_z_limits=knee_z_limits,
+            hip_z_limits=hip_z_limits,
+            thorax_z_limits=thorax_z_limits,
+            shoulder_z_limits=shoulder_z_limits,
+            elbow_z_limits=elbow_z_limits,
+            hand_z_limits=hand_z_limits,
+            neck_z_limits=neck_z_limits,
+            head_z_limits=head_z_limits,
+            tolerance=tolerance
         )
     num_frames = len(poses_2d['timestamp'].unique())
     logger.info('Reconstructing 3D poses from {} 2D poses across {} frames ({} to {})'.format(
