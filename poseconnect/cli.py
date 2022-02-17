@@ -86,6 +86,92 @@ def cli():
     help='Minimum and maximum y values of room (e.g., \"0.0 8.0\")'
 )
 @click.option(
+    '--floor-z',
+    type=click.FLOAT,
+    default=poseconnect.defaults.POSE_3D_FLOOR_Z,
+    help='Height (z-coordinate) of room floor (used for filtering 3D poses)',
+    show_default=True
+)
+@click.option(
+    '--foot-z-limits',
+    nargs=2,
+    type=click.FLOAT,
+    default=poseconnect.defaults.POSE_3D_FOOT_Z_LIMITS,
+    help='Minimum and maximum height above floor for feet in reconstructed 3D poses (e.g., \"0.0 1.0\")',
+    show_default=False
+)
+@click.option(
+    '--knee-z-limits',
+    nargs=2,
+    type=click.FLOAT,
+    default=poseconnect.defaults.POSE_3D_KNEE_Z_LIMITS,
+    help='Minimum and maximum height above floor for knees in reconstructed 3D poses (e.g., \"0.0 1.0\")',
+    show_default=False
+)
+@click.option(
+    '--hip-z-limits',
+    nargs=2,
+    type=click.FLOAT,
+    default=poseconnect.defaults.POSE_3D_HIP_Z_LIMITS,
+    help='Minimum and maximum height above floor for hips in reconstructed 3D poses (e.g., \"0.0 1.5\")',
+    show_default=False
+)
+@click.option(
+    '--thorax-z-limits',
+    nargs=2,
+    type=click.FLOAT,
+    default=poseconnect.defaults.POSE_3D_THORAX_Z_LIMITS,
+    help='Minimum and maximum height above floor for thoraxes in reconstructed 3D poses (e.g., \"0.0 1.7\")',
+    show_default=False
+)
+@click.option(
+    '--shoulder-z-limits',
+    nargs=2,
+    type=click.FLOAT,
+    default=poseconnect.defaults.POSE_3D_SHOULDER_Z_LIMITS,
+    help='Minimum and maximum height above floor for shoulders in reconstructed 3D poses (e.g., \"0.0 1.9\")',
+    show_default=False
+)
+@click.option(
+    '--elbow-z-limits',
+    nargs=2,
+    type=click.FLOAT,
+    default=poseconnect.defaults.POSE_3D_ELBOW_Z_LIMITS,
+    help='Minimum and maximum height above floor for elbows in reconstructed 3D poses (e.g., \"0.0 2.0\")',
+    show_default=False
+)
+@click.option(
+    '--hand-z-limits',
+    nargs=2,
+    type=click.FLOAT,
+    default=poseconnect.defaults.POSE_3D_HAND_Z_LIMITS,
+    help='Minimum and maximum height above floor for hands in reconstructed 3D poses (e.g., \"0.0 3.0\")',
+    show_default=False
+)
+@click.option(
+    '--neck-z-limits',
+    nargs=2,
+    type=click.FLOAT,
+    default=poseconnect.defaults.POSE_3D_NECK_Z_LIMITS,
+    help='Minimum and maximum height above floor for necks in reconstructed 3D poses (e.g., \"0.0 1.9\")',
+    show_default=False
+)
+@click.option(
+    '--head-z-limits',
+    nargs=2,
+    type=click.FLOAT,
+    default=poseconnect.defaults.POSE_3D_HEAD_Z_LIMITS,
+    help='Minimum and maximum height above floor for heads in reconstructed 3D poses (e.g., \"0.0 2.0\")',
+    show_default=False
+)
+@click.option(
+    '--tolerance',
+    type=click.FLOAT,
+    default=poseconnect.defaults.POSE_3D_LIMITS_TOLERANCE,
+    help='Tolerance for 3D pose spatial limits',
+    show_default=True
+)
+@click.option(
     '--min-keypoint-quality',
     type=click.FLOAT,
     default=poseconnect.defaults.RECONSTRUCTION_MIN_KEYPOINT_QUALITY,
@@ -212,6 +298,17 @@ def cli_reconstruct_poses_3d(
     pose_model_name,
     room_x_limits,
     room_y_limits,
+    floor_z,
+    foot_z_limits,
+    knee_z_limits,
+    hip_z_limits,
+    thorax_z_limits,
+    shoulder_z_limits,
+    elbow_z_limits,
+    hand_z_limits,
+    neck_z_limits,
+    head_z_limits,
+    tolerance,
     min_keypoint_quality,
     min_num_keypoints,
     min_pose_quality,
@@ -241,6 +338,17 @@ def cli_reconstruct_poses_3d(
         pose_model_name=pose_model_name,
         room_x_limits=room_x_limits,
         room_y_limits=room_y_limits,
+        floor_z=floor_z,
+        foot_z_limits=foot_z_limits,
+        knee_z_limits=knee_z_limits,
+        hip_z_limits=hip_z_limits,
+        thorax_z_limits=thorax_z_limits,
+        shoulder_z_limits=shoulder_z_limits,
+        elbow_z_limits=elbow_z_limits,
+        hand_z_limits=hand_z_limits,
+        neck_z_limits=neck_z_limits,
+        head_z_limits=head_z_limits,
+        tolerance=tolerance,
         min_keypoint_quality=min_keypoint_quality,
         min_num_keypoints=min_num_keypoints,
         min_pose_quality=min_pose_quality,
