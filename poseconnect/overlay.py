@@ -283,6 +283,7 @@ def overlay_poses_video(
     poses,
     video_input_path,
     video_start_time,
+    strict_timestamp_alignment=poseconnect.defaults.STRICT_TIMESTAMP_ALIGNMENT,
     pose_type=poseconnect.defaults.OVERLAY_POSE_TYPE,
     camera_id=poseconnect.defaults.OVERLAY_CAMERA_ID,
     camera_calibration=poseconnect.defaults.OVERLAY_CAMERA_CALIBRATION,
@@ -446,30 +447,31 @@ def overlay_poses_video(
         video_output_path,
         video_parameters=video_output_parameters
     )
-    video_timestamps, aligned_pose_timestamps = align_timestamps(
-        pose_timestamps=poses['timestamp'],
+    video_timestamps = generate_video_timestamps(
         video_start_time=video_start_time,
         video_fps=video_fps,
         video_frame_count=video_frame_count
     )
-    logger.info('{}/{} video timestamps have aligned pose data'.format(
-        aligned_pose_timestamps.notna().sum(),
-        video_timestamps.notna().sum()
-    ))
     if progress_bar:
         if notebook:
             t = tqdm.tqdm_notebook(total=video_frame_count)
         else:
             t = tqdm.tqdm(total=video_frame_count)
-    for frame_index, video_timestamp in enumerate(video_timestamps):
-        pose_timestamp = aligned_pose_timestamps[frame_index]
+    for frame_timestamp in video_timestamps:
+        poses_frame = extract_poses_video_frame(
+            poses=poses,
+            frame_timestamp=frame_timestamp,
+            video_fps=video_fps,
+            strict_timestamp_alignment=strict_timestamp_alignment
+        )
         frame = video_input.get_frame()
         if frame is None:
-            logger.warning('Input video ended unexpectedly at frame number {}'.format(frame_index))
+            logger.warning('Input video ended unexpectedly at video timestamp {}'.format(frame_timestamp.isoformat()))
             break
         frame=overlay_poses_image(
-            poses=poses.loc[poses['timestamp'] == pose_timestamp].copy(),
+            poses=poses_frame,
             image=frame,
+            strict_timestamp_alignment=strict_timestamp_alignment,
             pose_type=pose_type,
             camera_calibration=camera_calibration,
             pose_label_column=pose_label_column,
@@ -489,7 +491,7 @@ def overlay_poses_video(
         if draw_timestamp:
             frame = cv_utils.draw_timestamp(
                 original_image=frame,
-                timestamp=video_timestamp,
+                timestamp=frame_timestamp,
                 padding=timestamp_padding,
                 font_scale=timestamp_font_scale,
                 text_line_width=timestamp_text_line_width,
@@ -511,7 +513,7 @@ def overlay_poses_video_frame(
     video_input_path,
     video_start_time,
     timestamp,
-    timestamp_offset_max_milliseconds=poseconnect.defaults.OVERLAY_TIMESTAMP_OFFSET_MAX_MILLISECONDS,
+    strict_timestamp_alignment=poseconnect.defaults.STRICT_TIMESTAMP_ALIGNMENT,
     pose_type=poseconnect.defaults.OVERLAY_POSE_TYPE,
     camera_id=poseconnect.defaults.OVERLAY_CAMERA_ID,
     camera_calibration=poseconnect.defaults.OVERLAY_CAMERA_CALIBRATION,
@@ -646,25 +648,23 @@ def overlay_poses_video_frame(
             ])
         )
     logger.info('Image output path: {}'.format(image_output_path))
-    nearest_pose_timestamp = find_nearest_pose_timestamp(
-        pose_timestamps=poses['timestamp'],
-        target_timestamp=timestamp,
-        timestamp_offset_max_milliseconds=timestamp_offset_max_milliseconds
+    poses_frame = extract_poses_video_frame(
+        poses=poses,
+        frame_timestamp=timestamp,
+        video_fps=video_fps,
+        strict_timestamp_alignment=strict_timestamp_alignment
     )
-    if nearest_pose_timestamp is None:
-        logger.info('No pose timestamp near target timestamp')
-        return
     frame = video_input.get_frame_by_timestamp(timestamp)
     video_input.close()
     if frame is None:
         raise ValueError('No video frame at target timestamp {}'.format(timestamp.isoformat()))
-    poses_frame = poses.loc[poses['timestamp'] == nearest_pose_timestamp].copy()
     logger.info('Found {} poses for chosen frame'.format(
         len(poses_frame)
     ))
     frame=overlay_poses_image(
         poses=poses_frame,
         image=frame,
+        strict_timestamp_alignment=strict_timestamp_alignment,
         pose_type=pose_type,
         camera_calibration=camera_calibration,
         pose_label_column=pose_label_column,
@@ -703,6 +703,7 @@ def overlay_poses_video_frame(
 def overlay_poses_image(
     poses,
     image,
+    strict_timestamp_alignment=poseconnect.defaults.STRICT_TIMESTAMP_ALIGNMENT,
     pose_type=poseconnect.defaults.OVERLAY_POSE_TYPE,
     camera_calibration=poseconnect.defaults.OVERLAY_CAMERA_CALIBRATION,
     pose_label_column=poseconnect.defaults.OVERLAY_POSE_LABEL_COLUMN,
@@ -729,7 +730,7 @@ def overlay_poses_image(
         keypoint_coordinate_column_name='keypoint_coordinates_3d'
     else:
         raise ValueError('Pose type must be either \'2d\' or \'3d\'')
-    if poses['timestamp'].nunique() > 1:
+    if strict_timestamp_alignment and poses['timestamp'].nunique() > 1:
         raise ValueError('Pose data contains multiple timestamps for a single image')
     for pose_id, row in poses.iterrows():
         image = overlay_pose_image(
@@ -860,17 +861,11 @@ def overlay_pose_image(
         )
     return new_image
 
-def align_timestamps(
-    pose_timestamps,
+def generate_video_timestamps(
     video_start_time,
     video_fps,
     video_frame_count
 ):
-    pose_timestamps = pd.DatetimeIndex(
-        pd.to_datetime(pose_timestamps, utc=True)
-        .drop_duplicates()
-        .sort_values()
-    )
     if video_start_time.tzinfo is None:
         logger.info('Specified video start time is timezone-naive. Assuming UTC')
         video_start_time=video_start_time.replace(tzinfo=datetime.timezone.utc)
@@ -881,69 +876,34 @@ def align_timestamps(
         freq=pd.tseries.offsets.DateOffset(microseconds=frame_period_microseconds),
         periods=video_frame_count
     )
-    aligned_pose_timestamps = list()
-    for video_timestamp in video_timestamps:
-        nearby_pose_timestamps = pose_timestamps[
-            (pose_timestamps >= video_timestamp - datetime.timedelta(microseconds=frame_period_microseconds)/2) &
-            (pose_timestamps < video_timestamp + datetime.timedelta(microseconds=frame_period_microseconds)/2)
-        ]
-        if len(nearby_pose_timestamps) == 0:
-            logger.debug('There are no pose timestamps nearby video timestamp {}.'.format(
-                video_timestamp.isoformat()
-            ))
-            aligned_pose_timestamp = None
-        elif len(nearby_pose_timestamps) == 1:
-            aligned_pose_timestamp = nearby_pose_timestamps[0]
-        else:
-            time_distances = [
-                max(nearby_pose_timestamp.to_pydatetime(), video_timestamp.to_pydatetime()) -
-                min(nearby_pose_timestamp.to_pydatetime(), video_timestamp.to_pydatetime())
-                for nearby_pose_timestamp in nearby_pose_timestamps
-            ]
-            aligned_pose_timestamp = nearby_pose_timestamps[np.argmin(time_distances)]
-            logger.debug('There are {} pose timestamps nearby video timestamp {}: {}. Chose pose timestamp {}'.format(
-                len(nearby_pose_timestamps),
-                video_timestamp.isoformat(),
-                [nearby_pose_timestamp.isoformat() for nearby_pose_timestamp in nearby_pose_timestamps],
-                aligned_pose_timestamp.isoformat()
-            ))
-        aligned_pose_timestamps.append(aligned_pose_timestamp)
-    aligned_pose_timestamps = pd.DatetimeIndex(aligned_pose_timestamps)
-    return video_timestamps, aligned_pose_timestamps
+    return video_timestamps
 
-def find_nearest_pose_timestamp(
-    pose_timestamps,
-    target_timestamp,
-    timestamp_offset_max_milliseconds=poseconnect.defaults.OVERLAY_TIMESTAMP_OFFSET_MAX_MILLISECONDS
+def extract_poses_video_frame(
+    poses,
+    frame_timestamp,
+    video_fps,
+    strict_timestamp_alignment
 ):
-    pose_timestamps = pd.DatetimeIndex(
-        pd.to_datetime(pose_timestamps, utc=True)
-        .drop_duplicates()
-        .sort_values()
-    )
-    target_timestamp = poseconnect.utils.convert_to_datetime_utc(target_timestamp)
-    nearby_pose_timestamps = pose_timestamps[
-        (pose_timestamps >= target_timestamp - datetime.timedelta(milliseconds=timestamp_offset_max_milliseconds)) &
-        (pose_timestamps < target_timestamp + datetime.timedelta(milliseconds=timestamp_offset_max_milliseconds))
-    ]
-    if len(nearby_pose_timestamps) == 0:
-        logger.debug('There are no pose timestamps nearby target timestamp {}.'.format(
-            target_timestamp.isoformat()
-        ))
-        nearest_pose_timestamp = None
-    elif len(nearby_pose_timestamps) == 1:
-        nearest_pose_timestamp = nearby_pose_timestamps[0]
-    else:
-        time_distances = [
-            max(nearby_pose_timestamp.to_pydatetime(), target_timestamp) -
-            min(nearby_pose_timestamp.to_pydatetime(), target_timestamp)
-            for nearby_pose_timestamp in nearby_pose_timestamps
+    video_frame_period = datetime.timedelta(seconds=1/video_fps)
+    poses_frame = (
+        poses
+        .loc[
+            (poses['timestamp'] >= frame_timestamp - video_frame_period/2) &
+            (poses['timestamp'] < frame_timestamp + video_frame_period/2)
         ]
-        nearest_pose_timestamp = nearby_pose_timestamps[np.argmin(time_distances)]
-        logger.debug('There are {} pose timestamps nearby video timestamp {}: {}. Chose pose timestamp {}'.format(
-            len(nearby_pose_timestamps),
-            target_timestamp.isoformat(),
-            [nearby_pose_timestamp.isoformat() for nearby_pose_timestamp in nearby_pose_timestamps],
-            nearest_pose_timestamp.isoformat()
-        ))
-    return nearest_pose_timestamp
+        .copy()
+    )
+    pose_timestamps = poses_frame['timestamp'].unique()
+    if strict_timestamp_alignment and len(pose_timestamps) > 1:
+        timestamp_distances = [
+            max(pose_timestamp, frame_timestamp).to_pydatetime() -
+            min(pose_timestamp, frame_timestamp).to_pydatetime()
+            for pose_timestamp in pose_timestamps
+        ]
+        nearest_pose_timestamp = pose_timestamps[np.argmin(timestamp_distances)]
+        poses_frame = (
+            poses_frame
+            .loc[poses_frame['timestamp'] == nearest_pose_timestamp]
+            .copy()
+        )
+    return poses_frame
