@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tqdm
 from uuid import uuid4
+import datetime
 import logging
 import time
 import itertools
@@ -127,22 +128,16 @@ def interpolate_pose_track(
     pose_track_3d,
     frames_per_second=poseconnect.defaults.FRAMES_PER_SECOND
 ):
-    if not isinstance(frames_per_second, int):
-        raise ValueError('Only integer frame rates currently supported')
-    if not 1000 % frames_per_second == 0:
-        raise ValueError('Only frame periods with integer number of milliseconds currently supported')
-    frame_period_milliseconds = 1000//frames_per_second
     if pose_track_3d['timestamp'].duplicated().any():
         raise ValueError('Pose data for single pose track contains duplicate timestamps')
     pose_track_3d = pose_track_3d.copy()
     pose_track_3d.sort_values('timestamp', inplace=True)
     old_time_index = pd.DatetimeIndex(pose_track_3d['timestamp'])
-    combined_time_index = pd.date_range(
-        start=pose_track_3d['timestamp'].min(),
-        end=pose_track_3d['timestamp'].max(),
-        freq='{}ms'.format(frame_period_milliseconds),
-        name='timestamp'
+    combined_time_index = generate_interpolated_time_index(
+        timestamps = old_time_index,
+        frames_per_second=frames_per_second
     )
+    combined_time_index.name = 'timestamp'
     new_time_index = combined_time_index.difference(old_time_index)
     old_num_poses = len(old_time_index)
     combined_num_poses = len(combined_time_index)
@@ -165,6 +160,37 @@ def interpolate_pose_track(
     poses_3d_new['pose_3d_id'] = pose_3d_ids_new
     poses_3d_new = poses_3d_new.reset_index().set_index('pose_3d_id')
     return poses_3d_new
+
+def generate_interpolated_time_index(
+    timestamps,
+    frames_per_second
+):
+    frame_period_seconds = 1/frames_per_second
+    old_time_index = pd.DatetimeIndex(timestamps)
+    try:
+        new_time_index = pd.date_range(
+            start=old_time_index.min(),
+            end=old_time_index.max(),
+            freq='{}S'.format(frame_period_seconds),
+            name='timestamp'
+        )
+        assert(set(old_time_index).issubset(new_time_index))
+    except:
+        logger.debug('Timestamps don\'t line up neatly with generated time index. Falling back on irregular time interpolation.')
+        old_datetimes = [poseconnect.convert_to_datetime_utc(timestamp) for timestamp in old_time_index.unique().sort_values()]
+        frame_period = datetime.timedelta(seconds=frame_period_seconds)
+        new_datetimes = list()
+        new_datetimes.append(old_datetimes[0])
+        for old_timestamps_index in range(1, len(old_datetimes)):
+            num_frame_periods = round((old_datetimes[old_timestamps_index] - old_datetimes[old_timestamps_index - 1])/frame_period)
+            if num_frame_periods > 1:
+                for gap_timestamp_index in range(1, num_frame_periods):
+                    new_datetimes.append(old_datetimes[old_timestamps_index - 1] + gap_timestamp_index*frame_period)
+            new_datetimes.append(old_datetimes[old_timestamps_index])
+        new_time_index = pd.DatetimeIndex(new_datetimes)
+        assert(set(old_time_index).issubset(new_time_index))
+    return new_time_index
+
 
 class PoseTracks3D:
     def __init__(
