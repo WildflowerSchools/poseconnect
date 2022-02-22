@@ -176,7 +176,7 @@ def generate_interpolated_time_index(
         )
         assert(set(old_time_index).issubset(new_time_index))
     except:
-        logger.info('Timestamps don\'t line up neatly with generated time index. Falling back on irregular time interpolation.')
+        logger.debug('Timestamps don\'t line up neatly with generated time index. Falling back on irregular time interpolation.')
         old_datetimes = [poseconnect.convert_to_datetime_utc(timestamp) for timestamp in old_time_index.unique().sort_values()]
         frame_period = datetime.timedelta(seconds=frame_period_seconds)
         new_datetimes = list()
