@@ -401,6 +401,7 @@ def reconstruct_poses_3d_timestamp(
         diagnostics['pose_pair_ids_2d_after_empty_reprojected_2d_pose_filter'] = pose_pairs_2d_timestamp.index
     pose_pairs_2d_timestamp = score_pose_pairs(
         pose_pairs_2d=pose_pairs_2d_timestamp,
+        camera_calibrations=camera_calibrations,
         distance_method=pose_pair_score_distance_method
     )
     if return_diagnostics:

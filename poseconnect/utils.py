@@ -1,3 +1,4 @@
+import cv_utils
 import pandas as pd
 import numpy as np
 import json
@@ -82,11 +83,20 @@ def ingest_camera_calibrations(data_object):
         raise ValueError('Data is missing fields: {}'.format(
             set(target_columns) - set(df.columns)
         ))
-    df = df.reindex(columns=target_columns)
     df['camera_matrix'] = df['camera_matrix'].apply(convert_to_array)
     df['distortion_coefficients'] = df['distortion_coefficients'].apply(convert_to_array)
     df['rotation_vector'] = df['rotation_vector'].apply(convert_to_array)
     df['translation_vector'] = df['translation_vector'].apply(convert_to_array)
+    if 'camera_position' not in df.columns:
+        df['camera_position'] = df.apply(
+            lambda row: cv_utils.extract_camera_position(
+                rotation_vector=row['rotation_vector'],
+                translation_vector=row['translation_vector']
+            ),
+            axis=1
+        )
+    target_columns.append('camera_position')
+    df = df.reindex(columns=target_columns)
     return df
 
 def ingest_poses_3d(data_object):
