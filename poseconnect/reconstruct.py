@@ -670,6 +670,24 @@ def score_pose_pairs(
     )
     if distance_method == 'pixels':
         reprojection_differences = reprojection_differences_pixels
+    elif distance_method == 'image_frac':
+        image_widths = np.stack(
+            (
+                np.stack(
+                    pose_pairs_2d['camera_id_a']
+                    .apply(lambda x: camera_calibrations[x]['image_width'])
+                ),
+                np.stack(
+                    pose_pairs_2d['camera_id_b']
+                    .apply(lambda x: camera_calibrations[x]['image_width'])
+                )
+            ),
+            axis=1
+        )
+        reprojection_differences = np.divide(
+            reprojection_differences_pixels,
+            np.expand_dims(image_widths, axis=(2, 3))
+        )
     elif distance_method == '3d':
         camera_positions = np.stack(
             (
