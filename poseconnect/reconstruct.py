@@ -51,8 +51,6 @@ def reconstruct_poses_3d(
     min_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MIN_POSE_PAIR_SCORE,
     max_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MAX_POSE_PAIR_SCORE,
     pose_pair_score_distance_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
-    pose_pair_score_pixel_distance_scale=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE,
-    pose_pair_score_summary_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
     pose_3d_graph_initial_edge_threshold=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
     pose_3d_graph_max_dispersion=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
     include_track_labels=poseconnect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
@@ -124,8 +122,6 @@ def reconstruct_poses_3d(
             min_pose_pair_score=min_pose_pair_score,
             max_pose_pair_score=max_pose_pair_score,
             pose_pair_score_distance_method=pose_pair_score_distance_method,
-            pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
-            pose_pair_score_summary_method=pose_pair_score_summary_method,
             pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
             include_track_labels=include_track_labels,
@@ -178,8 +174,6 @@ def reconstruct_poses_3d(
             min_pose_pair_score=min_pose_pair_score,
             max_pose_pair_score=max_pose_pair_score,
             pose_pair_score_distance_method=pose_pair_score_distance_method,
-            pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
-            pose_pair_score_summary_method=pose_pair_score_summary_method,
             pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
             pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
             include_track_labels=include_track_labels,
@@ -228,8 +222,6 @@ def reconstruct_poses_3d_chunk(
     min_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MIN_POSE_PAIR_SCORE,
     max_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MAX_POSE_PAIR_SCORE,
     pose_pair_score_distance_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
-    pose_pair_score_pixel_distance_scale=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE,
-    pose_pair_score_summary_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
     pose_3d_graph_initial_edge_threshold=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
     pose_3d_graph_max_dispersion=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
     include_track_labels=poseconnect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
@@ -245,8 +237,6 @@ def reconstruct_poses_3d_chunk(
         min_pose_pair_score=min_pose_pair_score,
         max_pose_pair_score=max_pose_pair_score,
         pose_pair_score_distance_method=pose_pair_score_distance_method,
-        pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
-        pose_pair_score_summary_method=pose_pair_score_summary_method,
         pose_3d_limits=pose_3d_limits,
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
@@ -352,8 +342,6 @@ def reconstruct_poses_3d_timestamp(
     min_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MIN_POSE_PAIR_SCORE,
     max_pose_pair_score=poseconnect.defaults.RECONSTRUCTION_MAX_POSE_PAIR_SCORE,
     pose_pair_score_distance_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
-    pose_pair_score_pixel_distance_scale=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE,
-    pose_pair_score_summary_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
     pose_3d_graph_initial_edge_threshold=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_INITIAL_EDGE_THRESHOLD,
     pose_3d_graph_max_dispersion=poseconnect.defaults.RECONSTRUCTION_POSE_3D_GRAPH_MAX_DISPERSION,
     include_track_labels=poseconnect.defaults.RECONSTRUCTION_INCLUDE_TRACK_LABELS,
@@ -413,9 +401,8 @@ def reconstruct_poses_3d_timestamp(
         diagnostics['pose_pair_ids_2d_after_empty_reprojected_2d_pose_filter'] = pose_pairs_2d_timestamp.index
     pose_pairs_2d_timestamp = score_pose_pairs(
         pose_pairs_2d=pose_pairs_2d_timestamp,
-        distance_method=pose_pair_score_distance_method,
-        summary_method=pose_pair_score_summary_method,
-        pixel_distance_scale=pose_pair_score_pixel_distance_scale
+        camera_calibrations=camera_calibrations,
+        distance_method=pose_pair_score_distance_method
     )
     if return_diagnostics:
         diagnostics['pose_pair_2d_scores'] = pose_pairs_2d_timestamp['score']
@@ -663,13 +650,12 @@ def triangulate_image_points(
 
 def score_pose_pairs(
     pose_pairs_2d,
-    distance_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
-    summary_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
-    pixel_distance_scale=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE
+    camera_calibrations,
+    distance_method=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD
 ):
     if len(pose_pairs_2d) == 0:
         return pose_pairs_2d.copy()
-    reprojection_difference = np.stack(
+    reprojection_differences_pixels = np.stack(
         (
             np.subtract(
                 np.stack(pose_pairs_2d['keypoint_coordinates_2d_a_reprojected']),
@@ -680,40 +666,77 @@ def score_pose_pairs(
                 np.stack(pose_pairs_2d['keypoint_coordinates_2d_b'])
             )
         ),
-        axis=-2
+        axis=1
     )
     if distance_method == 'pixels':
-        distance = pixel_distance(reprojection_difference)
-    elif distance_method == 'probability':
-        distance = probability_distance(
-            reprojection_difference,
-            pixel_distance_scale=pixel_distance_scale
+        reprojection_differences = reprojection_differences_pixels
+    elif distance_method == 'image_frac':
+        image_widths = np.stack(
+            (
+                np.stack(
+                    pose_pairs_2d['camera_id_a']
+                    .apply(lambda x: camera_calibrations[x]['image_width'])
+                ),
+                np.stack(
+                    pose_pairs_2d['camera_id_b']
+                    .apply(lambda x: camera_calibrations[x]['image_width'])
+                )
+            ),
+            axis=1
+        )
+        reprojection_differences = np.divide(
+            reprojection_differences_pixels,
+            np.expand_dims(image_widths, axis=(2, 3))
+        )
+    elif distance_method == '3d':
+        camera_positions = np.stack(
+            (
+                np.stack(
+                    pose_pairs_2d['camera_id_a']
+                    .apply(lambda x: camera_calibrations[x]['camera_position'])
+                ),
+                np.stack(
+                    pose_pairs_2d['camera_id_b']
+                    .apply(lambda x: camera_calibrations[x]['camera_position'])
+                )
+            ),
+            axis=1
+        )
+        focal_lengths = np.stack(
+            (
+                np.stack(
+                    pose_pairs_2d['camera_id_a']
+                    .apply(lambda x: np.diag(camera_calibrations[x]['camera_matrix'])[:2])
+                ),
+                np.stack(
+                    pose_pairs_2d['camera_id_b']
+                    .apply(lambda x: np.diag(camera_calibrations[x]['camera_matrix'])[:2])
+                )
+            ),
+            axis=1
+        )
+        camera_distances = np.linalg.norm(
+            np.subtract(
+                np.expand_dims(np.stack(pose_pairs_2d['keypoint_coordinates_3d']), axis=1),
+                np.expand_dims(camera_positions, axis=-2)
+            ),
+            axis=-1
+        )
+        reprojection_differences_angles = np.divide(
+            reprojection_differences_pixels,
+            np.expand_dims(focal_lengths, axis=-2)
+        )
+        reprojection_differences = np.multiply(
+            reprojection_differences_angles,
+            np.expand_dims(camera_distances, axis=-1)
         )
     else:
         raise ValueError('Distance method not recognized')
-    if summary_method == 'rms':
-        score = np.sqrt(np.nanmean(np.square(distance), axis=(-1, -2)))
-    elif summary_method == 'sum':
-        score = np.nansum(distance, axis=(-1, -2))
-    else:
-        raise ValueError('Summary method not recognized')
+    reprojection_distances = np.linalg.norm(reprojection_differences, axis=-1)
+    score = np.sqrt(np.nanmean(np.square(reprojection_distances), axis=(-1, -2)))
     pose_pairs_2d_copy = pose_pairs_2d.copy()
     pose_pairs_2d_copy['score'] = score
     return pose_pairs_2d_copy
-
-def pixel_distance(image_point_differences):
-    return np.linalg.norm(image_point_differences, axis=-1)
-
-def probability_distance(image_point_differences, pixel_distance_scale):
-    return np.multiply(
-        1/np.sqrt(2*np.pi*pixel_distance_scale**2),
-        np.exp(
-            np.divide(
-                -np.square(pixel_distance(image_point_differences)),
-                2*pixel_distance_scale**2
-            )
-        )
-    )
 
 def pose_3d_in_range(
     pose_3d,
