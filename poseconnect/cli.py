@@ -209,28 +209,11 @@ def cli():
 @click.option(
     '--pose-pair-score-distance-method',
     type=click.Choice(
-        ['pixels', 'probability'],
+        ['pixels', 'image_frac', '3d'],
         case_sensitive=False
     ),
     default=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_DISTANCE_METHOD,
     help='Method of determining 2D keypoint distance in reprojection score',
-    show_default=True
-)
-@click.option(
-    '--pose-pair-score-pixel-distance-scale',
-    type=click.FLOAT,
-    default=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_PIXEL_DISTANCE_SCALE,
-    help='Pixel distance scale (for \'probability\' method)',
-    show_default=True
-)
-@click.option(
-    '--pose-pair-score-summary-method',
-    type=click.Choice(
-        ['rms', 'sum'],
-        case_sensitive=False
-    ),
-    default=poseconnect.defaults.RECONSTRUCTION_POSE_PAIR_SCORE_SUMMARY_METHOD,
-    help='Method for summarizing reprojection distance over keypoints',
     show_default=True
 )
 @click.option(
@@ -315,8 +298,6 @@ def cli_reconstruct_poses_3d(
     min_pose_pair_score,
     max_pose_pair_score,
     pose_pair_score_distance_method,
-    pose_pair_score_pixel_distance_scale,
-    pose_pair_score_summary_method,
     pose_3d_graph_initial_edge_threshold,
     pose_3d_graph_max_dispersion,
     include_track_labels,
@@ -355,8 +336,6 @@ def cli_reconstruct_poses_3d(
         min_pose_pair_score=min_pose_pair_score,
         max_pose_pair_score=max_pose_pair_score,
         pose_pair_score_distance_method=pose_pair_score_distance_method,
-        pose_pair_score_pixel_distance_scale=pose_pair_score_pixel_distance_scale,
-        pose_pair_score_summary_method=pose_pair_score_summary_method,
         pose_3d_graph_initial_edge_threshold=pose_3d_graph_initial_edge_threshold,
         pose_3d_graph_max_dispersion=pose_3d_graph_max_dispersion,
         include_track_labels=include_track_labels,
