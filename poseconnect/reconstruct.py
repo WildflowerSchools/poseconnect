@@ -25,6 +25,7 @@ KEYPOINT_CATEGORIES_BY_POSE_MODEL = {
     'MPII-15': ['head', 'neck', 'shoulder', 'elbow', 'hand', 'shoulder', 'elbow', 'hand', 'hip', 'knee', 'foot', 'hip', 'knee', 'foot', 'thorax'],
     'MPII-16': ['foot', 'knee', 'hip', 'hip', 'knee', 'foot', 'hip', 'thorax', 'neck', 'head', 'hand', 'elbow', 'shoulder', 'shoulder', 'elbow', 'hand'],
     'BODY_25': ['head', 'neck', 'shoulder', 'elbow', 'hand', 'shoulder', 'elbow', 'hand', 'hip', 'hip', 'knee', 'foot', 'hip', 'knee', 'foot', 'head', 'head', 'head', 'head', 'foot', 'foot', 'foot', 'foot', 'foot', 'foot'],
+    'BLAZEPOSE': ['head', 'head', 'head', 'head', 'head', 'head', 'head', 'head', 'head', 'head', 'head', 'shoulder', 'shoulder', 'elbow', 'elbow', 'hand', 'hand', 'hand', 'hand', 'hand', 'hand', 'hand', 'hand', 'hip', 'hip', 'knee', 'knee', 'foot', 'foot', 'foot', 'foot', 'foot', 'foot']
 }
 
 def reconstruct_poses_3d(
