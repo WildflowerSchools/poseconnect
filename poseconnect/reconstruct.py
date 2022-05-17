@@ -204,7 +204,17 @@ def reconstruct_poses_3d(
                         reconstruct_poses_3d_chunk_partial,
                         poses_2d_chunk_list
                 ))
+    if len(poses_3d) > 0:
         poses_3d.sort_values('timestamp', inplace=True)
+    else:
+        poses_3d = pd.DataFrame([], columns=[
+            'pose_3d_id',
+            'timestamp',
+            'keypoint_coordinates_3d',
+            'pose_2d_ids'
+        ])
+        poses_3d.set_index('pose_3d_id')
+        poses_3d=poseconnect.utils.ingest_poses_3d(poses_3d)
     elapsed_time = time.time() - start_time
     logger.info('Generated {} 3D poses in {:.1f} seconds ({:.3f} ms/frame)'.format(
         len(poses_3d),
