@@ -30,12 +30,15 @@ def ingest_poses_generic(
         df['camera_id'] = df['camera_id'].astype('object')
     if 'keypoint_coordinates_2d' in all_column_names:
         df['keypoint_coordinates_2d'] = df['keypoint_coordinates_2d'].apply(convert_to_array)
+        df['keypoint_coordinates_2d'] = df['keypoint_coordinates_2d'].apply(remove_zeroes)
     if 'keypoint_quality_2d' in all_column_names:
         df['keypoint_quality_2d'] = df['keypoint_quality_2d'].apply(convert_to_array)
+        df['keypoint_quality_2d'] = df['keypoint_quality_2d'].apply(remove_zeroes)
     if 'pose_quality_2d' in all_column_names:
         df['pose_quality_2d'] = pd.to_numeric(df['pose_quality_2d']).astype('float')
     if 'keypoint_coordinates_3d' in all_column_names:
         df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(convert_to_array)
+        df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(remove_zeroes)
     if 'pose_2d_ids' in all_column_names:
         df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
     return df
@@ -61,7 +64,9 @@ def ingest_poses_2d(data_object):
     df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     df['camera_id'] = df['camera_id'].astype('object')
     df['keypoint_coordinates_2d'] = df['keypoint_coordinates_2d'].apply(convert_to_array)
+    df['keypoint_coordinates_2d'] = df['keypoint_coordinates_2d'].apply(remove_zeroes)
     df['keypoint_quality_2d'] = df['keypoint_quality_2d'].apply(convert_to_array)
+    df['keypoint_quality_2d'] = df['keypoint_quality_2d'].apply(remove_zeroes)
     df['pose_quality_2d'] = pd.to_numeric(df['pose_quality_2d']).astype('float')
     return df
 
@@ -117,6 +122,7 @@ def ingest_poses_3d(data_object):
     df = df.reindex(columns=target_columns)
     df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True)
     df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(convert_to_array)
+    df['keypoint_coordinates_3d'] = df['keypoint_coordinates_3d'].apply(remove_zeroes)
     df['pose_2d_ids'] = df['pose_2d_ids'].apply(convert_to_list)
     return df
 
@@ -489,3 +495,7 @@ def nearly_equal(df_1, df_2):
 
 def convert_to_datetime_utc(datetime_object):
     return pd.to_datetime(datetime_object, utc=True).to_pydatetime()
+
+def remove_zeroes(array_object):
+    array_object_output = np.where(array_object == 0.0, np.nan, array_object)
+    return array_object_output
