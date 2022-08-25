@@ -6,4 +6,4 @@ from poseconnect.identify import *
 from poseconnect.overlay import *
 from poseconnect.utils import *
 
-__version__ = '0.10.0'
+__version__ = '0.11.0'
