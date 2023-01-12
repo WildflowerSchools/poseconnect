@@ -137,7 +137,7 @@ def generate_pose_identification(
                 ignore_z=ignore_z,
                 return_match_statistics=return_match_statistics
             )
-            match_statistics_list.append([timestamp] + match_statistics)
+            match_statistics_list.append(match_statistics)
         else:
             pose_identification_timestamp = generate_pose_identification_timestamp(
                 poses_3d_with_tracks_timestamp=poses_3d_with_tracks_timestamp,
@@ -151,15 +151,7 @@ def generate_pose_identification(
         pose_identification_timestamp_list.append(pose_identification_timestamp)
     pose_identification = pd.concat(pose_identification_timestamp_list)
     if return_match_statistics:
-        match_statistics = pd.DataFrame(
-            match_statistics_list,
-            columns=[
-                'timestamp',
-                'num_poses',
-                'num_persons',
-                'num_matches'
-            ]
-        )
+        match_statistics = pd.concat(match_statistics_list)
         return pose_identification, match_statistics
     return pose_identification
 
@@ -198,8 +190,7 @@ def generate_pose_identification_timestamp(
         logger.warn('No UWB data for timestamp %s', timestamp_poses_3d.isoformat())
     if num_poses == 0 or num_persons == 0:
         if return_match_statistics:
-            match_statistics = [num_poses, num_persons, num_matches]
-            return pd.DataFrame(), match_statistics
+            return pd.DataFrame(), pd.DataFrame()
         return pd.DataFrame()
     if num_poses != 0 and num_persons != 0 and timestamp_poses_3d != timestamp_sensor_data:
         raise ValueError('Timestamp in 3D pose data is {} but timestamp in UWB data is {}'.format(
@@ -210,6 +201,8 @@ def generate_pose_identification_timestamp(
     pose_track_3d_ids = poses_3d_with_tracks_timestamp['pose_track_3d_id'].values
     person_ids = sensor_data_resampled_timestamp['person_id'].values
     distance_matrix = np.zeros((num_poses, num_persons))
+    if return_match_statistics:
+        match_statistics_list = list()
     for i in range(num_poses):
         for j in range(num_persons):
             if sensor_position_keypoint_index is None:
@@ -230,6 +223,13 @@ def generate_pose_identification_timestamp(
             if ignore_z:
                 displacement_vector = displacement_vector[:2]
             distance_matrix[i, j] = np.linalg.norm(displacement_vector)
+            if return_match_statistics:
+                match_statistics_list.append({
+                    'timestamp': timestamp,
+                    'pose_track_3d_id': pose_track_3d_ids[i],
+                    'person_id': person_ids[j],
+                    'distance': distance_matrix[i, j]
+                })
     pose_track_3d_indices, person_indices = scipy.optimize.linear_sum_assignment(distance_matrix)
     num_expected_matches = min(num_poses, num_persons)
     num_matches = len(pose_track_3d_indices)
@@ -241,6 +241,24 @@ def generate_pose_identification_timestamp(
             num_matches,
             distance_matrix
         ))
+    if return_match_statistics:
+        match_statistics = (
+            pd.DataFrame(match_statistics_list)
+            .assign(
+                match_before_max_distance=False,
+                match=False
+            )
+            .set_index([
+                'timestamp',
+                'pose_track_3d_id',
+                'person_id'
+            ])
+        )
+        for pose_track_3d_index, person_index in zip(pose_track_3d_indices, person_indices):
+            match_statistics.loc[
+                (timestamp, pose_track_3d_ids[pose_track_3d_index], person_ids[person_index]),
+                'match_before_max_distance'
+            ] = True
     if max_distance is not None:
         new_pose_track_3d_indices=list()
         new_person_indices=list()
@@ -251,9 +269,17 @@ def generate_pose_identification_timestamp(
         pose_track_3d_indices=np.asarray(new_pose_track_3d_indices)
         person_indices=np.asarray(new_person_indices)
         num_matches = len(pose_track_3d_indices)
+        if return_match_statistics:
+            for pose_track_3d_index, person_index in zip(pose_track_3d_indices, person_indices):
+                match_statistics.loc[
+                    (timestamp, pose_track_3d_ids[pose_track_3d_index], person_ids[person_index]),
+                    'match'
+                ] = True
+    else:
+        if return_match_statistics:
+            match_statistics['match'] = match_statistics['match_before_max_distance']
     if num_matches == 0:
         if return_match_statistics:
-            match_statistics = [num_poses, num_persons, num_matches]
             return pd.DataFrame(), match_statistics
         else:
             return pd.DataFrame()
@@ -263,7 +289,6 @@ def generate_pose_identification_timestamp(
         'person_id': person_ids[person_indices]
     })
     if return_match_statistics:
-        match_statistics = [num_poses, num_persons, num_matches]
         return pose_identification_timestamp, match_statistics
     return pose_identification_timestamp
 
