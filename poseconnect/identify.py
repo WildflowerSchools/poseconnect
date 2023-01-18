@@ -17,6 +17,7 @@ def identify_pose_tracks_3d(
     sensor_position_keypoint_index=poseconnect.defaults.IDENTIFICATION_SENSOR_POSITION_KEYPOINT_INDEX,
     active_person_ids=poseconnect.defaults.IDENTIFICATION_ACTIVE_PERSON_IDS,
     ignore_z=poseconnect.defaults.IDENTIFICATION_IGNORE_Z,
+    match_algorithm=poseconnect.defaults.IDENTIFICATION_MATCH_ALGORITHM,
     max_distance=poseconnect.defaults.IDENTIFICATION_MAX_DISTANCE,
     min_fraction_matched=poseconnect.defaults.IDENTIFICATION_MIN_TRACK_FRACTION_MATCHED
 ):
@@ -34,6 +35,7 @@ def identify_pose_tracks_3d(
         sensor_position_keypoint_index=sensor_position_keypoint_index,
         active_person_ids=active_person_ids,
         ignore_z=ignore_z,
+        match_algorithm=match_algorithm,
         max_distance=max_distance,
         return_diagnostics=False
     )
@@ -119,6 +121,7 @@ def generate_pose_identification(
     sensor_position_keypoint_index=poseconnect.defaults.IDENTIFICATION_SENSOR_POSITION_KEYPOINT_INDEX,
     active_person_ids=poseconnect.defaults.IDENTIFICATION_ACTIVE_PERSON_IDS,
     ignore_z=poseconnect.defaults.IDENTIFICATION_IGNORE_Z,
+    match_algorithm=poseconnect.defaults.IDENTIFICATION_MATCH_ALGORITHM,
     max_distance=poseconnect.defaults.IDENTIFICATION_MAX_DISTANCE,
     return_diagnostics=poseconnect.defaults.IDENTIFICATION_RETURN_DIAGNOSTICS
 ):
@@ -135,6 +138,8 @@ def generate_pose_identification(
                 sensor_position_keypoint_index=sensor_position_keypoint_index,
                 active_person_ids=active_person_ids,
                 ignore_z=ignore_z,
+                match_algorithm=match_algorithm,
+                max_distance=max_distance,
                 return_diagnostics=return_diagnostics
             )
             diagnostics_list.append(diagnostics)
@@ -145,6 +150,7 @@ def generate_pose_identification(
                 sensor_position_keypoint_index=sensor_position_keypoint_index,
                 active_person_ids=active_person_ids,
                 ignore_z=ignore_z,
+                match_algorithm=match_algorithm,
                 max_distance=max_distance,
                 return_diagnostics=return_diagnostics
             )
@@ -161,6 +167,7 @@ def generate_pose_identification_timestamp(
     sensor_position_keypoint_index=poseconnect.defaults.IDENTIFICATION_SENSOR_POSITION_KEYPOINT_INDEX,
     active_person_ids=poseconnect.defaults.IDENTIFICATION_ACTIVE_PERSON_IDS,
     ignore_z=poseconnect.defaults.IDENTIFICATION_IGNORE_Z,
+    match_algorithm=poseconnect.defaults.IDENTIFICATION_MATCH_ALGORITHM,
     max_distance=poseconnect.defaults.IDENTIFICATION_MAX_DISTANCE,
     return_diagnostics=poseconnect.defaults.IDENTIFICATION_RETURN_DIAGNOSTICS
 ):
@@ -230,22 +237,23 @@ def generate_pose_identification_timestamp(
                     'person_id': person_ids[j],
                     'distance': distance_matrix[i, j]
                 })
-    pose_track_3d_indices, person_indices = scipy.optimize.linear_sum_assignment(distance_matrix)
-    num_expected_matches = min(num_poses, num_persons)
+    if match_algorithm == 'linear_sum':
+        pose_track_3d_indices, person_indices = calculate_linear_sum_matches(
+            distance_matrix=distance_matrix,
+            max_distance=max_distance
+        )
+    elif match_algorithm == 'best_match':
+        pose_track_3d_indices, person_indices = calculate_best_matches(
+            distance_matrix=distance_matrix,
+            max_distance=max_distance
+        )
+    else:
+        raise ValueError('Match algorithm \'{}\' not recognized'.format(match_algorithm))
     num_matches = len(pose_track_3d_indices)
-    if num_matches != num_expected_matches:
-        raise ValueError('Matching {} poses and {} persons so expected {} matches but found {} matches. Distance matrix: {}'.format(
-            num_poses,
-            num_persons,
-            num_expected_matches,
-            num_matches,
-            distance_matrix
-        ))
     if return_diagnostics:
         diagnostics = (
             pd.DataFrame(diagnostics_list)
             .assign(
-                match_before_max_distance=False,
                 match=False
             )
             .set_index([
@@ -257,27 +265,8 @@ def generate_pose_identification_timestamp(
         for pose_track_3d_index, person_index in zip(pose_track_3d_indices, person_indices):
             diagnostics.loc[
                 (timestamp, pose_track_3d_ids[pose_track_3d_index], person_ids[person_index]),
-                'match_before_max_distance'
+                'match'
             ] = True
-    if max_distance is not None:
-        new_pose_track_3d_indices=list()
-        new_person_indices=list()
-        for pose_track_3d_index, person_index in zip(pose_track_3d_indices, person_indices):
-            if distance_matrix[pose_track_3d_index, person_index] <= max_distance:
-                new_pose_track_3d_indices.append(pose_track_3d_index)
-                new_person_indices.append(person_index)
-        pose_track_3d_indices=np.asarray(new_pose_track_3d_indices)
-        person_indices=np.asarray(new_person_indices)
-        num_matches = len(pose_track_3d_indices)
-        if return_diagnostics:
-            for pose_track_3d_index, person_index in zip(pose_track_3d_indices, person_indices):
-                diagnostics.loc[
-                    (timestamp, pose_track_3d_ids[pose_track_3d_index], person_ids[person_index]),
-                    'match'
-                ] = True
-    else:
-        if return_diagnostics:
-            diagnostics['match'] = diagnostics['match_before_max_distance']
     if num_matches == 0:
         if return_diagnostics:
             return pd.DataFrame(), diagnostics
@@ -292,6 +281,42 @@ def generate_pose_identification_timestamp(
         return pose_identification_timestamp, diagnostics
     return pose_identification_timestamp
 
+def calculate_linear_sum_matches(
+    distance_matrix,
+    max_distance=poseconnect.defaults.IDENTIFICATION_MAX_DISTANCE
+):
+    match_indices = scipy.optimize.linear_sum_assignment(distance_matrix)
+    if max_distance is not None:
+        match_matrix = np.zeros(distance_matrix.shape, dtype='bool')
+        match_matrix[match_indices] = True
+        match_matrix = np.logical_and(
+            match_matrix,
+            distance_matrix <= max_distance
+        )
+        match_indices = np.nonzero(match_matrix)
+    return match_indices
+
+def calculate_best_matches(
+    distance_matrix,
+    max_distance=poseconnect.defaults.IDENTIFICATION_MAX_DISTANCE
+):
+    match_matrix = np.logical_and(
+        np.equal(
+            np.indices(distance_matrix.shape)[0],
+            np.expand_dims(np.argmin(distance_matrix, axis=0), axis=0)
+        ),
+        np.equal(
+            np.indices(distance_matrix.shape)[1],
+            np.expand_dims(np.argmin(distance_matrix, axis=1), axis=1)
+        )
+    )
+    if max_distance is not None:
+        match_matrix = np.logical_and(
+            match_matrix,
+            distance_matrix <= max_distance
+        )
+    match_indices = np.nonzero(match_matrix)
+    return match_indices
 
 def generate_pose_track_identification(
     pose_identification
