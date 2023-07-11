@@ -514,7 +514,7 @@ def calculate_3d_poses(
 ):
     if len(pose_pairs_2d) == 0:
         return pose_pairs_2d
-    pose_pairs_2d = pose_pairs_2d.groupby(['camera_id_a', 'camera_id_b']).apply(
+    pose_pairs_2d = pose_pairs_2d.groupby(['camera_id_a', 'camera_id_b'], group_keys=False).apply(
         lambda x: calculate_3d_poses_camera_pair(
             pose_pairs_2d_camera_pair=x,
             camera_calibrations=camera_calibrations,
