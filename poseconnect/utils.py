@@ -4,6 +4,9 @@ import numpy as np
 import json
 import pickle
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 def ingest_poses_generic(
     data_object,
