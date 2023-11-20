@@ -16,6 +16,7 @@ import copy
 from functools import partial
 import multiprocessing
 import math
+import warnings
 
 logger = logging.getLogger(__name__)
 
@@ -829,7 +830,9 @@ def generate_3d_poses_timestamp(
                     subgraph.nodes[pose_2d_id_2]['track_label_2d']
                 ))
             keypoint_coordinates_3d_list.append(keypoint_coordinates_3d_edge)
-        keypoint_coordinates_3d.append(np.nanmedian(np.stack(keypoint_coordinates_3d_list), axis=0))
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=RuntimeWarning)
+            keypoint_coordinates_3d.append(np.nanmedian(np.stack(keypoint_coordinates_3d_list), axis=0))
         pose_2d_ids.append(list(set(pose_2d_ids_list)))
         if include_track_labels:
             track_labels.append(track_label_list)
