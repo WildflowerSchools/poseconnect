@@ -365,7 +365,7 @@ def reconstruct_poses_3d_timestamp(
         'poses_2d': poses_2d_timestamp_copy.copy(),
         'pose_2d_ids_original': poses_2d_timestamp_copy.index
         }
-    timestamp = poses_2d_timestamp_copy['timestamp'][0]
+    timestamp = poses_2d_timestamp_copy['timestamp'].iloc[0]
     if min_keypoint_quality is not None:
         poses_2d_timestamp_copy = poseconnect.filter.filter_keypoints_by_quality(
             poses_2d=poses_2d_timestamp_copy,
