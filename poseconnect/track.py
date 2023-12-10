@@ -69,6 +69,7 @@ def update_pose_tracks_3d(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
+    poses_3d = poseconnect.utils.ingest_poses_3d(poses_3d)
     if len(poses_3d) == 0:
         return pose_tracks_3d
     if pose_tracks_3d is None:
