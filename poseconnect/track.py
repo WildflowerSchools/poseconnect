@@ -69,6 +69,7 @@ def update_pose_tracks_3d(
     progress_bar=poseconnect.defaults.PROGRESS_BAR,
     notebook=poseconnect.defaults.NOTEBOOK
 ):
+    poses_3d = poseconnect.utils.ingest_poses_3d(poses_3d)
     if len(poses_3d) == 0:
         return pose_tracks_3d
     if pose_tracks_3d is None:
@@ -84,6 +85,8 @@ def update_pose_tracks_3d(
         pose_tracks_3d = PoseTracks3D(
             timestamp=initial_timestamp,
             poses_3d=initial_poses_3d,
+            max_match_distance=max_match_distance,
+            max_iterations_since_last_match=max_iterations_since_last_match,
             centroid_position_initial_sd=centroid_position_initial_sd,
             centroid_velocity_initial_sd=centroid_velocity_initial_sd,
             reference_delta_t_seconds=reference_delta_t_seconds,
@@ -360,6 +363,41 @@ class PoseTracks3D:
         if not inplace:
             return new_pose_tracks_3d
 
+    def filter_active_tracks(
+        self,
+        num_poses_min=poseconnect.defaults.TRACKING_NUM_POSES_PER_TRACK_MIN,
+        inplace=False
+    ):
+        if not inplace:
+            new_pose_tracks_3d = copy.deepcopy(self)
+        else:
+            new_pose_tracks_3d = self
+        new_pose_tracks_3d.active_tracks = dict(filter(
+            lambda key_value_tuple: key_value_tuple[1].num_poses() >= num_poses_min,
+            new_pose_tracks_3d.active_tracks.items()
+        ))
+        if not inplace:
+            return new_pose_tracks_3d
+
+    def filter_inactive_tracks(
+        self,
+        num_poses_min=poseconnect.defaults.TRACKING_NUM_POSES_PER_TRACK_MIN,
+        inplace=False
+    ):
+        if not inplace:
+            new_pose_tracks_3d = copy.deepcopy(self)
+        else:
+            new_pose_tracks_3d = self
+        new_pose_tracks_3d.inactive_tracks = dict(filter(
+            lambda key_value_tuple: key_value_tuple[1].num_poses() >= num_poses_min,
+            new_pose_tracks_3d.inactive_tracks.items()
+        ))
+        if not inplace:
+            return new_pose_tracks_3d
+
+    def remove_inactive_tracks(self):
+        self.inactive_tracks = dict()
+
     def extract_pose_tracks_3d(
         self,
         poses_3d
@@ -376,9 +414,33 @@ class PoseTracks3D:
         output = {pose_track_3d_id: pose_track_3d.output() for pose_track_3d_id, pose_track_3d in self.tracks().items()}
         return output
 
+    def output_active_tracks(self):
+        output = {pose_track_3d_id: pose_track_3d.output() for pose_track_3d_id, pose_track_3d in self.active_tracks.items()}
+        return output
+
+    def output_inactive_tracks(self):
+        output = {pose_track_3d_id: pose_track_3d.output() for pose_track_3d_id, pose_track_3d in self.inactive_tracks.items()}
+        return output
+
     def output_df(self):
         df = pd.concat(
             [pose_track_3d.output_df() for pose_track_3d in self.tracks().values()]
+        )
+        return df
+
+    def output_active_tracks_df(self):
+        if len(self.active_tracks) == 0:
+            return pd.DataFrame()
+        df = pd.concat(
+            [pose_track_3d.output_df() for pose_track_3d in self.active_tracks.values()]
+        )
+        return df
+
+    def output_inactive_tracks_df(self):
+        if len(self.inactive_tracks) == 0:
+            return pd.DataFrame()
+        df = pd.concat(
+            [pose_track_3d.output_df() for pose_track_3d in self.inactive_tracks.values()]
         )
         return df
 
