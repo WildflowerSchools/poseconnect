@@ -85,6 +85,8 @@ def update_pose_tracks_3d(
         pose_tracks_3d = PoseTracks3D(
             timestamp=initial_timestamp,
             poses_3d=initial_poses_3d,
+            max_match_distance=max_match_distance,
+            max_iterations_since_last_match=max_iterations_since_last_match,
             centroid_position_initial_sd=centroid_position_initial_sd,
             centroid_velocity_initial_sd=centroid_velocity_initial_sd,
             reference_delta_t_seconds=reference_delta_t_seconds,
