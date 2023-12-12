@@ -335,6 +335,11 @@ class PoseTracks3D:
             )
             if distance < self.max_match_distance:
                 distances.loc[pose_track_3d_id, pose_3d_id] = distance
+        distances = (
+            distances
+            .dropna(axis=0, how='all')
+            .dropna(axis=1, how='all')
+        )
         best_track_for_each_pose = distances.idxmin(axis=0)
         best_pose_for_each_track = distances.idxmin(axis=1)
         matches = dict(
