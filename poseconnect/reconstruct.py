@@ -631,12 +631,12 @@ def triangulate_image_points(
     distortion_coefficients_2 = np.squeeze(distortion_coefficients_2)
     rotation_vector_2 = rotation_vector_2.reshape(3)
     translation_vector_2 = translation_vector_2.reshape(3)
-    image_points_1_undistorted = cv_utils.undistort_points(
+    image_points_1 = cv_utils.undistort_points(
         image_points_1,
         camera_matrix_1,
         distortion_coefficients_1
     )
-    image_points_2_undistorted = cv_utils.undistort_points(
+    image_points_2 = cv_utils.undistort_points(
         image_points_2,
         camera_matrix_2,
         distortion_coefficients_2
